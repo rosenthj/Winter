@@ -1,6 +1,6 @@
 Winter is a chess engine that relies on the UCI protocol to communicate with a GUI.
 
-In order to run it on Linux, just compile it via make in the root directory and then run it from the root directory. If everything is working correctly entering "go depth 14" should result in precisely the following output with exception of the time:
+In order to run it on Linux, just compile it via "make" in the root directory and then run it from the root directory. Systems which do not have the newest generation of processors may lack access to the BMI2 instruction set, in this case compile with "make no_bmi" instead. If everything is working correctly entering "go depth 14" should result in precisely the following output with exception of the time:
 
 go depth 14
 info  depth 1 seldepth 1 time 0 nodes 21 score cp 23 pv e2e3

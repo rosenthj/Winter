@@ -44,9 +44,6 @@ const std::string engine_version =
                                  : "Beta 0.1";
 const std::string engine_author = "Jonathan Rosenthal";
 
-
-constexpr bool kBMI2 = true;
-
 const bool kUseGMM = true;
 const int kGMMk = kExperimental ? 4 : 4;
 const std::string kParamPath = "params/";

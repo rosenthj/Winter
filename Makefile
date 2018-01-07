@@ -8,6 +8,9 @@ OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE=Winter
 
 all: $(SOURCES) $(EXECUTABLE) clean
+
+target no_bmi: CFLAGS += -DNO_BMI
+no_bmi: all
     
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lpthread
