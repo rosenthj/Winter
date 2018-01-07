@@ -1,0 +1,132 @@
+0 <-- King Piece Square Table
+13236.7 <-- King Piece Square Table
+3596.22 <-- King Piece Square Table
+2496.24 <-- King Piece Square Table
+16929.1 <-- King Piece Square Table
+17909.3 <-- King Piece Square Table
+15060.9 <-- King Piece Square Table
+12303.1 <-- King Piece Square Table
+23510.4 <-- King Piece Square Table
+15157.2 <-- King Piece Square Table
+10679.7 <-- Knight Piece Square Table
+141553 <-- Knight Piece Square Table
+156679 <-- Knight Piece Square Table
+265811 <-- Knight Piece Square Table
+69179.4 <-- Knight Piece Square Table
+335569 <-- Knight Piece Square Table
+562038 <-- Knight Piece Square Table
+673563 <-- Knight Piece Square Table
+687245 <-- Knight Piece Square Table
+524381 <-- Knight Piece Square Table
+297442 <-- Piece Base Value
+0 <-- Piece Base Value
+1.675e+06 <-- Piece Base Value
+2.02926e+06 <-- Piece Base Value
+1.7846e+06 <-- Piece Base Value
+6441.64 <-- Bishop Pair
+2944.01 <-- Piece Activity Bonus
+0 <-- Piece Activity Bonus
+0 <-- Piece Activity Bonus
+0 <-- Piece Activity Bonus
+0 <-- Piece Activity Bonus
+0 <-- Abstract Piece Activity Bonus
+0 <-- Abstract Piece Activity Bonus
+13124.4 <-- Abstract Piece Activity Bonus
+17133.6 <-- Abstract Piece Activity Bonus
+0 <-- Abstract Piece Activity Bonus
+0.0426458 <-- Passed Pawn Bonus
+0.00120296 <-- Passed Pawn Bonus
+970.284 <-- Passed Pawn Bonus
+11650.6 <-- Passed Pawn Bonus
+34245.7 <-- Passed Pawn Bonus
+52246.5 <-- Passed Pawn Bonus
+1604.54 <-- Double Pawn Penalty
+596.734 <-- Tempo Bonus
+0 <-- Direct Pawn Shield Bonus
+3369.45 <-- King Vector Exposure
+6757.62 <-- King Vector Exposure
+762.507 <-- Knight Outpost
+0 <-- Castling Right
+3988.01 <-- Pawn Attack
+2107.6 <-- Minor Attack
+0 <-- King Defence Distance
+0 <-- King Defence Distance
+0 <-- King Defence Distance
+0 <-- King Defence Distance
+34902.8 <-- King Attack Distance
+1257.35 <-- King Attack Distance
+25282.4 <-- King Attack Distance
+4746.89 <-- King Attack Distance
+381.43 <-- King Attack Danger
+443.026 <-- King Attack Danger
+1475.5 <-- King Attack Danger
+121.909 <-- King Attack Danger
+1673.72 <-- Safe Knight Square Count
+2438.07 <-- Safe Knight Square Count
+2031.27 <-- Safe Knight Square Count
+684.777 <-- Safe Knight Square Count
+0 <-- Safe Knight Square Count
+237.005 <-- Safe Knight Square Count
+448.902 <-- Safe Knight Square Count
+237.167 <-- Safe Knight Square Count
+98.0863 <-- Safe Knight Square Count
+8803.47 <-- Bishop Mobility
+11847.9 <-- Bishop Mobility
+10363.6 <-- Bishop Mobility
+6369.22 <-- Bishop Mobility
+2355.88 <-- Bishop Mobility
+370.923 <-- Bishop Mobility
+0 <-- Bishop Mobility
+322.569 <-- Bishop Mobility
+400.523 <-- Bishop Mobility
+856.502 <-- Bishop Mobility
+463.783 <-- Bishop Mobility
+514.323 <-- Bishop Mobility
+117.701 <-- Bishop Mobility
+172.026 <-- Bishop Mobility
+5186.95 <-- Rook Mobility
+9474.86 <-- Rook Mobility
+8209.44 <-- Rook Mobility
+4832.4 <-- Rook Mobility
+3414.49 <-- Rook Mobility
+630.564 <-- Rook Mobility
+0 <-- Rook Mobility
+749.455 <-- Rook Mobility
+2449.27 <-- Rook Mobility
+4484.2 <-- Rook Mobility
+5611.08 <-- Rook Mobility
+6117.24 <-- Rook Mobility
+5889.81 <-- Rook Mobility
+4915.07 <-- Rook Mobility
+5055.26 <-- Rook Mobility
+565.57 <-- Queen Mobility
+496.266 <-- Queen Mobility
+647.474 <-- Queen Mobility
+845.032 <-- Queen Mobility
+1035.53 <-- Queen Mobility
+946.242 <-- Queen Mobility
+700.572 <-- Queen Mobility
+437.425 <-- Queen Mobility
+238.951 <-- Queen Mobility
+95.5089 <-- Queen Mobility
+0 <-- Queen Mobility
+3.66906 <-- Queen Mobility
+29.2103 <-- Queen Mobility
+37.032 <-- Queen Mobility
+57.9534 <-- Queen Mobility
+50.8439 <-- Queen Mobility
+44.177 <-- Queen Mobility
+38.1388 <-- Queen Mobility
+32.1796 <-- Queen Mobility
+24.8381 <-- Queen Mobility
+19.6245 <-- Queen Mobility
+17.0456 <-- Queen Mobility
+9.26342 <-- Queen Mobility
+7.378 <-- Queen Mobility
+3.24532 <-- Queen Mobility
+2.6623 <-- Queen Mobility
+0.718263 <-- Queen Mobility
+1.90702 <-- Queen Mobility
+6823.89 <-- Safe Checks
+3635.33 <-- Unsafe Checks
+2136.98 <-- Unprotected Pieces

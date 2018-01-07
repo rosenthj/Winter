@@ -1,0 +1,132 @@
+0 0 0 0 <-- King Piece Square Table
+269 168 222 125 <-- King Piece Square Table
+201 196 74 8 <-- King Piece Square Table
+109 219 15 -73 <-- King Piece Square Table
+451 269 390 180 <-- King Piece Square Table
+435 341 318 4 <-- King Piece Square Table
+406 368 126 -202 <-- King Piece Square Table
+544 411 404 -113 <-- King Piece Square Table
+553 452 196 -65 <-- King Piece Square Table
+647 488 -126 5 <-- King Piece Square Table
+1934 2016 1285 0 <-- Knight Piece Square Table
+2343 2178 1736 290 <-- Knight Piece Square Table
+2350 2182 1695 249 <-- Knight Piece Square Table
+2430 2266 1768 312 <-- Knight Piece Square Table
+2364 2267 1690 129 <-- Knight Piece Square Table
+2334 2217 1667 260 <-- Knight Piece Square Table
+2421 2229 1781 342 <-- Knight Piece Square Table
+2405 2232 1748 361 <-- Knight Piece Square Table
+2452 2302 1776 382 <-- Knight Piece Square Table
+2405 2303 1717 342 <-- Knight Piece Square Table
+461 625 320 134 <-- Piece Base Value
+0 0 0 0 <-- Piece Base Value
+2021 2312 1415 361 <-- Piece Base Value
+3061 3639 0 0 <-- Piece Base Value
+5987 0 0 0 <-- Piece Base Value
+272 291 84 1 <-- Bishop Pair
+38 40 4 4 <-- Piece Activity Bonus
+0 0 0 0 <-- Piece Activity Bonus
+0 0 0 0 <-- Piece Activity Bonus
+0 0 0 0 <-- Piece Activity Bonus
+0 0 0 0 <-- Piece Activity Bonus
+0 0 0 0 <-- Abstract Piece Activity Bonus
+0 0 0 0 <-- Abstract Piece Activity Bonus
+47 36 36 16 <-- Abstract Piece Activity Bonus
+36 29 27 12 <-- Abstract Piece Activity Bonus
+0 0 0 0 <-- Abstract Piece Activity Bonus
+1 0 0 2 <-- Passed Pawn Bonus
+0 0 0 1 <-- Passed Pawn Bonus
+13 90 1 0 <-- Passed Pawn Bonus
+266 256 191 146 <-- Passed Pawn Bonus
+649 487 515 396 <-- Passed Pawn Bonus
+1163 844 763 801 <-- Passed Pawn Bonus
+-52 -116 -37 -33 <-- Double Pawn Penalty
+27 5 28 37 <-- Tempo Bonus
+0 0 0 0 <-- Direct Pawn Shield Bonus
+-24 5 -19 5 <-- King Vector Exposure
+-32 -9 -31 -5 <-- King Vector Exposure
+84 90 66 68 <-- Knight Outpost
+0 0 0 0 <-- Castling Right
+309 217 271 161 <-- Pawn Attack
+230 144 188 126 <-- Minor Attack
+0 0 0 0 <-- King Defence Distance
+0 0 0 0 <-- King Defence Distance
+0 0 0 0 <-- King Defence Distance
+0 0 0 0 <-- King Defence Distance
+-91 -1 -85 -18 <-- King Attack Distance
+-17 0 -12 0 <-- King Attack Distance
+-82 -23 -60 -23 <-- King Attack Distance
+-57 -89 -20 -1 <-- King Attack Distance
+17 6 11 11 <-- King Attack Danger
+18 6 5 0 <-- King Attack Danger
+25 14 27 20 <-- King Attack Danger
+10 64 1 1 <-- King Attack Danger
+-699 -774 -512 -222 <-- Safe Knight Square Count
+-310 -329 -243 -109 <-- Safe Knight Square Count
+-154 -167 -134 -56 <-- Safe Knight Square Count
+-73 -77 -59 -26 <-- Safe Knight Square Count
+0 0 0 0 <-- Safe Knight Square Count
+41 42 31 11 <-- Safe Knight Square Count
+63 45 75 14 <-- Safe Knight Square Count
+68 44 82 16 <-- Safe Knight Square Count
+69 44 109 15 <-- Safe Knight Square Count
+-681 -594 -489 -220 <-- Bishop Mobility
+-485 -431 -377 -206 <-- Bishop Mobility
+-350 -292 -252 -128 <-- Bishop Mobility
+-232 -195 -173 -93 <-- Bishop Mobility
+-145 -113 -96 -40 <-- Bishop Mobility
+-64 -44 -39 -17 <-- Bishop Mobility
+0 0 0 0 <-- Bishop Mobility
+59 55 28 15 <-- Bishop Mobility
+91 69 54 19 <-- Bishop Mobility
+140 107 104 19 <-- Bishop Mobility
+190 108 169 65 <-- Bishop Mobility
+238 120 286 116 <-- Bishop Mobility
+312 122 395 158 <-- Bishop Mobility
+356 122 555 159 <-- Bishop Mobility
+-713 -442 -322 -201 <-- Rook Mobility
+-454 -329 -252 -164 <-- Rook Mobility
+-349 -269 -207 -139 <-- Rook Mobility
+-252 -210 -156 -102 <-- Rook Mobility
+-166 -132 -127 -87 <-- Rook Mobility
+-61 -61 -58 -37 <-- Rook Mobility
+0 0 0 0 <-- Rook Mobility
+77 57 71 39 <-- Rook Mobility
+153 116 126 81 <-- Rook Mobility
+232 164 173 136 <-- Rook Mobility
+275 207 217 161 <-- Rook Mobility
+329 237 260 289 <-- Rook Mobility
+388 265 321 333 <-- Rook Mobility
+433 280 370 392 <-- Rook Mobility
+504 284 440 400 <-- Rook Mobility
+-611 -17 -356 -181 <-- Queen Mobility
+-496 -17 -243 -135 <-- Queen Mobility
+-387 -17 -218 -119 <-- Queen Mobility
+-328 -17 -188 -93 <-- Queen Mobility
+-249 -16 -147 -91 <-- Queen Mobility
+-214 -16 -119 -66 <-- Queen Mobility
+-164 -16 -92 -45 <-- Queen Mobility
+-116 -16 -67 -34 <-- Queen Mobility
+-89 -16 -40 -20 <-- Queen Mobility
+-57 -13 -21 -4 <-- Queen Mobility
+0 0 0 0 <-- Queen Mobility
+1 0 12 0 <-- Queen Mobility
+21 1 30 2 <-- Queen Mobility
+30 1 31 2 <-- Queen Mobility
+42 2 37 2 <-- Queen Mobility
+42 8 38 2 <-- Queen Mobility
+42 9 39 3 <-- Queen Mobility
+42 9 43 3 <-- Queen Mobility
+42 10 50 3 <-- Queen Mobility
+41 10 50 5 <-- Queen Mobility
+41 11 50 14 <-- Queen Mobility
+41 18 81 20 <-- Queen Mobility
+41 18 83 20 <-- Queen Mobility
+41 18 88 20 <-- Queen Mobility
+41 18 97 20 <-- Queen Mobility
+42 19 97 21 <-- Queen Mobility
+46 19 106 21 <-- Queen Mobility
+78 20 111 22 <-- Queen Mobility
+101 79 123 17 <-- Safe Checks
+45 48 37 13 <-- Unsafe Checks
+-69 -22 -73 -34 <-- Unprotected Pieces

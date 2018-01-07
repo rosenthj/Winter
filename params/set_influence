@@ -1,0 +1,26 @@
+104.801 +- 113.038 <-- King Piece Square Table
+738.548 +- 1095.97 <-- Knight Piece Square Table
+1025.65 +- 1354.09 <-- Piece Base Value
+24.7082 +- 76.3619 <-- Bishop Pair
+33.7233 +- 42.5058 <-- Piece Activity Bonus
+117.871 +- 117.064 <-- Abstract Piece Activity Bonus
+140.494 +- 275.072 <-- Passed Pawn Bonus
+15.9718 +- 36.7347 <-- Double Pawn Penalty
+20.6488 +- 13.0522 <-- Tempo Bonus
+0 +- 0 <-- Direct Pawn Shield Bonus
+61.9466 +- 87.8576 <-- King Vector Exposure
+9.08442 +- 26.0764 <-- Knight Outpost
+0 +- 0 <-- Castling Right
+14.8652 +- 61.3762 <-- Pawn Attack
+10.2591 +- 44.7476 <-- Minor Attack
+0 +- 0 <-- King Defence Distance
+126.774 +- 177.03 <-- King Attack Distance
+26.9174 +- 56.1791 <-- King Attack Danger
+47.2219 +- 72.7419 <-- Safe Knight Square Count
+111.925 +- 124.224 <-- Bishop Mobility
+140.51 +- 157.869 <-- Rook Mobility
+31.0087 +- 46.7725 <-- Queen Mobility
+34.9069 +- 74.8692 <-- Safe Checks
+35.5576 +- 48.6927 <-- Unsafe Checks
+27.7941 +- 36.9388 <-- Unprotected Pieces
+0 +- 0 <-- Num Features Placeholder
