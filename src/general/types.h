@@ -162,7 +162,7 @@ inline PieceType GetPieceType(const Piece piece) { return piece & 0x7; }
 
 inline BitBoard GetSquareBitBoard(const Square square) {
   assert(square >= 0 && square < 64);
-  return 0x1L << square;
+  return ((BitBoard) 1) << square;
 }
 
 

@@ -83,6 +83,16 @@ public:
   bool IsDraw() const;
   std::vector<std::string> GetFen() const;
   void Print() const;
+  void PrintBitBoards() const {
+    for (PieceType pt = kPawn; pt <= kKing; pt++) {
+      std::cout << "Piece " << pt << std::endl;
+      parse::PrintBitboard(pt_bitboards[pt]);
+    }
+    std::cout << "White" << std::endl;
+    parse::PrintBitboard(color_bitboards[kWhite]);
+    std::cout << "Black" << std::endl;
+    parse::PrintBitboard(color_bitboards[kBlack]);
+  }
   void PrintMadeMoves() const {
     for (int i = 0; i < move_history.size(); i++) {
       std::cout << parse::MoveToString(move_history[i]) << " ";

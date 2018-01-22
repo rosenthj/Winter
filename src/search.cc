@@ -303,14 +303,14 @@ inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score 
 
 namespace search {
 
-long Perft(Board &board, Depth depth) {
+uint64_t Perft(Board &board, Depth depth) {
   if (depth <= 0) {
     return 1;
   }
   if (depth == 1) {
     return board.GetMoves<kNonQuiescent>().size();
   }
-  long perft_sum = 0;
+  uint64_t perft_sum = 0;
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   for (Move move : moves) {
     board.Make(move);

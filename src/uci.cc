@@ -137,6 +137,9 @@ void Loop() {
     else if (Equals(command, "print")) {
       board.Print();
     }
+    else if (Equals(command, "print_bitboards")) {
+      board.PrintBitBoards();
+    }
     else if (Equals(command, "print_features")) {
       evaluation::PrintFeatureValues(board);
     }
@@ -257,7 +260,7 @@ void Loop() {
     else if (Equals(command, "perft")) {
       Depth depth = atoi(tokens[index++].c_str());
       std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-      long sum = 0;
+      uint64_t sum = 0;
       Time begin = now();
       HashType hash = board.get_hash();
       for (Move move : moves) {
