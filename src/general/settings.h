@@ -32,7 +32,7 @@
 
 namespace settings {
 
-#ifdef EXPERIMENTAL
+#ifdef EXPERIMENT
 constexpr bool kExperimental = true;
 #else
 constexpr bool kExperimental = false;
@@ -41,7 +41,7 @@ constexpr bool kExperimental = false;
 const std::string engine_name = "Winter";
 const std::string engine_version =
                    kExperimental ? "Beta 20171204 Experimental"
-                                 : "Beta 0.1";
+                                 : "Beta 0.1.1";
 const std::string engine_author = "Jonathan Rosenthal";
 
 const bool kUseGMM = true;

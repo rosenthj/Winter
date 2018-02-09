@@ -73,10 +73,11 @@ std::vector<Game> LoadGames(size_t max_games, std::string game_file) {
     }
     games.emplace_back(game);
     if (games.size() % 10000 == 0) {
-      std::cout << "loaded " << games.size() << " games!" << std::endl;
+      std::cout << "\rloaded " << games.size() << " games!" << std::flush;
     }
     std::getline(file, in);
   }
+  std::cout << "\rfinished loading " << games.size() << " games!" << std::endl;
   file.close();
   return games;
 }

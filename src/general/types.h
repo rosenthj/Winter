@@ -49,7 +49,7 @@ typedef Piece PieceType;
 typedef Piece Color;
 //A score is a value assigned to a position which represents how good the position
 //for the player to move.
-typedef int_fast32_t Score;
+typedef int32_t Score;
 typedef int32_t Depth;
 typedef double Probability;
 typedef int32_t CastlingRights;
@@ -114,11 +114,8 @@ const int piece_phases[7] = {0, 3, 3, 4, 9, 0, 0};
 const int max_phase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
               + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
               + 2 * piece_phases[kQueen];
-#ifdef EXPERIMENTAL
-const size_t kPhaseVecLength = 5;
-#else
+
 const size_t kPhaseVecLength = 6;
-#endif
 
 const long kThousand = 1000;
 const long kMillion = kThousand * kThousand;
