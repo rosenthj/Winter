@@ -41,11 +41,13 @@ Move DepthSearch(Board board, Depth depth);
 Move TimeSearch(Board board, Milliseconds time);
 Board SampleEval(Board board);
 Score QSearch(Board &board);
+Score SQSearch(Board &board);
 void inc_node_count();
 void dec_node_count();
 Score get_last_search_score();
 void set_print_info(bool print_info);
 void end_search();
+Board get_sampled_board();
 
 void clear_killers();
 

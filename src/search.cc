@@ -320,6 +320,42 @@ uint64_t Perft(Board &board, Depth depth) {
   return perft_sum;
 }
 
+Board get_sampled_board() {
+  return sampled_board;
+}
+
+Score SQSearch(Board &board, Score alpha, Score beta) {
+  if (!board.InCheck()) {
+    Score static_eval = evaluation::ScoreBoard(board);
+    if (static_eval >= beta) {
+      return beta;
+    }
+    alpha = std::max(static_eval, alpha);
+  }
+  std::vector<Move> moves = board.GetMoves<kQuiescent>();
+  if (board.InCheck() && moves.size() == 0) {
+    return kMinScore+board.get_num_made_moves();
+  }
+  SortMoves<kQuiescent>(moves, board, 0);
+
+  for (Move move : moves) {
+    board.Make(move);
+    Score score = -SQSearch(board, -beta, -alpha);
+    board.UnMake();
+    if (score >= beta) {
+      return beta;
+    }
+    alpha = std::max(score, alpha);
+  }
+  return alpha;
+}
+
+//Simplified Q-Search with no pruning features or TT-access
+Score SQSearch(Board &board) {
+  return SQSearch(board, kMinScore, kMaxScore);
+}
+
+
 template<int Mode>
 Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   max_ply = std::max(board.get_num_made_moves(), max_ply);
