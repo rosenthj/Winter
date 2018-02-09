@@ -53,6 +53,7 @@ double BoardProbability(const Board &board);
 Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board);
 Score EvaluateQuietMoveValue();
 void SGDDrawMarginTrain();
+void PrintEvaluationGMM();
 
 }
 
