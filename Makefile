@@ -6,6 +6,7 @@ LDFLAGS=-flto -Wall
 SOURCES=$(wildcard src/general/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE:=Winter
+EXPERIMENT:= WinterExp
 
 all: $(SOURCES) $(EXECUTABLE) clean
 
@@ -14,6 +15,12 @@ no_bmi: all
 target windows: LDFLAGS += -static
 target windows: CC=x86_64-w64-mingw32-g++-posix
 windows: all
+
+target experiment: CFLAGS += -DEXPERIMENT
+experiment: $(SOURCES) $(EXPERIMENT) clean
+
+$(EXPERIMENT): $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lpthread
     
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lpthread
