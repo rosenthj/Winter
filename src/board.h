@@ -29,6 +29,7 @@
 
 #include "general/types.h"
 #include "general/parse.h"
+#include "general/bit_operations.h"
 #include "learning/linear_algebra.h"
 #include <vector>
 #include <iostream>
@@ -69,6 +70,9 @@ public:
     const { return color_bitboards[color]; }
   BitBoard get_piecetype_bitboard(const PieceType piece_type)
     const { return pt_bitboards[piece_type]; }
+  int8_t get_num_pieces() const {
+    return bitops::PopCount(color_bitboards[kWhite] | color_bitboards[kBlack]);
+  }
   size_t get_num_made_moves() const { return move_history.size(); }
   int8_t get_piece_count(const Color color, const PieceType piece_type) const {
     return piece_counts[color][piece_type];

@@ -36,16 +36,20 @@ enum Directions {
 
 namespace bitops {
 
-const BitBoard not_a_file = ~(parse::StringToBitBoard("a1") | parse::StringToBitBoard("a2")
+const BitBoard a_file = parse::StringToBitBoard("a1") | parse::StringToBitBoard("a2")
                       | parse::StringToBitBoard("a3") | parse::StringToBitBoard("a4")
                       | parse::StringToBitBoard("a5") | parse::StringToBitBoard("a6")
-                      | parse::StringToBitBoard("a7") | parse::StringToBitBoard("a8"));
+                      | parse::StringToBitBoard("a7") | parse::StringToBitBoard("a8");
 
-const BitBoard not_h_file = ~(parse::StringToBitBoard("h1")
+const BitBoard h_file = parse::StringToBitBoard("h1")
                       | parse::StringToBitBoard("h2") | parse::StringToBitBoard("h3")
                       | parse::StringToBitBoard("h4") | parse::StringToBitBoard("h5")
                       | parse::StringToBitBoard("h6") | parse::StringToBitBoard("h7")
-                      | parse::StringToBitBoard("h8"));
+                      | parse::StringToBitBoard("h8");
+
+const BitBoard rook_file = a_file | h_file;
+const BitBoard not_a_file = ~a_file;
+const BitBoard not_h_file = ~h_file;
 
 const BitBoard light_squares_first_two_ranks =  parse::StringToBitBoard("b1") | parse::StringToBitBoard("d1")
                               | parse::StringToBitBoard("f1") | parse::StringToBitBoard("h1")

@@ -1389,6 +1389,8 @@ void SGDVariantTrain(bool from_scratch) {
 template<int sgd_variant, bool use_draw_margin>
 void SGDVariantRL() {
   const int k = settings::kGMMk;
+  const double game_res_weight = 0.3;
+  const double td_weight = 1 - game_res_weight;
   const double draw_margin = 1.0;
   const double scaling = 1024;
   std::vector<double> variables(kNumFeatures * k);
@@ -1543,21 +1545,21 @@ void SGDVariantRL() {
     if (games[index].board.get_turn() == kBlack) {
       game_res = 1 - game_res;
     }
-    double target = 0.7 * Sigmoid<double>(position_targets[index])
-                  + 0.3 * game_res;
+    double target = td_weight * Sigmoid<double>(position_targets[index])
+                  + game_res_weight * game_res;
     double gradient = sigmoid - target;
     if (use_draw_margin) {
-      double PWin = 0.7 * Sigmoid<double>(position_targets[index] - draw_margin);
-      double PLoss = 0.7 * Sigmoid<double>(-position_targets[index] - draw_margin);
-      double PDraw = 0.7 - PWin - PLoss;
+      double PWin = td_weight * Sigmoid<double>(position_targets[index] - draw_margin);
+      double PLoss = td_weight * Sigmoid<double>(-position_targets[index] - draw_margin);
+      double PDraw = td_weight - PWin - PLoss;
       if (game_res == 1) {
-        PWin += 0.3;
+        PWin += game_res_weight;
       }
       else if (game_res == 0) {
-        PLoss += 0.3;
+        PLoss += game_res_weight;
       }
       else {
-        PDraw += 0.3;
+        PDraw += game_res_weight;
       }
       gradient = PWin  * (Sigmoid<double>(final_score - draw_margin) - 1)
                       + PLoss * (1 - Sigmoid<double>(-final_score - draw_margin))
@@ -1746,7 +1748,7 @@ void SGDVariantTDL() {
         std::cout << "+" << positions[index].get_num_made_moves() << std::flush;
       position_tries[index] = 0;
       search::set_print_info(false);
-      search::DepthSearch(positions[index], 7);
+      search::DepthSearch(positions[index], 6);
       search::set_print_info(true);
       if (test)
         std::cout << "+ " << std::flush;
@@ -1830,9 +1832,9 @@ void SGDVariantTDL() {
       EnforceConstraints(variables);
     }
     if (completed_iterations % 100 == 0) {
-      std::cout << "\r";
+      //std::cout << "\r";
       if (test) std::cout << "                 ";
-      std::cout << "completed " << completed_iterations << " iterations!"
+      std::cout << "\rcompleted " << completed_iterations << " iterations!"
           << " running means: ";
       r_mean.print();
       std::cout << "           " << std::flush;
@@ -1872,6 +1874,7 @@ void Train(bool from_scratch) {
   else {
     //SGDMarginVariantTrain<settings::kGMMk, SGDNormal>(false);
     SGDVariantRL<SGDAdam, false>();
+    //SGDVariantTDL<SGDAdam, false>();
   }
 }
 

@@ -77,6 +77,37 @@ inline HashType get_color_hash() {
 
 namespace {
 
+template<Color pawn_owner>
+inline bool clearly_drawn_pawn_ending(const BitBoard pawn_bb, const BitBoard defending_king_bb) {
+  Square defending_king = bitops::NumberOfTrailingZeros(defending_king_bb);
+  Square pawn = bitops::NumberOfTrailingZeros(pawn_bb);
+  if ((pawn_owner == kWhite && GetSquareY(pawn) >= GetSquareY(defending_king))
+      || (pawn_owner == kBlack && GetSquareY(pawn) <= GetSquareY(defending_king))) {
+    return false;
+  }
+  if (pawn_bb & bitops::rook_file) {
+    return std::abs(GetSquareX(pawn)-GetSquareX(defending_king)) <= 1;
+  }
+  if (GetSquareX(pawn)-GetSquareX(defending_king)) {
+    return false;
+  }
+  if (pawn_owner == kWhite) {
+    return GetSquareY(defending_king - pawn) <= 2 && GetSquareY(defending_king) < 7;
+  }
+  return GetSquareY(pawn - defending_king) <= 2 && GetSquareY(defending_king) > 0;
+}
+
+inline bool clearly_drawn_pawn_ending(const BitBoard pawn_bb, const BitBoard kings, const BitBoard w_pieces) {
+  if (w_pieces & pawn_bb) {
+    return clearly_drawn_pawn_ending<kWhite>(pawn_bb, kings & (~w_pieces));
+  }
+  return clearly_drawn_pawn_ending<kBlack>(pawn_bb, w_pieces & kings);
+}
+
+}
+
+namespace {
+
 const Score see_values[7] = { 100, 300, 300, 450, 900, 10000, 0 };
 
 enum MoveGenerationType {
@@ -1105,7 +1136,12 @@ bool Board::GivesCheck(const Move move) {
 }
 
 bool Board::IsDraw() const {
-  return (fifty_move_count >= 100) || InTwoFoldRepetition();
+  return (fifty_move_count >= 100) || InTwoFoldRepetition()
+      || (get_num_pieces() == 3 && ((get_piecetype_bitboard(kKnight) | get_piecetype_bitboard(kBishop))
+          || (get_piecetype_bitboard(kPawn) && clearly_drawn_pawn_ending(get_piecetype_bitboard(kPawn),
+                                                                         get_piecetype_bitboard(kKing),
+                                                                         get_color_bitboard(kWhite)))))
+      || get_num_pieces() == 2;
 }
 
 Board Board::copy() const {
