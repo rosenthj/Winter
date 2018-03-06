@@ -83,8 +83,39 @@ std::vector<Game> LoadGames(size_t max_games, std::string game_file) {
 }
 
 void SetGameToRandom(Game &game) {
-  int index = (rng() % (game.moves.size()-3)) + rng() % 2;
+  int index = 4 + (rng() % (game.moves.size()-7)) + rng() % 2;
   game.set_to_position_after(index);
+}
+
+void SaveBoardFens(std::string filename, std::vector<Board> boards) {
+  std::ofstream file(filename);
+  for (Board board : boards) {
+    std::vector<std::string> fen_tokens = board.GetFen();
+    file << fen_tokens[0];
+    for (int i = 1; i < fen_tokens.size(); i++) {
+      file << " " << fen_tokens[i];
+    }
+    file << std::endl;
+  }
+  std::cout << "Saved Board FENs to " << filename << std::endl;
+  file.close();
+}
+
+std::vector<Board> LoadBoardFens(std::string filename) {
+  std::vector<Board> boards;
+  std::ifstream file(filename);
+  std::string in;
+  while (std::getline(file, in)) {
+    std::vector<std::string> fen_tokens = parse::split(in, ' ');
+    boards.emplace_back();
+    boards.back().SetBoard(fen_tokens);
+    if (boards.size() % 10000 == 0) {
+      std::cout << "\rloaded " << boards.size() << " positions!" << std::flush;
+    }
+  }
+  std::cout << "\rfinished loading " << boards.size() << " positions!" << std::endl;
+  file.close();
+  return boards;
 }
 
 }
