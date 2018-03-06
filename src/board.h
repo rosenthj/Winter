@@ -54,7 +54,7 @@ public:
   void UnMake();
   void SetStartBoard();
   HashType get_hash() const {
-    return hash ^ (castling_rights | GetSquareBitBoard(en_passant));
+    return hash ^ (castling_rights | GetSquareBitBoard(en_passant + 8));
   }
   //This needs to be public for the evaluation function.
   //PieceBitboardSet get_piece_bitboards() const;

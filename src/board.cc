@@ -295,13 +295,15 @@ inline void AddPawnMoves(const BitBoard pawn_bb, const BitBoard empty,
     w_captures &= critical;
   }
   AddPawnMovesLoop<Quiescent, MoveGenType, PointOfView>(w_captures, d_west, moves, kCapture);
-  BitBoard ep_bitboard = GetSquareBitBoard(en_passant);
-  BitBoard ep_captures = (bitops::Dir<b_west>(ep_bitboard) | bitops::Dir<b_east>(ep_bitboard))
-                             &  pawn_bb;
-  while (ep_captures) {
-    const Square source = bitops::NumberOfTrailingZeros(ep_captures);
-    moves.emplace_back(GetMove(source, en_passant, kEnPassant));
-    bitops::PopLSB(ep_captures);
+  if (en_passant) {
+    BitBoard ep_bitboard = GetSquareBitBoard(en_passant);
+    BitBoard ep_captures = (bitops::Dir<b_west>(ep_bitboard) | bitops::Dir<b_east>(ep_bitboard))
+                               &  pawn_bb;
+    while (ep_captures) {
+      const Square source = bitops::NumberOfTrailingZeros(ep_captures);
+      moves.emplace_back(GetMove(source, en_passant, kEnPassant));
+      bitops::PopLSB(ep_captures);
+    }
   }
 }
 
@@ -389,6 +391,9 @@ std::vector<std::string> Board::GetFen() const {
           case GetPiece(kBlack, kKing): board_fen.append("k"); break;
         }
       }
+    }
+    if (empty_in_a_row) {
+      board_fen.append(std::to_string(empty_in_a_row));
     }
     if (row > 0) {
       board_fen.append("/");
@@ -593,7 +598,7 @@ void Board::Make(const Move move) {
   SaveCastlingRights(information, castling_rights);
   SaveFiftyMoveCount(information, fifty_move_count);
   //We default our ep square to a place the opponent will never be able to ep.
-  en_passant = 56 - (56 * get_turn());
+  en_passant = 0;
   fifty_move_count++;
   if (GetPieceType(pieces[GetMoveDestination(move)]) == kPawn
       || GetMoveType(move) == kCapture) {
@@ -1057,7 +1062,7 @@ bool Board::IsMoveLegal(const Move move) const {
   }
   switch (GetMoveType(move)) {
     case kEnPassant:
-      if (en_passant != GetMoveDestination(move) || GetPieceType(piece) != kPawn) {
+      if (!en_passant || en_passant != GetMoveDestination(move) || GetPieceType(piece) != kPawn) {
         return false;
       }
       return true;
