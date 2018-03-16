@@ -87,6 +87,46 @@ void SetGameToRandom(Game &game) {
   game.set_to_position_after(index);
 }
 
+void SetGamesToRandom(std::vector<Game> &games) {
+  std::cout << "Sampling Games!" << std::endl;
+  for (size_t i = 0; i < games.size(); i++) {
+    SetGameToRandom(games[i]);
+  }
+  std::cout << "Finished sampling!" << std::endl;
+}
+
+bool SetGameToRandomQuiescent(Game &game) {
+  int failed_attempts = 0;
+  if (game.moves.size() < 10) {
+    return false;
+  }
+  while (failed_attempts < 100) {
+    int index = (rng() % 2) + (rng() % (game.moves.size()-4));
+    if (GetMoveType(game.moves[index]) < kCapture
+        && GetMoveType(game.moves[index+1]) < kCapture) {
+        //&& GetMoveType(game.moves[index+2]) < kCapture) {
+        //&& GetMoveType(game.moves[index+3]) < kCapture) {
+      game.set_to_position_after(index);
+      if (!game.board.InCheck()) {
+        break;
+      }
+    }
+    failed_attempts++;
+  }
+  if (failed_attempts >= 100) {
+    return false;
+  }
+  return true;
+}
+
+void SetGamesToRandomQuiescent(std::vector<Game> &games) {
+  std::cout << "Sampling Games!" << std::endl;
+  for (size_t i = 0; i < games.size(); i++) {
+    SetGameToRandomQuiescent(games[i]);
+  }
+  std::cout << "Finished sampling!" << std::endl;
+}
+
 void SaveBoardFens(std::string filename, std::vector<Board> boards) {
   std::ofstream file(filename);
   for (Board board : boards) {

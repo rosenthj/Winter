@@ -54,10 +54,13 @@ struct Game{
 namespace data {
 
 std::vector<Game> LoadGames(size_t max_games = 1200000, std::string game_file = "data/CCRL.ucig");
-void SetGameToRandom(Game &game);
-
 void SaveBoardFens(std::string filename, std::vector<Board> boards);
 std::vector<Board> LoadBoardFens(std::string filename = "data/sample_evals.fen");
+
+void SetGameToRandom(Game &game);
+void SetGamesToRandom(std::vector<Game> &games);
+bool SetGameToRandomQuiescent(Game &game);
+void SetGamesToRandomQuiescent(std::vector<Game> &games);
 
 }
 
