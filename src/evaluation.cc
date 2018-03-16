@@ -1117,11 +1117,77 @@ enum LearningStyle {
   kSupervised, kTDL, kMixedLearning
 };
 
+template<LearningStyle learning_style>
+bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
+  if (learning_style == kSupervised) {
+    bool success = data::SetGameToRandomQuiescent(game);
+    if (!success) {
+      return false;
+    }
+    position.SetToSamePosition(game.board);
+    target = game.result;
+    if (position.get_turn() == kBlack) {
+      target = 1 - target;
+    }
+  }
+  else if (learning_style == kMixedLearning) {
+    const double game_res_weight = 0.3;
+    const double td_weight = 1 - game_res_weight;
+    Score score = 0, qscore = -1;
+    //std::cout << "-> " << index << std::flush;
+    int qsearch_attempts = 0;
+    while (score != qscore) {
+      data::SetGameToRandom(game);
+      if (game.board.InCheck() || game.board.IsDraw())
+        continue;
+      qsearch_attempts++;
+      if (qsearch_attempts == 20)
+        break;
+      score = ScoreBoard(game.board);
+      qscore = search::QSearch(game.board);
+    }
+    if (qsearch_attempts == 20)
+      return false;
+    //std::cout << " -> " << games[index].board.get_num_made_moves() << std::flush;
+    search::set_print_info(false);
+    search::DepthSearch(game.board, 4);
+    search::set_print_info(true);
+    //std::cout << "<- " << std::endl;
+    target = search::get_last_search_score() / eval_scaling;
+    double game_res = game.result;
+    if (game.board.get_turn() == kBlack) {
+      game_res = 1 - game_res;
+    }
+    target = td_weight * Sigmoid<double>(target)
+                            + game_res_weight * game_res;
+    position.SetToSamePosition(game.board);
+  }
+  else if (learning_style == kTDL) {
+    //Score score = 0, qscore = -1;
+    //int qsearch_attempts = 0;
+    data::SetGameToRandom(game);
+    position.SetToSamePosition(game.board);
+    search::set_print_info(false);
+    Move move = search::DepthSearch(position, 4);
+    search::set_print_info(true);
+    position.Make(move);
+    if (position.GetMoves<kNonQuiescent>().size() == 0) {
+      return false;
+    }
+    if (ScoreBoard(position) != search::SQSearch(position)) {
+      return false;
+    }
+    search::set_print_info(false);
+    search::DepthSearch(position, 6);
+    search::set_print_info(true);
+    target = Sigmoid<double>(search::get_last_search_score() / eval_scaling);
+  }
+  return true;
+}
+
 template<SGDVariantType sgd_variant, LearningStyle learning_style>
 void SGDTrain(bool from_scratch = false) {
   const int k = settings::kGMMk;
-  const double game_res_weight = 0.3;
-  const double td_weight = 1 - game_res_weight;
   double kMinNu = (1.0 / kMillion);
   const int max_position_tries = learning_style == kSupervised ? 5 : 2;
   const long step_size = learning_style == kSupervised ? (200 * kMillion) : (max_position_tries * 1200 * kThousand);
@@ -1149,9 +1215,8 @@ void SGDTrain(bool from_scratch = false) {
     }
   }
   std::vector<Game> games = data::LoadGames();
-  GMM<k, kPhaseVecLength> gmm;
   if (from_scratch && settings::kTrainGMMFromScratch) {
-    gmm = EMForGMM<k>(games);
+    GMM<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
     SaveGMM<k>(gmm, settings::kMixtureFile);
     gmm_main = gmm;
   }
@@ -1159,115 +1224,23 @@ void SGDTrain(bool from_scratch = false) {
     if (from_scratch && !settings::kTrainGMMFromScratch) {
       LoadMixtures();
     }
-    for (size_t m = 0; m < k; m++) {
-      for (size_t i = 0; i < kPhaseVecLength; i++) {
-        gmm.mixtures[m].mu[i]=  gmm_main.mixtures[m].mu[i];
-        for (size_t j = 0; j < kPhaseVecLength; j++) {
-          gmm.mixtures[m].sigma[i][j] = gmm_main.mixtures[m].sigma[i][j];
-        }
-      }
-      gmm.mixtures[m].set_sigma_inv();
-      gmm.weights[m] = gmm_main.weights[m];
-    }
   }
 
   std::vector<int8_t> position_tries(games.size(), max_position_tries);
   std::vector<double> position_targets(games.size(), 0);
   std::vector<Board> positions(games.size());
-  Vec<double, k> r_mean, prior;
-  for (int i = 0; i < k; i++) {
-    r_mean = 0.5;
-    prior = 0.5;
-  }
   while (optimizer->nu > kMinNu) {
     size_t index = rng() % games.size();
     if (position_tries[index] >= max_position_tries) {
-      if (learning_style == kMixedLearning) {
-        Score score = 0, qscore = -1;
-        //std::cout << "-> " << index << std::flush;
-        int qsearch_attempts = 0;
-        while (score != qscore) {
-          data::SetGameToRandom(games[index]);
-          if (games[index].board.InCheck() || games[index].board.IsDraw())
-            continue;
-          qsearch_attempts++;
-          if (qsearch_attempts == 20)
-            break;
-          score = ScoreBoard(games[index].board);
-          qscore = search::QSearch(games[index].board);
-        }
-        if (qsearch_attempts == 20)
-          continue;
-        position_tries[index] = 0;
-        //std::cout << " -> " << games[index].board.get_num_made_moves() << std::flush;
-        search::set_print_info(false);
-        search::DepthSearch(games[index].board, 4);
-        search::set_print_info(true);
-        //std::cout << "<- " << std::endl;
-        position_targets[index] = search::get_last_search_score() / eval_scaling;
-        Vec<double, k> probabilities = gmm.GetWeightedProbabilities(
-            GetBoardPhaseVec(games[index].board));
-        for (int i = 0; i < k; i++) {
-          r_mean[i] = 0.99995 * r_mean[i]
-                                       + 0.00005 * (position_targets[index] * probabilities[i]
-                                                                                            + r_mean[i] * (1 - probabilities[i]));
-        }
-        double game_res = games[index].result;
-        if (games[index].board.get_turn() == kBlack) {
-          game_res = 1 - game_res;
-        }
-        position_targets[index] = td_weight * Sigmoid<double>(position_targets[index])
-                                + game_res_weight * game_res;
-        for (int i = 0; i < k; i++) {
-          prior[i] = 0.99995 * prior[i]
-                                     + 0.00005 * (game_res * probabilities[i]
-                                                                           + prior[i] * (1 - probabilities[i]));
-        }
-        positions[index].SetToSamePosition(games[index].board);
+      bool success = SamplePositionAndTarget<learning_style>(
+          games[index], positions[index], position_targets[index]);
+      if (!success) {
+        continue;
       }
-      else if (learning_style == kTDL) {
-        //Score score = 0, qscore = -1;
-        //int qsearch_attempts = 0;
-        data::SetGameToRandom(games[index]);
-        positions[index].SetToSamePosition(games[index].board);
-        search::set_print_info(false);
-        Move move = search::DepthSearch(positions[index], 4);
-        search::set_print_info(true);
-        positions[index].Make(move);
-        if (positions[index].GetMoves<kNonQuiescent>().size() == 0) {
-          continue;
-        }
-        if (ScoreBoard(positions[index]) != search::SQSearch(positions[index])) {
-          continue;
-        }
-        position_tries[index] = 0;
-        search::set_print_info(false);
-        search::DepthSearch(positions[index], 6);
-        search::set_print_info(true);
-        position_targets[index] = Sigmoid<double>(search::get_last_search_score() / eval_scaling);
-        Vec<double, k> probabilities = gmm.GetWeightedProbabilities(
-            GetBoardPhaseVec(positions[index]));
-        for (int i = 0; i < k; i++) {
-          r_mean[i] = 0.99995 * r_mean[i]
-                                       + 0.00005 * (position_targets[index] * probabilities[i]
-                                       + r_mean[i] * (1 - probabilities[i]));
-        }
-      }
-      else {
-        bool success = data::SetGameToRandomQuiescent(games[index]);
-        if (!success) {
-          continue;
-        }
-        position_tries[index] = 0;
-        positions[index].SetToSamePosition(games[index].board);
-        position_targets[index] = games[index].result;
-        if (positions[index].get_turn() == kBlack) {
-          position_targets[index] = 1 - position_targets[index];
-        }
-      }
+      position_tries[index] = 0;
     }
     position_tries[index]++;
-    Vec<double, k> probabilities = gmm.GetWeightedProbabilities(
+    Vec<double, k> probabilities = gmm_main.GetWeightedProbabilities(
         GetBoardPhaseVec(positions[index]));
     if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
       if (optimizer->counter < 50 * kMillion) {
@@ -1292,7 +1265,7 @@ void SGDTrain(bool from_scratch = false) {
       }
     }
 
-    double probability_of_position = gmm.GetSampleProbability(
+    double probability_of_position = gmm_main.GetSampleProbability(
         GetBoardPhaseVec(positions[index]));
     if (probability_of_position == 0) {
       std::cout << "Error! Found impossible position!" << std::endl;
