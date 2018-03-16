@@ -68,8 +68,10 @@ const int kBishopPairIndex = kBaseValueIndex + 5;//No King
 const int kActivityBonusIndex = kBishopPairIndex + 1;
 const int kAbstractActivityIndex = kActivityBonusIndex + 5;//No King
 const int kPassedPawnBonusIndex = kAbstractActivityIndex + 5;//No king
+//const int kPassedPawnUnblocked = kPassedPawnBonusIndex + 6;
+//const int kRookBehindPasser = kPassedPawnUnblocked + 1;
 //const int kPassedPawnPushBonusIndex = kPassedPawnBonusIndex + 6;
-const int kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 6;
+const int kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 6;//kRookBehindPasser + 1;
 const int kTempoBonusIndex = kDoublePawnPenaltyIndex + 1;
 const int kDirectPawnShieldBonus = kTempoBonusIndex + 1;
 const int kKingVectorExposure = kDirectPawnShieldBonus + 1;
@@ -92,12 +94,13 @@ const int kNumFeatures = kUnprotectedPieces + 1;
 const std::array<FeatureInfo, 26> kFeatureInfos = {{
     FeatureInfo("King Piece Square Table", kKingPSTIndex),
     FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxScore),
-    FeatureInfo("Piece Base Value", kBaseValueIndex, 0, kMaxScore),
+    FeatureInfo("Piece Base Value", kBaseValueIndex, kMinScore, kMaxScore),
     FeatureInfo("Bishop Pair", kBishopPairIndex, 0, kMaxScore),
     FeatureInfo("Piece Activity Bonus", kActivityBonusIndex, 0, kMaxScore),
     FeatureInfo("Abstract Piece Activity Bonus", kAbstractActivityIndex, 0, kMaxScore),
     FeatureInfo("Passed Pawn Bonus", kPassedPawnBonusIndex, 0, kMaxScore),
-    //FeatureInfo("Passed Pawn Push Bonus", kPassedPawnPushBonusIndex),
+    //FeatureInfo("Passed Pawn Unblocked", kPassedPawnUnblocked),
+    //FeatureInfo("Rook Behind Passed Pawn Bonus", kRookBehindPasser, -5, kMaxScore),
     FeatureInfo("Double Pawn Penalty", kDoublePawnPenaltyIndex, kMinScore, 0),
     FeatureInfo("Tempo Bonus", kTempoBonusIndex, 0, kMaxScore),
     FeatureInfo("Direct Pawn Shield Bonus", kDirectPawnShieldBonus),
