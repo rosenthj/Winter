@@ -48,7 +48,7 @@ const int kNormalSearchMode = 0;
 const int kSamplingSearchMode = 1;
 const int kSamplingEvalMode = 2;
 int kNodeCountSampleAt = 1000;
-int kNodeCountSampleEvalAt = 400;
+int kNodeCountSampleEvalAt = 5000;
 const int kMaxDepthSampled = 3;
 
 Board sampled_board;
@@ -1255,7 +1255,7 @@ Score QSearch(Board &board) {
 }
 
 Board SampleEval(Board board) {
-  end_time = now() + Milliseconds(1000000);
+  end_time = now() + Milliseconds(5000);
   evaluation_nodes = 0;
   RootSearch<kSamplingEvalMode>(board, 128);
   return sampled_board;
@@ -1484,6 +1484,29 @@ void EvaluateCaptureMoveValue(int n) {
     }
     std::cout << std::endl << std::endl;
   }
+}
+
+std::vector<Board> GenerateEvalSampleSet(std::string filename) {
+  std::vector<Board> boards;
+  std::vector<Game> games = data::LoadGames(1200000, settings::kCCRLPath);
+  boards.reserve(games.size());
+  HashType last_hash = 42;
+  set_print_info(false);
+  for (int i = 0; i < games.size(); i++) {
+    data::SetGameToRandom(games[i]);
+    Board board = SampleEval(games[i].board);
+    if (board.get_hash() != last_hash) {
+      last_hash = board.get_hash();
+      boards.emplace_back(board);
+      if (boards.size() % 1000 == 0) {
+        std::cout << "\rsampled " << boards.size() << " positions!" << std::flush;
+      }
+    }
+  }
+  std::cout << "\rsampled " << boards.size() << " positions!" << std::endl;
+  set_print_info(true);
+  data::SaveBoardFens(filename, boards);
+  return boards;
 }
 
 }

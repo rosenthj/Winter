@@ -49,6 +49,8 @@ void set_print_info(bool print_info);
 void end_search();
 Board get_sampled_board();
 
+std::vector<Board> GenerateEvalSampleSet(std::string filename);
+
 void clear_killers();
 
 void CreateSearchParamDataset(bool from_scratch);
