@@ -38,6 +38,8 @@
 namespace evaluation {
 
 Score ScoreBoard(const Board &board);
+template<typename T>
+T ScoreBoard(const Board &board);
 void PrintFeatureValues(const Board &board);
 void SaveGMMVariables();
 void LoadGMMVariables();
