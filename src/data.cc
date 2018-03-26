@@ -70,6 +70,7 @@ std::vector<Game> LoadGames(size_t max_games, std::string game_file) {
     }
     else {
       std::cout << "read error: result!" << std::endl;
+      game.result = 0.5;
     }
     games.emplace_back(game);
     if (games.size() % 10000 == 0) {

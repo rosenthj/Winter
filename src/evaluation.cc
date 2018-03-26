@@ -1315,6 +1315,10 @@ void CheckVariableInfluence() {
   std::vector<double> set_influence_squared_sum(kFeatureInfos.size());
   Vec<double, settings::kGMMk> mixture_proportions;
   std::vector<Game> games = data::LoadGames();
+  if (games.size() == 0) {
+    std::cout << "No games found!" << std::endl;
+    return;
+  }
   long num_positions = 0;
   for (long index = 0; index < games.size(); index++) {
     games[index].set_to_position_after(0);

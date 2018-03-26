@@ -28,6 +28,7 @@
 #include "bit_operations.h"
 #include "settings.h"
 #include <immintrin.h>
+#include <cassert>
 #include <array>
 
 
@@ -261,15 +262,19 @@ const std::array<BitBoard, 64> initKingSafetyMap() {
     for (Square a = 0; a < 64; a++) {
       Square pos = a;
       if (GetSquareX(a) == 0) {
+        assert(pos <= 56);
         pos++;
       }
       else if (GetSquareX(a) == 7) {
+        assert(pos >= 7);
         pos--;
       }
       if (GetSquareY(a) == 0) {
+        assert(pos < 8);
         pos += 8;
       }
       else if (GetSquareY(a) == 7) {
+        assert(pos >= 56);
         pos -= 8;
       }
       king_map[a] = kingAttackMap[pos] | GetSquareBitBoard(pos);
