@@ -157,6 +157,41 @@ EvalStats GetEvalStats(std::vector<Game> &games) {
   return GetEvalStats(eval_positions);
 }
 
+const Array2d<BitBoard, 2, 64> get_king_pawn_coverage() {
+  const BitBoard second_row = parse::StringToBitBoard("a2") | parse::StringToBitBoard("b2")
+                        | parse::StringToBitBoard("c2") | parse::StringToBitBoard("d2")
+                        | parse::StringToBitBoard("e2") | parse::StringToBitBoard("f2")
+                        | parse::StringToBitBoard("g2") | parse::StringToBitBoard("h2");
+
+  const BitBoard seventh_row = second_row << (8 * 5);
+  Array2d<BitBoard, 2, 64> coverage;
+  for (Square square = 0; square < 64; square++) {
+    BitBoard bb = GetSquareBitBoard(square);
+    int i = GetSquareY(square);
+    while (i) {
+      bb |= bitops::E(bb) | bitops::W(bb);
+      i--;
+    }
+    bb = bitops::FillNorthEast(bb, ~0) | bitops::FillNorthWest(bb, ~0);
+    bb = bitops::FillNorth(bb, ~0);
+    bb &= ~seventh_row | bitops::N(bb);
+    coverage[kWhite][square] = bb;
+    bb = GetSquareBitBoard(square);
+    i = 7 - GetSquareY(square);
+    while (i) {
+      bb |= bitops::E(bb) | bitops::W(bb);
+      i--;
+    }
+    bb = bitops::FillSouthEast(bb, ~0) | bitops::FillSouthWest(bb, ~0);
+    bb = bitops::FillSouth(bb, ~0);
+    bb &= ~second_row | bitops::S(bb);
+    coverage[kBlack][square] = bb;
+  }
+  return coverage;
+}
+
+const Array2d<BitBoard, 2, 64> king_pawn_coverage = get_king_pawn_coverage();
+
 }
 
 namespace evaluation {
@@ -298,8 +333,7 @@ T ScoreBoard(const Board &board) {
   BitBoard safe_checking_squares[2][4] = { {0, 0, 0, 0}, {0, 0, 0, 0} };
   for (Color color = kWhite; color <= kBlack; color++) {
     Color not_color = color ^ 0x1;
-    Square enemy_king = bitops::NumberOfTrailingZeros(
-        board.get_piece_bitboard(not_color,kKing));
+    Square enemy_king = king_squares[not_color];
     checking_squares[color][kKnight - kKnight] = magic::GetAttackMap<kKnight>(enemy_king, all_pieces);
     checking_squares[color][kBishop - kKnight] = magic::GetAttackMap<kBishop>(enemy_king, all_pieces);
     checking_squares[color][kRook - kKnight] = magic::GetAttackMap<kRook>(enemy_king, all_pieces);
@@ -317,17 +351,23 @@ T ScoreBoard(const Board &board) {
 
   for (Color color = kWhite; color <= kBlack; color++) {
     Color not_color = color ^ 0x1;
-    Square enemy_king_square = bitops::NumberOfTrailingZeros(
-        board.get_piece_bitboard(not_color,kKing));
+    Square enemy_king_square = king_squares[not_color];
     BitBoard enemy_king_zone = magic::GetKingArea(enemy_king_square);
     int king_attack_count = 0;
 
-    BitBoard passed_pawns = passed[color];
-    while (passed_pawns) {
-      Square pawn_square = bitops::NumberOfTrailingZeros(passed_pawns);
+    BitBoard covered_passed_pawns = passed[color] & king_pawn_coverage[not_color][enemy_king_square];
+    while (covered_passed_pawns) {
+      Square pawn_square = bitops::NumberOfTrailingZeros(covered_passed_pawns);
       int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
       AddFeature<T>(score, color, kPassedPawnBonusIndex + pawn_rank, 1);
-      bitops::PopLSB(passed_pawns);
+      bitops::PopLSB(covered_passed_pawns);
+    }
+    BitBoard uncovered_passed = passed[color] & ~king_pawn_coverage[not_color][enemy_king_square];
+    while (uncovered_passed) {
+      Square pawn_square = bitops::NumberOfTrailingZeros(uncovered_passed);
+      int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
+      AddFeature<T>(score, color, kPassedPawnBonusIndex + 6 + pawn_rank, 1);
+      bitops::PopLSB(uncovered_passed);
     }
 
     BitBoard targets = covered_once[color] & (c_pieces[not_color] ^ pawn_bb[not_color]);
