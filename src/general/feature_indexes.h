@@ -69,7 +69,6 @@ const int kActivityBonusIndex = kBishopPairIndex + 1;
 const int kAbstractActivityIndex = kActivityBonusIndex + 5;//No King
 const int kPassedPawnBonusIndex = kAbstractActivityIndex + 5;//No king
 //const int kPassedPawnUnblocked = kPassedPawnBonusIndex + 6;
-//const int kRookBehindPasser = kPassedPawnUnblocked + 1;
 //const int kPassedPawnPushBonusIndex = kPassedPawnBonusIndex + 6;
 const int kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 12;//kRookBehindPasser + 1;
 const int kTempoBonusIndex = kDoublePawnPenaltyIndex + 1;
@@ -89,9 +88,11 @@ const int kQueenMobility = kRookMobility + 15;
 const int kSafeChecks = kQueenMobility + 28;
 const int kUnSafeChecks = kSafeChecks + 1;
 const int kUnprotectedPieces = kUnSafeChecks + 1;
-const int kNumFeatures = kUnprotectedPieces + 1;
+const int kBishopVsKingPosition = kUnprotectedPieces + 1;
+const int kNumFeatures = kBishopVsKingPosition + 36;
 
-const std::array<FeatureInfo, 26> kFeatureInfos = {{
+
+const std::array<FeatureInfo, 27> kFeatureInfos = {{
     FeatureInfo("King Piece Square Table", kKingPSTIndex),
     FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxScore),
     FeatureInfo("Piece Base Value", kBaseValueIndex, kMinScore, kMaxScore),
@@ -119,6 +120,7 @@ const std::array<FeatureInfo, 26> kFeatureInfos = {{
     FeatureInfo("Safe Checks", kSafeChecks),
     FeatureInfo("Unsafe Checks", kUnSafeChecks),
     FeatureInfo("Unprotected Pieces", kUnprotectedPieces),
+    FeatureInfo("Bishop's Position Relative To King", kBishopVsKingPosition),
     FeatureInfo("Num Features Placeholder", kNumFeatures)
 }};
 

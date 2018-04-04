@@ -192,6 +192,24 @@ const Array2d<BitBoard, 2, 64> get_king_pawn_coverage() {
 
 const Array2d<BitBoard, 2, 64> king_pawn_coverage = get_king_pawn_coverage();
 
+const std::array<int, 15*15> relative_king_map = {
+    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0,
+    1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
+    2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
+    3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
+    4, 11, 17, 22, 26, 27, 28, 29, 28, 27, 26, 22, 17, 11, 4,
+    5, 12, 18, 23, 27, 30, 31, 32, 31, 30, 27, 23, 18, 12, 5,
+    6, 13, 19, 24, 28, 31, 33, 34, 33, 31, 28, 24, 19, 13, 6,
+    7, 14, 20, 25, 29, 32, 34, 35, 34, 32, 29, 25, 20, 14, 7,
+    6, 13, 19, 24, 28, 31, 33, 34, 33, 31, 28, 24, 19, 13, 6,
+    5, 12, 18, 23, 27, 30, 31, 32, 31, 30, 27, 23, 18, 12, 5,
+    4, 11, 17, 22, 26, 27, 28, 29, 28, 27, 26, 22, 17, 11, 4,
+    3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
+    2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
+    1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
+    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
+};
+
 }
 
 namespace evaluation {
@@ -302,20 +320,21 @@ T ScoreBoard(const Board &board) {
   s_filled |= bitops::SW(s_filled) | bitops::SE(s_filled);
   n_filled |= bitops::NW(n_filled) | bitops::NE(n_filled);
   BitBoard passed[2] = {
-      board.get_piece_bitboard(kWhite, kPawn) & (~s_filled),
-      board.get_piece_bitboard(kBlack, kPawn) & (~n_filled)
+      pawn_bb[kWhite] & (~(s_filled | bitops::S(bitops::FillSouth(pawn_bb[kWhite], ~0)))),
+      pawn_bb[kBlack] & (~(n_filled | bitops::N(bitops::FillNorth(pawn_bb[kBlack], ~0))))
   };
 
 //  AddFeature<T>(score, kWhite, kPassedPawnUnblocked,
 //                bitops::PopCount(passed[kWhite] & bitops::S(empty))
 //              - bitops::PopCount(passed[kBlack] & bitops::N(empty)));
 
-//  BitBoard behind_passed = bitops::FillSouth(passed[kWhite] & bitops::S(empty), empty | all_major_pieces)
-//                         | bitops::FillNorth(passed[kBlack] & bitops::N(empty), empty | all_major_pieces);
-//  behind_passed &= board.get_piecetype_bitboard(kRook);
+//  BitBoard behind_passed[2] = {bitops::FillSouth(passed[kWhite], ~(pawn_bb[kWhite] | pawn_bb[kBlack])),
+//                            bitops::FillNorth(passed[kBlack], ~(pawn_bb[kWhite] | pawn_bb[kBlack]))};
+//  behind_passed[kWhite] &= board.get_piecetype_bitboard(kRook);
+//  behind_passed[kBlack] &= board.get_piecetype_bitboard(kRook);
 //  AddFeature<T>(score, kWhite, kRookBehindPasser,
-//                bitops::PopCount(c_pieces[kWhite] & behind_passed)
-//                -bitops::PopCount(c_pieces[kBlack] & behind_passed));
+//                bitops::PopCount(c_pieces[kWhite] & behind_passed[kWhite])
+//                -bitops::PopCount(c_pieces[kBlack] & behind_passed[kBlack]));
 
   const BitBoard controlled[2] = {
       board.PlayerBitBoardControl(kWhite, all_pieces),
@@ -381,6 +400,9 @@ T ScoreBoard(const Board &board) {
       AddFeature<T>(score, color, kKnightPSTIndex + kPSTindex[piece_square], 1);
       AddFeature<T>(score, color, kKingAttackDistance + kKnight - 1,
           magic::GetSquareDistance(piece_square, king_squares[not_color]));
+//      int relative_x = GetSquareX(piece_square) - GetSquareX(enemy_king_square) + 7;
+//      int relative_y = GetSquareY(piece_square) - GetSquareY(enemy_king_square) + 7;
+//      AddFeature<T>(score, color, kKnightVsKingPosition + relative_king_map[relative_x + 15 * relative_y], 1);
       BitBoard attack_map = magic::GetAttackMap<kKnight>(piece_square, all_pieces);
       unsafe_checks[color] += bitops::PopCount(attack_map
                                                & checking_squares[color][kKnight-kKnight]);
@@ -402,8 +424,11 @@ T ScoreBoard(const Board &board) {
     BitBoard abstract_targets = 0;
     while (pieces) {
       Square piece_square = bitops::NumberOfTrailingZeros(pieces);
-      AddFeature<T>(score, color, kKingAttackDistance + kBishop - 1,
-          magic::GetSquareDistance(piece_square, king_squares[not_color]));
+//      AddFeature<T>(score, color, kKingAttackDistance + kBishop - 1,
+//          magic::GetSquareDistance(piece_square, king_squares[not_color]));
+      int relative_x = GetSquareX(piece_square) - GetSquareX(enemy_king_square) + 7;
+      int relative_y = GetSquareY(piece_square) - GetSquareY(enemy_king_square) + 7;
+      AddFeature<T>(score, color, kBishopVsKingPosition + relative_king_map[relative_x + 15 * relative_y], 1);
       BitBoard attack_map = magic::GetAttackMap<kBishop>(piece_square, all_pieces)
           & (~covered_once[not_color] | (c_pieces[not_color] ^ pawn_bb[not_color]));
       unsafe_checks[color] += bitops::PopCount(attack_map
@@ -1290,8 +1315,13 @@ void SGDTrain(bool from_scratch = false) {
       }
       else {
         double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
+        double sum = 0;
         for (int i = 0; i < k; i++) {
-          probabilities[i] = p * probabilities[i] + (1-p) * (1.0 / k);
+          probabilities[i] = std::pow(probabilities[i], p);
+          sum += probabilities[i];
+        }
+        for (int i = 0; i < k; i++) {
+          probabilities[i] /= sum;
         }
       }
     }

@@ -40,14 +40,16 @@ constexpr bool kExperimental = false;
 
 const std::string engine_name = "Winter";
 const std::string engine_version =
-                   kExperimental ? "Beta 20171204 Experimental"
-                                 : "Beta 0.1.1";
+                   kExperimental ? "Beta 20180404 Experimental"
+                                 : "Beta 0.2 RC";
 const std::string engine_author = "Jonathan Rosenthal";
 
 const bool kUseGMM = true;
 const int kGMMk = kExperimental ? 4 : 4;
+
 const std::string kParamPath = "params/";
 const std::string kSampledMixtureFile = kParamPath + "v2Smixtures" + std::to_string(kGMMk) + ".txt";
+
 const std::string kMixtureFile =
                  kExperimental ? kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt"
                                : kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt";
@@ -78,7 +80,5 @@ const Depth R = 2;
 const Depth kMaxDepth = 128;
 
 }
-
-
 
 #endif /* GENERAL_SETTINGS_H_ */

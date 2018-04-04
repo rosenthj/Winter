@@ -1,132 +1,174 @@
-0 0 0 0 <-- King Piece Square Table
-269 168 222 125 <-- King Piece Square Table
-201 196 74 8 <-- King Piece Square Table
-109 219 15 -73 <-- King Piece Square Table
-451 269 390 180 <-- King Piece Square Table
-435 341 318 4 <-- King Piece Square Table
-406 368 126 -202 <-- King Piece Square Table
-544 411 404 -113 <-- King Piece Square Table
-553 452 196 -65 <-- King Piece Square Table
-647 488 -126 5 <-- King Piece Square Table
-1934 2016 1285 0 <-- Knight Piece Square Table
-2343 2178 1736 290 <-- Knight Piece Square Table
-2350 2182 1695 249 <-- Knight Piece Square Table
-2430 2266 1768 312 <-- Knight Piece Square Table
-2364 2267 1690 129 <-- Knight Piece Square Table
-2334 2217 1667 260 <-- Knight Piece Square Table
-2421 2229 1781 342 <-- Knight Piece Square Table
-2405 2232 1748 361 <-- Knight Piece Square Table
-2452 2302 1776 382 <-- Knight Piece Square Table
-2405 2303 1717 342 <-- Knight Piece Square Table
-461 625 320 134 <-- Piece Base Value
+-348 -313 -168 30 <-- King Piece Square Table
+-90 -134 47 127 <-- King Piece Square Table
+-176 -99 -100 11 <-- King Piece Square Table
+-269 -70 -181 -77 <-- King Piece Square Table
+93 -33 207 195 <-- King Piece Square Table
+72 42 133 -51 <-- King Piece Square Table
+39 71 -61 -259 <-- King Piece Square Table
+189 135 220 -152 <-- King Piece Square Table
+201 173 57 -101 <-- King Piece Square Table
+320 225 -169 303 <-- King Piece Square Table
+2068 2061 1346 1 <-- Knight Piece Square Table
+2541 2227 1790 361 <-- Knight Piece Square Table
+2550 2221 1761 316 <-- Knight Piece Square Table
+2639 2307 1848 392 <-- Knight Piece Square Table
+2572 2289 1753 223 <-- Knight Piece Square Table
+2548 2252 1741 337 <-- Knight Piece Square Table
+2630 2268 1850 413 <-- Knight Piece Square Table
+2624 2271 1816 433 <-- Knight Piece Square Table
+2650 2342 1846 464 <-- Knight Piece Square Table
+2616 2345 1795 421 <-- Knight Piece Square Table
+496 640 334 142 <-- Piece Base Value
 0 0 0 0 <-- Piece Base Value
-2021 2312 1415 361 <-- Piece Base Value
-3061 3639 0 0 <-- Piece Base Value
-5987 0 0 0 <-- Piece Base Value
-272 291 84 1 <-- Bishop Pair
-38 40 4 4 <-- Piece Activity Bonus
+0 0 0 0 <-- Piece Base Value
+0 0 0 0 <-- Piece Base Value
+0 0 0 0 <-- Piece Base Value
+273 286 80 13 <-- Bishop Pair
+35 36 1 2 <-- Piece Activity Bonus
 0 0 0 0 <-- Piece Activity Bonus
 0 0 0 0 <-- Piece Activity Bonus
 0 0 0 0 <-- Piece Activity Bonus
 0 0 0 0 <-- Piece Activity Bonus
 0 0 0 0 <-- Abstract Piece Activity Bonus
 0 0 0 0 <-- Abstract Piece Activity Bonus
-47 36 36 16 <-- Abstract Piece Activity Bonus
-36 29 27 12 <-- Abstract Piece Activity Bonus
+59 41 41 18 <-- Abstract Piece Activity Bonus
+41 34 30 13 <-- Abstract Piece Activity Bonus
 0 0 0 0 <-- Abstract Piece Activity Bonus
-1 0 0 2 <-- Passed Pawn Bonus
-0 0 0 1 <-- Passed Pawn Bonus
-13 90 1 0 <-- Passed Pawn Bonus
-266 256 191 146 <-- Passed Pawn Bonus
-649 487 515 396 <-- Passed Pawn Bonus
-1163 844 763 801 <-- Passed Pawn Bonus
--52 -116 -37 -33 <-- Double Pawn Penalty
-27 5 28 37 <-- Tempo Bonus
+29 0 1 1 <-- Passed Pawn Bonus
+0 0 0 0 <-- Passed Pawn Bonus
+17 107 0 0 <-- Passed Pawn Bonus
+235 227 177 112 <-- Passed Pawn Bonus
+507 313 460 316 <-- Passed Pawn Bonus
+141 145 2 283 <-- Passed Pawn Bonus
+0 0 0 0 <-- Passed Pawn Bonus
+0 0 0 0 <-- Passed Pawn Bonus
+70 105 46 22 <-- Passed Pawn Bonus
+374 369 262 105 <-- Passed Pawn Bonus
+777 674 602 390 <-- Passed Pawn Bonus
+1369 1043 1017 753 <-- Passed Pawn Bonus
+-41 -106 -36 -41 <-- Double Pawn Penalty
+28 4 28 34 <-- Tempo Bonus
 0 0 0 0 <-- Direct Pawn Shield Bonus
--24 5 -19 5 <-- King Vector Exposure
--32 -9 -31 -5 <-- King Vector Exposure
-84 90 66 68 <-- Knight Outpost
+-29 2 -19 4 <-- King Vector Exposure
+-37 -11 -32 -5 <-- King Vector Exposure
+97 94 68 76 <-- Knight Outpost
 0 0 0 0 <-- Castling Right
-309 217 271 161 <-- Pawn Attack
-230 144 188 126 <-- Minor Attack
+331 213 287 163 <-- Pawn Attack
+260 142 189 135 <-- Minor Attack
 0 0 0 0 <-- King Defence Distance
 0 0 0 0 <-- King Defence Distance
 0 0 0 0 <-- King Defence Distance
 0 0 0 0 <-- King Defence Distance
--91 -1 -85 -18 <-- King Attack Distance
--17 0 -12 0 <-- King Attack Distance
--82 -23 -60 -23 <-- King Attack Distance
--57 -89 -20 -1 <-- King Attack Distance
-17 6 11 11 <-- King Attack Danger
-18 6 5 0 <-- King Attack Danger
-25 14 27 20 <-- King Attack Danger
-10 64 1 1 <-- King Attack Danger
--699 -774 -512 -222 <-- Safe Knight Square Count
--310 -329 -243 -109 <-- Safe Knight Square Count
--154 -167 -134 -56 <-- Safe Knight Square Count
--73 -77 -59 -26 <-- Safe Knight Square Count
+-89 -1 -83 -13 <-- King Attack Distance
+0 0 0 0 <-- King Attack Distance
+-93 -24 -60 -15 <-- King Attack Distance
+-67 -101 -20 0 <-- King Attack Distance
+22 4 11 14 <-- King Attack Danger
+13 8 4 0 <-- King Attack Danger
+23 15 28 18 <-- King Attack Danger
+8 5 1 1 <-- King Attack Danger
+-708 -802 -539 -236 <-- Safe Knight Square Count
+-323 -345 -245 -121 <-- Safe Knight Square Count
+-165 -178 -138 -59 <-- Safe Knight Square Count
+-71 -79 -60 -24 <-- Safe Knight Square Count
 0 0 0 0 <-- Safe Knight Square Count
-41 42 31 11 <-- Safe Knight Square Count
-63 45 75 14 <-- Safe Knight Square Count
-68 44 82 16 <-- Safe Knight Square Count
-69 44 109 15 <-- Safe Knight Square Count
--681 -594 -489 -220 <-- Bishop Mobility
--485 -431 -377 -206 <-- Bishop Mobility
--350 -292 -252 -128 <-- Bishop Mobility
--232 -195 -173 -93 <-- Bishop Mobility
--145 -113 -96 -40 <-- Bishop Mobility
--64 -44 -39 -17 <-- Bishop Mobility
-0 0 0 0 <-- Bishop Mobility
-59 55 28 15 <-- Bishop Mobility
-91 69 54 19 <-- Bishop Mobility
-140 107 104 19 <-- Bishop Mobility
-190 108 169 65 <-- Bishop Mobility
-238 120 286 116 <-- Bishop Mobility
-312 122 395 158 <-- Bishop Mobility
-356 122 555 159 <-- Bishop Mobility
--713 -442 -322 -201 <-- Rook Mobility
--454 -329 -252 -164 <-- Rook Mobility
--349 -269 -207 -139 <-- Rook Mobility
--252 -210 -156 -102 <-- Rook Mobility
--166 -132 -127 -87 <-- Rook Mobility
--61 -61 -58 -37 <-- Rook Mobility
-0 0 0 0 <-- Rook Mobility
-77 57 71 39 <-- Rook Mobility
-153 116 126 81 <-- Rook Mobility
-232 164 173 136 <-- Rook Mobility
-275 207 217 161 <-- Rook Mobility
-329 237 260 289 <-- Rook Mobility
-388 265 321 333 <-- Rook Mobility
-433 280 370 392 <-- Rook Mobility
-504 284 440 400 <-- Rook Mobility
--611 -17 -356 -181 <-- Queen Mobility
--496 -17 -243 -135 <-- Queen Mobility
--387 -17 -218 -119 <-- Queen Mobility
--328 -17 -188 -93 <-- Queen Mobility
--249 -16 -147 -91 <-- Queen Mobility
--214 -16 -119 -66 <-- Queen Mobility
--164 -16 -92 -45 <-- Queen Mobility
--116 -16 -67 -34 <-- Queen Mobility
--89 -16 -40 -20 <-- Queen Mobility
--57 -13 -21 -4 <-- Queen Mobility
-0 0 0 0 <-- Queen Mobility
-1 0 12 0 <-- Queen Mobility
-21 1 30 2 <-- Queen Mobility
-30 1 31 2 <-- Queen Mobility
-42 2 37 2 <-- Queen Mobility
-42 8 38 2 <-- Queen Mobility
-42 9 39 3 <-- Queen Mobility
-42 9 43 3 <-- Queen Mobility
-42 10 50 3 <-- Queen Mobility
-41 10 50 5 <-- Queen Mobility
-41 11 50 14 <-- Queen Mobility
-41 18 81 20 <-- Queen Mobility
-41 18 83 20 <-- Queen Mobility
-41 18 88 20 <-- Queen Mobility
-41 18 97 20 <-- Queen Mobility
-42 19 97 21 <-- Queen Mobility
-46 19 106 21 <-- Queen Mobility
-78 20 111 22 <-- Queen Mobility
-101 79 123 17 <-- Safe Checks
-45 48 37 13 <-- Unsafe Checks
--69 -22 -73 -34 <-- Unprotected Pieces
+41 42 39 5 <-- Safe Knight Square Count
+69 44 68 7 <-- Safe Knight Square Count
+81 44 84 11 <-- Safe Knight Square Count
+82 44 99 12 <-- Safe Knight Square Count
+1312 1654 915 238 <-- Bishop Mobility
+1564 1839 1025 259 <-- Bishop Mobility
+1728 1965 1156 341 <-- Bishop Mobility
+1853 2084 1247 379 <-- Bishop Mobility
+1964 2169 1323 430 <-- Bishop Mobility
+2050 2244 1385 461 <-- Bishop Mobility
+2132 2293 1443 485 <-- Bishop Mobility
+2207 2349 1479 513 <-- Bishop Mobility
+2263 2379 1528 517 <-- Bishop Mobility
+2323 2422 1568 536 <-- Bishop Mobility
+2401 2431 1670 650 <-- Bishop Mobility
+2455 2447 1855 665 <-- Bishop Mobility
+2539 2451 1974 858 <-- Bishop Mobility
+2563 2463 2250 946 <-- Bishop Mobility
+2601 3166 2704 2875 <-- Rook Mobility
+2922 3292 2781 2934 <-- Rook Mobility
+3061 3370 2831 2950 <-- Rook Mobility
+3148 3442 2888 3002 <-- Rook Mobility
+3245 3518 2921 3011 <-- Rook Mobility
+3361 3597 2998 3063 <-- Rook Mobility
+3433 3663 3061 3111 <-- Rook Mobility
+3517 3719 3125 3159 <-- Rook Mobility
+3607 3784 3183 3209 <-- Rook Mobility
+3683 3842 3238 3240 <-- Rook Mobility
+3746 3879 3284 3291 <-- Rook Mobility
+3803 3917 3323 3373 <-- Rook Mobility
+3868 3949 3382 3473 <-- Rook Mobility
+3944 3971 3485 3504 <-- Rook Mobility
+4020 3972 3610 3573 <-- Rook Mobility
+6120 6018 6088 6177 <-- Queen Mobility
+6247 6151 6106 6226 <-- Queen Mobility
+6263 6152 6166 6242 <-- Queen Mobility
+6391 6156 6192 6276 <-- Queen Mobility
+6424 6156 6226 6289 <-- Queen Mobility
+6490 6206 6260 6315 <-- Queen Mobility
+6532 6236 6288 6338 <-- Queen Mobility
+6576 6280 6317 6353 <-- Queen Mobility
+6613 6305 6343 6367 <-- Queen Mobility
+6643 6364 6358 6389 <-- Queen Mobility
+6667 6391 6385 6393 <-- Queen Mobility
+6696 6470 6398 6394 <-- Queen Mobility
+6714 6489 6412 6399 <-- Queen Mobility
+6731 6489 6414 6400 <-- Queen Mobility
+6747 6493 6418 6402 <-- Queen Mobility
+6753 6495 6419 6404 <-- Queen Mobility
+6754 6496 6426 6407 <-- Queen Mobility
+6754 6497 6428 6407 <-- Queen Mobility
+6754 6497 6437 6411 <-- Queen Mobility
+6755 6498 6451 6421 <-- Queen Mobility
+6755 6499 6466 6448 <-- Queen Mobility
+6755 6499 6473 6457 <-- Queen Mobility
+6755 6499 6508 6458 <-- Queen Mobility
+6755 6500 6514 6461 <-- Queen Mobility
+6755 6500 6556 6465 <-- Queen Mobility
+6755 6500 6557 6466 <-- Queen Mobility
+6783 6500 6558 6471 <-- Queen Mobility
+6828 6500 6558 6472 <-- Queen Mobility
+105 74 126 13 <-- Safe Checks
+38 41 34 9 <-- Unsafe Checks
+-78 -17 -77 -37 <-- Unprotected Pieces
+168 229 5 323 <-- Bishop's Position Relative To King
+133 44 72 12 <-- Bishop's Position Relative To King
+89 62 27 82 <-- Bishop's Position Relative To King
+11 50 12 -19 <-- Bishop's Position Relative To King
+28 112 -19 -48 <-- Bishop's Position Relative To King
+7 125 -57 -48 <-- Bishop's Position Relative To King
+38 83 -29 -53 <-- Bishop's Position Relative To King
+-44 85 -71 -135 <-- Bishop's Position Relative To King
+118 150 96 104 <-- Bishop's Position Relative To King
+39 47 21 -17 <-- Bishop's Position Relative To King
+59 61 48 92 <-- Bishop's Position Relative To King
+-40 41 -71 -102 <-- Bishop's Position Relative To King
+16 69 13 -9 <-- Bishop's Position Relative To King
+-12 43 -40 -75 <-- Bishop's Position Relative To King
+30 69 27 -9 <-- Bishop's Position Relative To King
+133 116 94 110 <-- Bishop's Position Relative To King
+9 39 3 -28 <-- Bishop's Position Relative To King
+10 37 22 24 <-- Bishop's Position Relative To King
+-48 24 -44 -18 <-- Bishop's Position Relative To King
+32 57 8 -23 <-- Bishop's Position Relative To King
+-11 24 -48 -56 <-- Bishop's Position Relative To King
+67 53 25 22 <-- Bishop's Position Relative To King
+-20 16 -9 -26 <-- Bishop's Position Relative To King
+2 38 -13 -27 <-- Bishop's Position Relative To King
+-55 8 -94 -103 <-- Bishop's Position Relative To King
+75 58 22 28 <-- Bishop's Position Relative To King
+112 82 59 -55 <-- Bishop's Position Relative To King
+7 -5 4 -131 <-- Bishop's Position Relative To King
+65 19 53 37 <-- Bishop's Position Relative To King
+4 0 -13 -87 <-- Bishop's Position Relative To King
+681 199 547 437 <-- Bishop's Position Relative To King
+127 -12 240 144 <-- Bishop's Position Relative To King
+218 13 373 271 <-- Bishop's Position Relative To King
+0 0 0 0 <-- Bishop's Position Relative To King
+43 -57 34 -58 <-- Bishop's Position Relative To King
+0 0 0 0 <-- Bishop's Position Relative To King
