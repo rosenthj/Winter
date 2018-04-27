@@ -493,7 +493,7 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   // Whose turn is it?
   turn = kWhite;
   if(fen_tokens[1] == "b"){
-    turn = kBlack;
+    SwapTurn();
   }
 
   if (fen_tokens.size() == 2){
