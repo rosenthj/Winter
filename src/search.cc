@@ -680,6 +680,57 @@ Score RootSearchLoop(Board &board, Score alpha, Score beta, Depth current_depth,
 }
 
 template<int Mode>
+inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
+  if (current_depth == 1) {
+    score = RootSearchLoop<Mode>(board, kMinScore, kMaxScore, current_depth, moves);
+  }
+  else {
+    Score delta = 500;
+    Score alpha = std::max(score-delta, kMinScore);
+    Score beta = std::min(score+delta, kMaxScore);
+    SortMovesML(moves, board, moves[0]);
+    score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
+    while (!finished() && (score <= alpha || score >= beta)) {
+      if (score <= alpha) {
+        alpha = std::max(alpha-delta, kMinScore);
+      }
+      else if (score >= beta) {
+        beta = std::min(beta+delta, kMaxScore);
+      }
+      score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
+      delta *= 2;
+    }
+  }
+  return score;
+}
+
+template<int Mode>
+inline Score MTDf(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
+  if (current_depth == 1) {
+    score = QuiescentSearch<Mode>(board, kMinScore, kMaxScore);
+  }
+  Score min_bound = kMinScore - 1;
+  Score max_bound = kMaxScore;
+  Score beta = score + 1;
+  while (min_bound < max_bound) {
+    score = AlphaBeta<kNW, Mode>(board, beta-1, beta, current_depth);
+    if (score < beta) {
+      max_bound = score;
+      beta = score;
+    }
+    else {
+      min_bound = score;
+      beta = score + 1;
+      table::Entry entry = table::GetEntry(board.get_hash());
+      if (entry.best_move != kNullMove && table::ValidateHash(entry, board.get_hash())) {
+        SortMovesML(moves, board, entry.best_move);
+      }
+    }
+  }
+  return score;
+}
+
+template<int Mode>
 Move RootSearch(Board &board, Depth depth){
   // Measure complete search time
   const Time begin = now();
@@ -698,26 +749,10 @@ Move RootSearch(Board &board, Depth depth){
     if(finished()) {
       break;
     }
-    if (current_depth == 1) {
-      score = RootSearchLoop<Mode>(board, kMinScore, kMaxScore, current_depth, moves);
-    }
-    else {
-      Score delta = 500;
-      Score alpha = std::max(score-delta, kMinScore);
-      Score beta = std::min(score+delta, kMaxScore);
-      SortMovesML(moves, board, moves[0]);
-      score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
-      while (!finished() && (score <= alpha || score >= beta)) {
-        if (score <= alpha) {
-          alpha = std::max(alpha-delta, kMinScore);
-        }
-        else if (score >= beta) {
-          beta = std::min(beta+delta, kMaxScore);
-        }
-        score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
-        delta *= 2;
-      }
-    }
+
+    score = PVS<Mode>(board, current_depth, score, moves);
+    //score = MTDf<Mode>(board, current_depth, score, moves);
+
     if(!finished()){
       last_search_score = score;
       std::vector<Move> pv;
