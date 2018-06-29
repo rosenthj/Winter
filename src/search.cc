@@ -429,9 +429,18 @@ inline Score get_futility_margin(Depth depth, Score score) {
   return kFutileMargin[depth];
 }
 
+Score sample_node_and_return_alpha(const Board &board, const Depth depth,
+                                   const int node_type, const Score alpha) {
+  sampled_board.SetToSamePosition(board);
+  sampled_depth = depth;
+  sampled_node_type = node_type;
+  sampled_alpha = alpha;
+  end_search_time();
+  return alpha;
+}
+
 template<int NodeType, int Mode>
 Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
-  assert(board.get_num_made_moves() > 0);
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
@@ -475,12 +484,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
                 && depth <= kMaxDepthSampled) {
         sample_nodes++;
         if (sample_nodes == kNodeCountSampleAt) {
-          sampled_board.SetToSamePosition(board);
-          sampled_depth = depth;
-          sampled_node_type = NodeType;
-          sampled_alpha = alpha;
-          end_search_time();
-          return alpha;
+          return sample_node_and_return_alpha(board, depth, NodeType, alpha);
         }
       }
       //const Score intercept[3] = { 475, 550, 616 };
@@ -527,12 +531,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
   if (Mode == kSamplingSearchMode && NodeType == kNW && depth <= kMaxDepthSampled) {
     sample_nodes++;
     if (sample_nodes == kNodeCountSampleAt) {
-      sampled_board.SetToSamePosition(board);
-      sampled_depth = depth;
-      sampled_node_type = NodeType;
-      sampled_alpha = alpha;
-      end_search_time();
-      return alpha;
+      return sample_node_and_return_alpha(board, depth, NodeType, alpha);
     }
   }
 
@@ -705,6 +704,67 @@ inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Mov
 }
 
 template<int Mode>
+inline Score sMTDf(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
+  if (current_depth == 1) {
+    score = QuiescentSearch<Mode>(board, kMinScore, kMaxScore);
+  }
+  Score min_bound = kMinScore - 1;
+  Score max_bound = kMaxScore;
+  std::vector<Score> move_max_bounds(moves.size(), max_bound);
+  assert(moves.size() == move_max_bounds.size());
+  Score beta = score + 1;
+  int d = 1;
+  bool lower_found = false, upper_found = false, binary_search = false;
+  while (min_bound < max_bound && !finished()) {
+    for (int i = 0; i < moves.size(); i++) {
+      if (move_max_bounds[i] < beta) {
+        //continue;
+      }
+      board.Make(moves[i]);
+      score = -AlphaBeta<kNW, Mode>(board, -beta, -(beta-1), current_depth-1);
+      board.UnMake();
+      if (finished()) {
+        return min_bound;
+      }
+      if (score < beta) {
+        move_max_bounds[i] = beta - 1;
+      }
+      else {
+        //std::cout << "Broke beta " << beta << " on move[" << i << "]: " << parse::MoveToString(moves[i]) << std::endl;
+        table::SaveEntry(board, moves[i], beta, kLowerBound, current_depth);
+        auto it = moves.rbegin() + moves.size() - i - 1;
+        std::rotate(it, it + 1, moves.rend());
+        auto itb = move_max_bounds.rbegin() + moves.size() - i - 1;
+        std::rotate(itb, itb + 1, move_max_bounds.rend());
+        break;
+      }
+    }
+    if (score < beta) {
+      max_bound = score;
+      upper_found = true;
+      binary_search = lower_found && upper_found;
+      if (!binary_search) {
+        Score alpha = std::max(score - d, min_bound);
+        beta = alpha + 1;
+      }
+    }
+    else {
+      min_bound = score;
+      lower_found = true;
+      binary_search = lower_found && upper_found;
+      if (!binary_search) {
+        beta = std::min(score + d, max_bound);
+      }
+    }
+    if (binary_search) {
+      beta = (min_bound + max_bound + 1) / 2;
+    }
+    d *= 2;
+  }
+  return min_bound;
+}
+
+template<int Mode>
 inline Score MTDf(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
   if (current_depth == 1) {
     score = QuiescentSearch<Mode>(board, kMinScore, kMaxScore);
@@ -712,22 +772,51 @@ inline Score MTDf(Board &board, Depth current_depth, Score score, std::vector<Mo
   Score min_bound = kMinScore - 1;
   Score max_bound = kMaxScore;
   Score beta = score + 1;
-  while (min_bound < max_bound) {
+  table::Entry best_entry;
+  Move best_move = kNullMove;
+  int d = 1;
+  bool lower_found = false, upper_found = false, binary_search = false;
+  while (min_bound < max_bound && !finished()) {
     score = AlphaBeta<kNW, Mode>(board, beta-1, beta, current_depth);
+    if (finished()) {
+      return min_bound;
+    }
     if (score < beta) {
+      //std::cout << "broke alpha " << (beta - 1) << std::endl;
       max_bound = score;
-      beta = score;
+      upper_found = true;
+      binary_search = lower_found && upper_found;
+      if (!binary_search) {
+        Score alpha = std::max(score - d, min_bound);
+        beta = alpha + 1;
+      }
+      d *= 2;
     }
     else {
+      //std::cout << "Broke beta " << beta << std::endl;
       min_bound = score;
-      beta = score + 1;
+      lower_found = true;
+      binary_search = lower_found && upper_found;
+      if (!binary_search) {
+        beta = std::min(score + d, max_bound);
+      }
       table::Entry entry = table::GetEntry(board.get_hash());
-      if (entry.best_move != kNullMove && table::ValidateHash(entry, board.get_hash())) {
+      if (entry.best_move != kNullMove && table::ValidateHash(entry, board.get_hash())
+          && entry.depth == current_depth) {
         SortMovesML(moves, board, entry.best_move);
+        best_entry = entry;
+        best_move = entry.best_move;
+      }
+      else if (best_move != kNullMove) {
+        table::SaveEntry(board, entry.best_move, entry.get_score(board), entry.bound, entry.depth);
       }
     }
+    if (binary_search) {
+      beta = (min_bound + max_bound + 1) / 2;
+    }
+    d *= 2;
   }
-  return score;
+  return min_bound;
 }
 
 template<int Mode>
@@ -752,6 +841,8 @@ Move RootSearch(Board &board, Depth depth){
 
     score = PVS<Mode>(board, current_depth, score, moves);
     //score = MTDf<Mode>(board, current_depth, score, moves);
+    //score = sMTDf<Mode>(board, current_depth, score, moves);
+
 
     if(!finished()){
       last_search_score = score;
