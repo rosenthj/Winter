@@ -44,6 +44,7 @@ class Board{
 public:
   //Board constructor initializes the board to the starting position.
   Board();
+  Board(std::string fen);
   //Sets the board to position defined by the argument FEN code.
   //Previous state information is reset.
   void SetBoard(std::vector<std::string> fen_tokens);

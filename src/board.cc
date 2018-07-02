@@ -506,6 +506,10 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   }
 }
 
+Board::Board(std::string fen) {
+  this->SetBoard(parse::split(fen, ' '));
+}
+
 void Board::evaluate_castling_rights(std::string fen_code){
   castling_rights = 0;
 
