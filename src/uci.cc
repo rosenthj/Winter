@@ -289,6 +289,9 @@ void Loop() {
     else if (Equals(command, "perft_test")) {
       benchmark::PerftSuite();
     }
+    else if (Equals(command, "symmetry_test")) {
+      benchmark::SymmetrySuite();
+    }
     else if (Equals(command, "benchmark")) {
       int ms = atoi(tokens[index++].c_str());
       benchmark::EntropyLossTimedSuite(Milliseconds(ms));

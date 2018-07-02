@@ -28,6 +28,7 @@
 #include "data.h"
 #include "search.h"
 #include "transposition.h"
+#include "evaluation.h"
 #include "general/parse.h"
 #include "general/settings.h"
 #include "benchmark.h"
@@ -77,9 +78,43 @@ struct PerftTestSet {
   }
 };
 
+struct SymmetryTest {
+  Board board1, board2;
+  std::vector<std::pair<Depth, long> > depth_results;
+  SymmetryTest(std::string line) {
+    std::vector<std::string> tokens = parse::split(line, '|');
+    board1.SetBoard(parse::split(tokens[0], ' '));
+    board2.SetBoard(parse::split(tokens[1], ' '));
+  }
+};
+
 }
 
 namespace benchmark {
+
+void SymmetrySuite() {
+  std::vector<SymmetryTest> test_sets;
+  std::string line;
+  std::ifstream file("./tests/symmetry.test");
+  while(std::getline(file, line)) {
+    test_sets.emplace_back(line);
+  }
+  //Time start = now();
+  long test_sets_passed = 0;
+  for (SymmetryTest test_set : test_sets) {
+    if (evaluation::ScoreBoard(test_set.board1)
+        == evaluation::ScoreBoard(test_set.board2))
+      test_sets_passed++;
+  }
+  if (test_sets_passed == test_sets.size()) {
+    std::cout << "\033[32mPassed " << test_sets_passed << "/" << test_sets.size()
+        << " test sets\033[0m"<< std::endl;
+  }
+  else {
+    std::cout << "\033[31mPassed " << test_sets_passed << "/" << test_sets.size()
+        << " test sets\033[0m"<< std::endl;
+  }
+}
 
 void PerftSuite() {
   std::vector<PerftTestSet> test_sets;
