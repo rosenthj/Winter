@@ -71,6 +71,10 @@ public:
     const { return color_bitboards[color]; }
   BitBoard get_piecetype_bitboard(const PieceType piece_type)
     const { return pt_bitboards[piece_type]; }
+  bool has_non_pawn_material(Color color) const {
+    return (pt_bitboards[kKnight] | pt_bitboards[kBishop] |
+        pt_bitboards[kRook] | pt_bitboards[kQueen]) & color_bitboards[color];
+  }
   int8_t get_num_pieces() const {
     return bitops::PopCount(color_bitboards[kWhite] | color_bitboards[kBlack]);
   }
