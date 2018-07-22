@@ -56,6 +56,28 @@ Score sampled_alpha;
 int sampled_node_type;
 Depth sampled_depth;
 
+const Array2d<Depth, 64, 64> init_lmr_reductions() {
+  Array2d<Depth, 64, 64> lmr_reductions;
+  for (int i = 0; i < 64; i++) {
+    for (int j = 0; j < 64; j++) {
+      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.8);
+      lmr_reductions[i][j] = std::min(lmr_reductions[i][j], i);
+    }
+  }
+  return lmr_reductions;
+}
+
+const Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions();
+
+template<int NodeType>
+const Depth get_lmr_reduction(const Depth depth, const int move_number) {
+  assert(depth > 0);
+  if (NodeType == kPV) {
+    return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, 63)] / 2;
+  }
+  return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, 63)];
+}
+
 const Vec<Score, 4> init_futility_margins() {
   Vec<Score, 4> kFutilityMargins;
   if (false) {
@@ -99,7 +121,7 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
 }
 
 std::mt19937_64 rng;
-size_t max_ply = 0;
+size_t max_ply = 0, min_ply = 0;
 long nodes = 0;
 long sample_nodes = 0;
 long evaluation_nodes = 0;
@@ -274,7 +296,8 @@ inline bool is_mate_score(const Score score) {
 
 inline bool is_null_move_allowed(const Board &board, const Depth depth) {
   return settings::kUseNullMoves && depth > 1
-      && board.get_phase() > 1 * piece_phases[kQueen];// && !board.InCheck();
+      && board.has_non_pawn_material(board.get_turn());
+      //&& board.get_phase() > 1 * piece_phases[kQueen];// && !board.InCheck();
 }
 
 //This tested negative, may revisit in the future.
@@ -394,9 +417,11 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   }
   if (table::ValidateHash(entry,board.get_hash())) {
     SortMoves<kQuiescent>(moves, board, entry.best_move);
+    //SortMovesML(moves, board, entry.best_move);
   }
   else {
     SortMoves<kQuiescent>(moves, board, 0);
+    //SortMovesML(moves, board, 0);
   }
 
   for (Move move : moves) {
@@ -417,7 +442,7 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
 }
 
 inline Score get_futility_margin(Depth depth, Score score) {
-  if (false && settings::kExperimental) {
+  if (false) {
     depth--;
 
     const Score intercept[3] = { 113, 204, 706 };
@@ -439,8 +464,24 @@ Score sample_node_and_return_alpha(const Board &board, const Depth depth,
   return alpha;
 }
 
+inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
+                            Depth depth, int move_number, int expected_node,
+                            bookkeeping::Trigger trigger) {
+  if (settings::bookkeeping_active) {
+    bookkeeping::InfoContainer info;
+    info.NodeType = NodeType;
+    info.depth = depth;
+    info.expected_node = expected_node;
+    info.min_ply = min_ply;
+    info.move_number = move_number;
+    info.tt_entry = tt_entry;
+    info.trigger = trigger;
+    bookkeeping::log_info(board, info);
+  }
+}
+
 template<int NodeType, int Mode>
-Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
+Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected_node = 1) {
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
@@ -503,8 +544,9 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
     }
     if (static_eval >= beta && is_null_move_allowed(board, depth)) {
       board.Make(kNullMove);
+      const Depth R = 3 + depth / 5;
       Score score = -AlphaBeta<kNW, Mode>(board, -beta, -alpha,
-                                    depth - 1 - settings::R);
+                                    depth - R, (expected_node & (~0x1)) + 2);
       board.UnMake();
       if (score >= beta) {
         return beta;
@@ -569,11 +611,16 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
     }
     Move move = moves[i];
     Depth reduction = 0;
-    if (NodeType == kNW && !in_check && depth >= 3 && i >= 4
-        && GetMoveType(move) <= kDoublePawnMove
+//    if (NodeType == kNW && !in_check && depth >= 3 && i >= 4
+//        && GetMoveType(move) <= kDoublePawnMove
+//        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+//                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
+//      reduction = (i >= 8) ? 2 : 1;
+//    }
+    if (!in_check && GetMoveType(move) <= kDoublePawnMove
         && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                       & GetSquareBitBoard(GetMoveDestination(move)))) {
-      reduction = (i >= 8) ? 2 : 1;
+      reduction = get_lmr_reduction<NodeType>(depth, i);
     }
     assert(reduction < depth);
     if (NodeType == kNW && settings::kUseScoreBasedPruning
@@ -585,19 +632,13 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
     }
     board.Make(move);
     Score score;
-    if (NodeType == kNW) {
-      score = -AlphaBeta<kNW, Mode>(board, -beta, -alpha, depth - 1 - reduction);
-      if (reduction > 0 && score >= beta) {
-        score = -AlphaBeta<kNW, Mode>(board, -beta, -alpha, depth - 1);
-      }
-    }
-    else if (i == 0) {
-      score = -AlphaBeta<kPV, Mode>(board, -beta, -alpha, depth - 1);
+    if (i == 0) {
+      score = -AlphaBeta<NodeType, Mode>(board, -beta, -alpha, depth - 1, expected_node ^ 0x1);
     }
     else {
-      score = -AlphaBeta<kNW, Mode>(board, -(alpha+1), -alpha, depth - 1);
-      if (score >= (alpha+1)) {
-        score = -AlphaBeta<kPV, Mode>(board, -beta, -alpha, depth - 1);
+      score = -AlphaBeta<kNW, Mode>(board, -(alpha+1), -alpha, depth - 1 - reduction, 1);
+      if (score > alpha && (NodeType == kPV || reduction > 0)) {
+        score = -AlphaBeta<NodeType, Mode>(board, -beta, -alpha, depth - 1, 0);
       }
     }
     board.UnMake();
@@ -605,9 +646,13 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
       return alpha;
     }
     if (score >= beta) {
-      if (NodeType == kPV) {
-        bookkeeping::Inc<0>(i);
+      if (!in_check && GetMoveType(move) <= kDoublePawnMove
+              && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+                                            & GetSquareBitBoard(GetMoveDestination(move)))) {
+        bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
+                        bookkeeping::Trigger::kFailHigh);
       }
+
       table::SaveEntry(board, move, score, kLowerBound, depth);
       if (GetMoveType(move) < kCapture) {
         int num_made_moves = board.get_num_made_moves();
@@ -619,12 +664,27 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth) {
       return beta;
     }
     if (score > alpha) {
-      if (NodeType == kPV) {
-        bookkeeping::Inc<0>(i);
+      if (!in_check && GetMoveType(move) <= kDoublePawnMove
+              && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+                                            & GetSquareBitBoard(GetMoveDestination(move)))) {
+      bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
+                      bookkeeping::Trigger::kImproveAlpha);
       }
       alpha = score;
       best_local_move = move;
     }
+    else {
+      if (!in_check && GetMoveType(move) <= kDoublePawnMove
+              && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+                                            & GetSquareBitBoard(GetMoveDestination(move)))) {
+      bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
+                      bookkeeping::Trigger::kLessEqualAlpha);
+      }
+    }
+  }
+  if (!in_check) {
+  bookkeeping_log(NodeType, board, tt_entry, depth, moves.size(), expected_node,
+                  bookkeeping::Trigger::kReturnAlpha);
   }
   if (alpha > original_alpha) {
     // We should save any best move which has improved alpha.
@@ -824,6 +884,7 @@ Move RootSearch(Board &board, Depth depth){
   // Measure complete search time
   const Time begin = now();
   max_ply = board.get_num_made_moves();
+  min_ply = board.get_num_made_moves();
   Score score = 0;
   nodes = 0;
   depth = std::min(depth, settings::kMaxDepth);
