@@ -29,6 +29,7 @@
 #include "evaluation.h"
 #include "general/settings.h"
 #include "general/types.h"
+#include "general/bookkeeping.h"
 #include "board.h"
 #include "search.h"
 #include "transposition.h"
@@ -285,6 +286,15 @@ void Loop() {
     }
     else if (Equals(command, "train_params")) {
       evaluation::Train(false);
+    }
+    else if (Equals(command, "bookkeeping_reset")) {
+      bookkeeping::reset_counters();
+    }
+    else if (Equals(command, "bookkeeping_absolute")) {
+      bookkeeping::print_counters();
+    }
+    else if (Equals(command, "bookkeeping_relative")) {
+      bookkeeping::print_relative_counters();
     }
     else if (Equals(command, "perft_test")) {
       benchmark::PerftSuite();

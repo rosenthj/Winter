@@ -30,35 +30,182 @@
 
 namespace {
 
-std::vector<int> NWD1NodeRequirements(128, 0);
-int max_node_requirement = 0;
+const int kPV = 0;
+const int kNW = 1;
+
+template<int num>
+struct Counter {
+  std::vector<Counter<num-1> > vec;
+  Counter<num-1>& operator[](std::size_t idx) {
+    while(vec.size() <= idx) {
+      vec.emplace_back();
+    }
+    return vec[idx];
+  }
+  const size_t size() {
+    return vec.size();
+  }
+  void clear() {
+    for (Counter<num-1> counter: vec) {
+      counter.clear();
+    }
+    vec.clear();
+  }
+  double sum() {
+    double sum = 0;
+    for (Counter<num-1> counter: vec) {
+      sum += counter.sum();
+    }
+    return sum;
+  }
+};
+
+template<>
+struct Counter<1> {
+  std::vector<double> vec;
+  double& operator[](std::size_t idx) {
+    while(vec.size() <= idx) {
+      vec.emplace_back();
+    }
+    return vec[idx];
+  }
+  const size_t size() {
+    return vec.size();
+  }
+  void clear() {
+    vec.clear();
+  }
+  double sum() {
+    double sum = 0;
+    for (double counter: vec) {
+      sum += counter;
+    }
+    return sum;
+  }
+};
+
+template<bool relative>
+void PrintCounter(Counter<2> counter, std::ostream &out = std::cout) {
+  for (int i = 0; i < counter.size(); i++) {
+    out << "Counter " << i << ": ";
+    double sum = 1;
+    if (relative) {
+      sum = counter[i].sum();
+    }
+    if (sum > 0) {
+      for (int j = 0; j < counter[i].size(); j++) {
+        if (j != 0) {
+          out << ", ";
+        }
+        out << j << ":" << (counter[i][j] / sum);
+      }
+    }
+    out << std::endl;
+  }
+}
+
+void PrintCounterBinary(Counter<2> counter, std::ostream &out = std::cout) {
+  for (int i = 0; i < std::min((int)counter.size(), 16); i++) {
+    out << "Counter " << i << ": ";
+
+    for (int j = 0; j < counter[i].size(); j += 2) {
+      if (j != 0) {
+        out << ", ";
+      }
+      double sum = counter[i][j] + counter[i][j+1];
+      out << (j/2) << ":" << (counter[i][j] / sum);
+    }
+    out << std::endl;
+  }
+}
 
 }
 
 namespace bookkeeping {
+Counter<2> counters;
+Counter<2> improve_alpha_counter;
+Counter<4> fh_nw_counter;
+Counter<2> current_counter;
 
-void IncrementNWD1NodesToFailHigh(int num_searched_nodes) {
-  max_node_requirement = std::max(num_searched_nodes, max_node_requirement);
-  NWD1NodeRequirements[num_searched_nodes] += 1;
+void inc_counter(int counter, int index) {
+  counters[counter][index]++;
 }
 
-void PrintNWD1NodeRequirements() {
-  double total = 0, avg = 0;
-  for (int i = 0; i <= max_node_requirement; i++) {
-    total += NWD1NodeRequirements[i];
-    avg += i * NWD1NodeRequirements[i];
+/*void inc_counter_old(int counter, int index) {
+  while (counters.size() <= counter) {
+    counters.emplace_back();
   }
-  for (int i = 0; i <= max_node_requirement; i++) {
-    std::cout << i << ":" << (NWD1NodeRequirements[i] / total) << " ";
+  while (counters[counter].size() <= index) {
+    counters[counter].emplace_back(0);
   }
-  std::cout << "\nAverage wasted nodes:" << (avg / total) << std::endl;
+  counters[counter][index]++;
+}*/
+
+template<bool relative>
+void print_counters() {
+  std::cout << "Generic Counters" << std::endl;
+  PrintCounter<relative>(counters);
+  std::cout << "\nPV Alpha Improvements by Tree Depth and Move Number" << std::endl;
+  PrintCounterBinary(improve_alpha_counter);
+  std::cout << "\nNW Fail High Expected High Without TT Entry by Tree Depth and Move Number" << std::endl;
+  PrintCounterBinary(fh_nw_counter[0][1]);
+  std::cout << "\nNW Fail High Expected Low Without TT Entry by Tree Depth and Move Number" << std::endl;
+  PrintCounterBinary(fh_nw_counter[0][0]);
+  std::cout << "\nNW Fail High Expected High With TT Entry by Tree Depth and Move Number" << std::endl;
+  PrintCounterBinary(fh_nw_counter[1][1]);
+  std::cout << "\nNW Fail High Expected Low With TT Entry by Tree Depth and Move Number" << std::endl;
+  PrintCounterBinary(fh_nw_counter[1][0]);
+  std::cout << "\nCurrent LMR Conditions Counter" << std::endl;
+  PrintCounterBinary(current_counter);
 }
 
-void ResetNWD1NodeRequirements() {
-  for (int i = 0; i <= max_node_requirement; i++) {
-    NWD1NodeRequirements[i] = 0;
+void print_counters() {
+  print_counters<false>();
+}
+
+void print_relative_counters() {
+  print_counters<true>();
+}
+
+void reset_counters() {
+  counters.clear();
+  improve_alpha_counter.clear();
+  fh_nw_counter.clear();
+}
+
+void log_info(const Board &board, const InfoContainer &info) {
+  if (info.trigger == Trigger::kFailHigh) {
+    if (info.NodeType == kPV) {
+      improve_alpha_counter[info.depth][info.move_number * 2]++;
+    }
+    else if (info.tt_entry != kNullMove) {
+      fh_nw_counter[1][info.expected_node][info.depth][info.move_number * 2]++;
+      current_counter[info.depth][info.move_number * 2]++;
+    }
+    else {
+      fh_nw_counter[0][info.expected_node][info.depth][info.move_number * 2]++;
+      current_counter[info.depth][info.move_number * 2]++;
+    }
   }
-  max_node_requirement = 0;
+
+  if (info.trigger == Trigger::kImproveAlpha) {
+    assert(info.NodeType == kPV);
+    improve_alpha_counter[info.depth][info.move_number * 2]++;
+  }
+
+  if (info.trigger == Trigger::kLessEqualAlpha) {
+    if (info.NodeType == kPV) {
+      improve_alpha_counter[info.depth][info.move_number * 2 + 1]++;
+    }
+    else {
+      fh_nw_counter[info.tt_entry != kNullMove][info.expected_node][info.depth][info.move_number * 2 + 1]++;
+      current_counter[info.depth][info.move_number * 2 + 1]++;
+    }
+  }
+
+  if (info.trigger == Trigger::kReturnAlpha && info.NodeType == kNW && info.expected_node < 2) {
+
+  }
 }
 
 }

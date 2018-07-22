@@ -28,21 +28,38 @@
 #define SRC_GENERAL_BOOKKEEPING_H_
 
 #include "settings.h"
+#include "../board.h"
+#include <iostream>
+#include <vector>
 
 namespace bookkeeping {
 
-void IncrementNWD1NodesToFailHigh(int num_searched_nodes);
-void PrintNWD1NodeRequirements();
-void ResetNWD1NodeRequirements();
+enum Trigger {
+  kFailHigh, kImproveAlpha, kLessEqualAlpha, kReturnAlpha
+};
 
-template<int counter_idx>
-inline void Inc(int arg = -1) {
+struct InfoContainer {
+  int NodeType;
+  Move tt_entry;
+  Depth depth;
+  Depth min_ply;
+  int move_number;
+  int expected_node;
+  Trigger trigger;
+};
+
+void inc_counter(int counter, int index);
+void print_counters();
+void print_relative_counters();
+void reset_counters();
+
+inline void Inc(int counter, int index) {
   if (settings::bookkeeping_active) {
-    if (counter_idx == 0) {
-      return IncrementNWD1NodesToFailHigh(arg);
-    }
+    inc_counter(counter, index);
   }
 }
+
+void log_info(const Board &board, const InfoContainer &info);
 
 }
 
