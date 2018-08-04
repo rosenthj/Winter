@@ -40,7 +40,7 @@ constexpr bool kExperimental = false;
 
 const std::string engine_name = "Winter";
 const std::string engine_version =
-                   kExperimental ? "Beta 20180404 Experimental"
+                   kExperimental ? "Beta 180723 Experimental"
                                  : "Beta 0.2 RC";
 const std::string engine_author = "Jonathan Rosenthal";
 

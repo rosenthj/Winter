@@ -496,7 +496,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
 
   table::Entry entry = table::GetEntry(board.get_hash());
   bool valid_entry = table::ValidateHash(entry,board.get_hash());
-  if (valid_entry
+  if (NodeType != kPV && valid_entry
       && sufficient_bounds(board, entry, alpha, beta, depth) ) {
     return entry.get_score(board);
   }
@@ -520,7 +520,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       static_eval = evaluation::ScoreBoard(board);
     }
 
-    if (NodeType == kNW && depth <= 3) {
+    if (NodeType == kNW && depth <= 5) {
       if (false && Mode == kSamplingSearchMode && static_eval > beta
                 && depth <= kMaxDepthSampled) {
         sample_nodes++;
@@ -528,15 +528,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
           return sample_node_and_return_alpha(board, depth, NodeType, alpha);
         }
       }
-      //const Score intercept[3] = { 475, 550, 616 };
-      //const double w_abs_score[3] = { 0.33, 0.7, 0.68 };
-      //const double w_score[3] = { 0, -0.32, -0.30 };
-      const Score intercept[3] = { 106, 257, 288 };
-      const double w_abs_score[3] = { 0.169, 0.199, 0.216 };
-      const double w_score[3] = { -0.015, -0.05, -0.06 };
-      Score margin = std::round(intercept[depth - 1] +
-                                static_eval * w_score[depth - 1] +
-                                std::abs(static_eval) * w_abs_score[depth - 1]);
+      Score margin = 330 * depth;
       if (settings::kUseScoreBasedPruning && static_eval > beta + margin
           && board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
@@ -667,7 +659,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       if (!in_check && GetMoveType(move) <= kDoublePawnMove
               && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                             & GetSquareBitBoard(GetMoveDestination(move)))) {
-      bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
+        bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
                       bookkeeping::Trigger::kImproveAlpha);
       }
       alpha = score;
@@ -677,13 +669,13 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       if (!in_check && GetMoveType(move) <= kDoublePawnMove
               && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                             & GetSquareBitBoard(GetMoveDestination(move)))) {
-      bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
+        bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
                       bookkeeping::Trigger::kLessEqualAlpha);
       }
     }
   }
   if (!in_check) {
-  bookkeeping_log(NodeType, board, tt_entry, depth, moves.size(), expected_node,
+    bookkeeping_log(NodeType, board, tt_entry, depth, moves.size(), expected_node,
                   bookkeeping::Trigger::kReturnAlpha);
   }
   if (alpha > original_alpha) {
@@ -751,9 +743,15 @@ inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Mov
     score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
     while (!finished() && (score <= alpha || score >= beta)) {
       if (score <= alpha) {
+        if (!is_mate_score(alpha) && !is_mate_score(beta)) {
+          beta = (alpha + 3 * beta) / 4;
+        }
         alpha = std::max(alpha-delta, kMinScore);
       }
       else if (score >= beta) {
+        if (!is_mate_score(alpha) && !is_mate_score(beta)) {
+          alpha = (3 * alpha + beta) / 4;
+        }
         beta = std::min(beta+delta, kMaxScore);
       }
       score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
