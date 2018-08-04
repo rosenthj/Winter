@@ -3,7 +3,7 @@ CC=g++
 #CC=clang++
 CFLAGS=-c -DNDEBUG -Ofast -flto -g3 -Wall -Wno-sign-compare -m64 -march=native -std=c++11 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-flto -Wall
-SOURCES=$(wildcard src/general/*.cc src/*.cc)
+SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE:=Winter
 EXPERIMENT:= WinterExp
@@ -28,10 +28,13 @@ $(EXECUTABLE): $(OBJECTS)
 .cc.o:
 	$(CC) $(CFLAGS) $< -o $@
 
-clean: clean-src clean-general
+clean: clean-src clean-general clean-learning
 
 clean-src:
 	rm -rf src/*.o
 	
 clean-general:
 	rm -rf src/general/*.o
+	
+clean-learning:
+	rm -rf src/learning/*.o
