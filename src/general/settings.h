@@ -41,7 +41,7 @@ constexpr bool kExperimental = false;
 const std::string engine_name = "Winter";
 const std::string engine_version =
                    kExperimental ? "Beta 180723 Experimental"
-                                 : "Beta 0.2 RC";
+                                 : "0.2";
 const std::string engine_author = "Jonathan Rosenthal";
 
 const bool kUseGMM = true;

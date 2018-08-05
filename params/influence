@@ -1,132 +1,174 @@
-0 <-- King Piece Square Table
-13236.7 <-- King Piece Square Table
-3596.22 <-- King Piece Square Table
-2496.24 <-- King Piece Square Table
-16929.1 <-- King Piece Square Table
-17909.3 <-- King Piece Square Table
-15060.9 <-- King Piece Square Table
-12303.1 <-- King Piece Square Table
-23510.4 <-- King Piece Square Table
-15157.2 <-- King Piece Square Table
-10679.7 <-- Knight Piece Square Table
-141553 <-- Knight Piece Square Table
-156679 <-- Knight Piece Square Table
-265811 <-- Knight Piece Square Table
-69179.4 <-- Knight Piece Square Table
-335569 <-- Knight Piece Square Table
-562038 <-- Knight Piece Square Table
-673563 <-- Knight Piece Square Table
-687245 <-- Knight Piece Square Table
-524381 <-- Knight Piece Square Table
-297442 <-- Piece Base Value
+7884.6 <-- King Piece Square Table
+3249.95 <-- King Piece Square Table
+1699.48 <-- King Piece Square Table
+2286.32 <-- King Piece Square Table
+1431.59 <-- King Piece Square Table
+440.102 <-- King Piece Square Table
+498.355 <-- King Piece Square Table
+1379.08 <-- King Piece Square Table
+3381.23 <-- King Piece Square Table
+3301.2 <-- King Piece Square Table
+11524.3 <-- Knight Piece Square Table
+156941 <-- Knight Piece Square Table
+171835 <-- Knight Piece Square Table
+292255 <-- Knight Piece Square Table
+74801.9 <-- Knight Piece Square Table
+368619 <-- Knight Piece Square Table
+616066 <-- Knight Piece Square Table
+745309 <-- Knight Piece Square Table
+745729 <-- Knight Piece Square Table
+575014 <-- Knight Piece Square Table
+320138 <-- Piece Base Value
 0 <-- Piece Base Value
-1.675e+06 <-- Piece Base Value
-2.02926e+06 <-- Piece Base Value
-1.7846e+06 <-- Piece Base Value
-6441.64 <-- Bishop Pair
-2944.01 <-- Piece Activity Bonus
+0 <-- Piece Base Value
+0 <-- Piece Base Value
+0 <-- Piece Base Value
+6315.41 <-- Bishop Pair
+2412.29 <-- Piece Activity Bonus
 0 <-- Piece Activity Bonus
 0 <-- Piece Activity Bonus
 0 <-- Piece Activity Bonus
 0 <-- Piece Activity Bonus
 0 <-- Abstract Piece Activity Bonus
 0 <-- Abstract Piece Activity Bonus
-13124.4 <-- Abstract Piece Activity Bonus
-17133.6 <-- Abstract Piece Activity Bonus
+18407.5 <-- Abstract Piece Activity Bonus
+22325.6 <-- Abstract Piece Activity Bonus
 0 <-- Abstract Piece Activity Bonus
-0.0426458 <-- Passed Pawn Bonus
-0.00120296 <-- Passed Pawn Bonus
-970.284 <-- Passed Pawn Bonus
-11650.6 <-- Passed Pawn Bonus
-34245.7 <-- Passed Pawn Bonus
-52246.5 <-- Passed Pawn Bonus
-1604.54 <-- Double Pawn Penalty
-596.734 <-- Tempo Bonus
+21.5578 <-- Passed Pawn Bonus
+0 <-- Passed Pawn Bonus
+1089.75 <-- Passed Pawn Bonus
+6049.75 <-- Passed Pawn Bonus
+7240.47 <-- Passed Pawn Bonus
+248.267 <-- Passed Pawn Bonus
+0 <-- Passed Pawn Bonus
+0 <-- Passed Pawn Bonus
+369.384 <-- Passed Pawn Bonus
+8705.37 <-- Passed Pawn Bonus
+33225.8 <-- Passed Pawn Bonus
+63045.7 <-- Passed Pawn Bonus
+1340.69 <-- Double Pawn Penalty
+560.443 <-- Tempo Bonus
 0 <-- Direct Pawn Shield Bonus
-3369.45 <-- King Vector Exposure
-6757.62 <-- King Vector Exposure
-762.507 <-- Knight Outpost
+4238.39 <-- King Vector Exposure
+8812.25 <-- King Vector Exposure
+887.98 <-- Knight Outpost
 0 <-- Castling Right
-3988.01 <-- Pawn Attack
-2107.6 <-- Minor Attack
+4374.06 <-- Pawn Attack
+2370.72 <-- Minor Attack
 0 <-- King Defence Distance
 0 <-- King Defence Distance
 0 <-- King Defence Distance
 0 <-- King Defence Distance
-34902.8 <-- King Attack Distance
-1257.35 <-- King Attack Distance
-25282.4 <-- King Attack Distance
-4746.89 <-- King Attack Distance
-381.43 <-- King Attack Danger
-443.026 <-- King Attack Danger
-1475.5 <-- King Attack Danger
-121.909 <-- King Attack Danger
-1673.72 <-- Safe Knight Square Count
-2438.07 <-- Safe Knight Square Count
-2031.27 <-- Safe Knight Square Count
-684.777 <-- Safe Knight Square Count
+33057.4 <-- King Attack Distance
+0 <-- King Attack Distance
+31531.5 <-- King Attack Distance
+6480.94 <-- King Attack Distance
+529.391 <-- King Attack Danger
+317.019 <-- King Attack Danger
+1476.93 <-- King Attack Danger
+78.2897 <-- King Attack Danger
+1803.93 <-- Safe Knight Square Count
+2647.04 <-- Safe Knight Square Count
+2251.51 <-- Safe Knight Square Count
+681.293 <-- Safe Knight Square Count
 0 <-- Safe Knight Square Count
-237.005 <-- Safe Knight Square Count
-448.902 <-- Safe Knight Square Count
-237.167 <-- Safe Knight Square Count
-98.0863 <-- Safe Knight Square Count
-8803.47 <-- Bishop Mobility
-11847.9 <-- Bishop Mobility
-10363.6 <-- Bishop Mobility
-6369.22 <-- Bishop Mobility
-2355.88 <-- Bishop Mobility
-370.923 <-- Bishop Mobility
-0 <-- Bishop Mobility
-322.569 <-- Bishop Mobility
-400.523 <-- Bishop Mobility
-856.502 <-- Bishop Mobility
-463.783 <-- Bishop Mobility
-514.323 <-- Bishop Mobility
-117.701 <-- Bishop Mobility
-172.026 <-- Bishop Mobility
-5186.95 <-- Rook Mobility
-9474.86 <-- Rook Mobility
-8209.44 <-- Rook Mobility
-4832.4 <-- Rook Mobility
-3414.49 <-- Rook Mobility
-630.564 <-- Rook Mobility
-0 <-- Rook Mobility
-749.455 <-- Rook Mobility
-2449.27 <-- Rook Mobility
-4484.2 <-- Rook Mobility
-5611.08 <-- Rook Mobility
-6117.24 <-- Rook Mobility
-5889.81 <-- Rook Mobility
-4915.07 <-- Rook Mobility
-5055.26 <-- Rook Mobility
-565.57 <-- Queen Mobility
-496.266 <-- Queen Mobility
-647.474 <-- Queen Mobility
-845.032 <-- Queen Mobility
-1035.53 <-- Queen Mobility
-946.242 <-- Queen Mobility
-700.572 <-- Queen Mobility
-437.425 <-- Queen Mobility
-238.951 <-- Queen Mobility
-95.5089 <-- Queen Mobility
-0 <-- Queen Mobility
-3.66906 <-- Queen Mobility
-29.2103 <-- Queen Mobility
-37.032 <-- Queen Mobility
-57.9534 <-- Queen Mobility
-50.8439 <-- Queen Mobility
-44.177 <-- Queen Mobility
-38.1388 <-- Queen Mobility
-32.1796 <-- Queen Mobility
-24.8381 <-- Queen Mobility
-19.6245 <-- Queen Mobility
-17.0456 <-- Queen Mobility
-9.26342 <-- Queen Mobility
-7.378 <-- Queen Mobility
-3.24532 <-- Queen Mobility
-2.6623 <-- Queen Mobility
-0.718263 <-- Queen Mobility
-1.90702 <-- Queen Mobility
-6823.89 <-- Safe Checks
-3635.33 <-- Unsafe Checks
-2136.98 <-- Unprotected Pieces
+259.188 <-- Safe Knight Square Count
+429.936 <-- Safe Knight Square Count
+273.604 <-- Safe Knight Square Count
+105.15 <-- Safe Knight Square Count
+27343.8 <-- Bishop Mobility
+97552.6 <-- Bishop Mobility
+260536 <-- Bishop Mobility
+421502 <-- Bishop Mobility
+550583 <-- Bishop Mobility
+574510 <-- Bishop Mobility
+558236 <-- Bishop Mobility
+562669 <-- Bishop Mobility
+370831 <-- Bishop Mobility
+351727 <-- Bishop Mobility
+144218 <-- Bishop Mobility
+130265 <-- Bishop Mobility
+20652.6 <-- Bishop Mobility
+35196.6 <-- Bishop Mobility
+674038 <-- Rook Mobility
+1.73488e+06 <-- Rook Mobility
+1.90109e+06 <-- Rook Mobility
+1.69687e+06 <-- Rook Mobility
+2.12999e+06 <-- Rook Mobility
+2.04305e+06 <-- Rook Mobility
+2.02691e+06 <-- Rook Mobility
+2.08599e+06 <-- Rook Mobility
+1.94491e+06 <-- Rook Mobility
+1.81329e+06 <-- Rook Mobility
+1.55605e+06 <-- Rook Mobility
+1.27672e+06 <-- Rook Mobility
+984820 <-- Rook Mobility
+751003 <-- Rook Mobility
+770573 <-- Rook Mobility
+634313 <-- Queen Mobility
+873582 <-- Queen Mobility
+1.20076e+06 <-- Queen Mobility
+1.96186e+06 <-- Queen Mobility
+2.86128e+06 <-- Queen Mobility
+3.5536e+06 <-- Queen Mobility
+3.84117e+06 <-- Queen Mobility
+3.75492e+06 <-- Queen Mobility
+3.73609e+06 <-- Queen Mobility
+3.35723e+06 <-- Queen Mobility
+2.94922e+06 <-- Queen Mobility
+2.53364e+06 <-- Queen Mobility
+2.16229e+06 <-- Queen Mobility
+1.85481e+06 <-- Queen Mobility
+1.59252e+06 <-- Queen Mobility
+1.36378e+06 <-- Queen Mobility
+1.16087e+06 <-- Queen Mobility
+976750 <-- Queen Mobility
+806514 <-- Queen Mobility
+655571 <-- Queen Mobility
+522786 <-- Queen Mobility
+437212 <-- Queen Mobility
+239759 <-- Queen Mobility
+194737 <-- Queen Mobility
+85559.9 <-- Queen Mobility
+68101.1 <-- Queen Mobility
+15468.7 <-- Queen Mobility
+14600.8 <-- Queen Mobility
+7030.2 <-- Safe Checks
+2662.85 <-- Unsafe Checks
+2427.31 <-- Unprotected Pieces
+19.7407 <-- Bishop's Position Relative To King
+47.7645 <-- Bishop's Position Relative To King
+49.4579 <-- Bishop's Position Relative To King
+31.2917 <-- Bishop's Position Relative To King
+42.605 <-- Bishop's Position Relative To King
+226.143 <-- Bishop's Position Relative To King
+191.143 <-- Bishop's Position Relative To King
+75.2311 <-- Bishop's Position Relative To King
+110.63 <-- Bishop's Position Relative To King
+57.0154 <-- Bishop's Position Relative To King
+145.211 <-- Bishop's Position Relative To King
+418.788 <-- Bishop's Position Relative To King
+74.5009 <-- Bishop's Position Relative To King
+107.463 <-- Bishop's Position Relative To King
+77.649 <-- Bishop's Position Relative To King
+235.493 <-- Bishop's Position Relative To King
+34.761 <-- Bishop's Position Relative To King
+47.6919 <-- Bishop's Position Relative To King
+114.134 <-- Bishop's Position Relative To King
+76.362 <-- Bishop's Position Relative To King
+71.3739 <-- Bishop's Position Relative To King
+43.3215 <-- Bishop's Position Relative To King
+18.9999 <-- Bishop's Position Relative To King
+35.5509 <-- Bishop's Position Relative To King
+353.786 <-- Bishop's Position Relative To King
+55.9176 <-- Bishop's Position Relative To King
+102.962 <-- Bishop's Position Relative To King
+142.357 <-- Bishop's Position Relative To King
+47.3263 <-- Bishop's Position Relative To King
+59.7254 <-- Bishop's Position Relative To King
+775.07 <-- Bishop's Position Relative To King
+552.739 <-- Bishop's Position Relative To King
+348.244 <-- Bishop's Position Relative To King
+0 <-- Bishop's Position Relative To King
+47.7948 <-- Bishop's Position Relative To King
+0 <-- Bishop's Position Relative To King
