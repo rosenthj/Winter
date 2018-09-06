@@ -76,7 +76,7 @@ constexpr bool bookkeeping_active = false;
 const bool kUseExtensions = true;
 const bool kUseScoreBasedPruning = true;
 const bool kUseNullMoves = true && kUseExtensions;
-const Depth R = 2;
+const Depth kRepsForDraw = 2;
 const Depth kMaxDepth = 128;
 
 }

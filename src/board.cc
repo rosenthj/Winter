@@ -33,6 +33,7 @@
 
 #include <random>
 #include <iostream>
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -970,17 +971,84 @@ bool Board::InCheck() const {
   return targeted;
 }
 
-bool Board::InTwoFoldRepetition() const {
-  int repetitions = 0;
+bool Board::MoveInListCanRepeat(const std::vector<Move> moves) {
+  HashType mhash = get_hash() ^ hash::get_color_hash();
+  std::vector<HashType> potential_hashes = std::vector<HashType>();
+  potential_hashes.reserve(moves.size());
+  for (Move move : moves) {
+    if (GetMoveType(move) != kNormalMove) {
+      continue;
+    }
+    int src = GetMoveSource(move);
+    Piece piece = pieces[src];
+    if (GetPieceType(piece) == kPawn) {
+      continue;
+    }
+    int des = GetMoveDestination(move);
+    HashType pot_hash = (mhash ^ hash::get_piece(piece, src)) ^ hash::get_piece(piece, des);
+    potential_hashes.emplace_back(pot_hash);
+  }
+  std::vector<HashType> pre_hashes = std::vector<HashType>();
+  pre_hashes.reserve(fifty_move_count / 2);
+
   int min_index = previous_hashes.size() - fifty_move_count;
   if (min_index < 0) {
     min_index = 0;
   }
+  for (int index = previous_hashes.size()-1; index >= min_index; index -= 2) {
+    pre_hashes.emplace_back(previous_hashes[index]);
+  }
+
+  /*for (int i = 0; i < potential_hashes.size(); i++) {
+    for (int j = 0; j < pre_hashes.size(); j++) {
+      if (potential_hashes[i] == pre_hashes[j]) {
+        std::cout << "found repetition" << std::endl;
+        return true;
+      }
+    }
+  }*/
+
+  std::sort(pre_hashes.begin(), pre_hashes.end());
+  std::sort(potential_hashes.begin(), potential_hashes.end());
+
+  int i = 0, j = 0;
+  while (i < potential_hashes.size() && j < pre_hashes.size()) {
+    while (potential_hashes[i] < pre_hashes[j]) {
+      i++;
+      if (i >= potential_hashes.size()) {
+        return false;
+      }
+    }
+    while (pre_hashes[j] < potential_hashes[i]) {
+      j++;
+      if (j >= pre_hashes.size()) {
+        return false;
+      }
+    }
+    if (potential_hashes[i] == pre_hashes[j]) {
+      return true;
+    }
+  }
+  /*for (i = 0; i < potential_hashes.size(); i++) {
+    std::cout << potential_hashes[i] << " ";
+  }
+  std::cout << std::endl;
+  for (i = 0; i < pre_hashes.size(); i++) {
+    std::cout << pre_hashes[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "checked all, no reps found" << std::endl;*/
+  return false;
+}
+
+int Board::CountRepetitions(size_t min_ply) const {
+  int repetitions = 1; //We count the current position as a "repetition"
+  int min_index = std::max(previous_hashes.size() - fifty_move_count, min_ply);
   HashType cur_hash = get_hash();
   for (int index = previous_hashes.size()-2; index >= min_index; index-=2) {
     repetitions += (cur_hash == previous_hashes[index]);
   }
-  return repetitions != 0;
+  return repetitions;
 }
 
 template<int piece_type>
@@ -1145,7 +1213,7 @@ bool Board::GivesCheck(const Move move) {
 }
 
 bool Board::IsDraw() const {
-  return (fifty_move_count >= 100) || InTwoFoldRepetition()
+  return (fifty_move_count >= 100) || CountRepetitions() >= settings::kRepsForDraw
       || (get_num_pieces() == 3 && ((get_piecetype_bitboard(kKnight) | get_piecetype_bitboard(kBishop))
           || (get_piecetype_bitboard(kPawn) && clearly_drawn_pawn_ending(get_piecetype_bitboard(kPawn),
                                                                          get_piecetype_bitboard(kKing),

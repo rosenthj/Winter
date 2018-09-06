@@ -39,6 +39,7 @@ namespace search {
 uint64_t Perft(Board &board, Depth depth);
 Move DepthSearch(Board board, Depth depth);
 Move TimeSearch(Board board, Milliseconds time);
+Move NodeSearch(Board board, size_t num_nodes);
 Board SampleEval(Board board);
 Score QSearch(Board &board);
 Score SQSearch(Board &board);

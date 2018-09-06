@@ -1215,7 +1215,8 @@ bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
       return false;
     //std::cout << " -> " << games[index].board.get_num_made_moves() << std::flush;
     search::set_print_info(false);
-    search::DepthSearch(game.board, 4);
+    //search::DepthSearch(game.board, 6);
+    search::NodeSearch(game.board, 20000);
     search::set_print_info(true);
     //std::cout << "<- " << std::endl;
     target = search::get_last_search_score() / eval_scaling;
@@ -1233,7 +1234,7 @@ bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
     data::SetGameToRandom(game);
     position.SetToSamePosition(game.board);
     search::set_print_info(false);
-    Move move = search::DepthSearch(position, 4);
+    Move move = search::DepthSearch(position, 6);
     search::set_print_info(true);
     position.Make(move);
     if (position.GetMoves<kNonQuiescent>().size() == 0) {

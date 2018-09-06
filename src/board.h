@@ -117,11 +117,12 @@ public:
   Board copy() const;
   Move get_last_move() const { return move_history.back(); }
   BitBoard PlayerBitBoardControl(Color color, BitBoard all_pieces) const;
+  bool MoveInListCanRepeat(const std::vector<Move> moves);
+  int CountRepetitions(size_t min_ply = 0) const;
 
 private:
   template<int Quiescent, int MoveGenerationType>
   std::vector<Move> GetMoves(BitBoard critical = 0);
-  bool InTwoFoldRepetition() const;
   void SwapTurn();
   void AddPiece(const Square square, const Piece piece);
   Piece RemovePiece(const Square square);

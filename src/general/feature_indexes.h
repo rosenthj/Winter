@@ -139,10 +139,11 @@ const int kPWISEE = kPWICaptureLastMoved + 1;
 const int kPWIGivesCheck = kPWISEE + 2;
 const int kPWITabooDestination = kPWIGivesCheck + 1;
 const int kPWIForcingChanges = kPWITabooDestination + 1;
-const int kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
+const int kPWIPawnRankDestination = kPWIForcingChanges + 4;
+//const int kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
+const int kNumMoveProbabilityFeatures = kPWIPawnRankDestination + 6;
 
-
-const std::array<FeatureInfo, 12> kFeatureInfos = {{
+const std::array<FeatureInfo, 13> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
     FeatureInfo("Moving and Target Piece Type", kPWIPieceTypeXTargetPieceType),
@@ -154,6 +155,7 @@ const std::array<FeatureInfo, 12> kFeatureInfos = {{
     FeatureInfo("Move Gives Check", kPWIGivesCheck),
     FeatureInfo("Move Destination Taboo", kPWITabooDestination),
     FeatureInfo("Changes Between Non-/Forcing States", kPWIForcingChanges),
+    FeatureInfo("Rank of pawn destination", kPWIPawnRankDestination),
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};
 
