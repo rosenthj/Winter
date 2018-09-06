@@ -238,6 +238,56 @@ double EntropyLossTimedSuite(Milliseconds time_per_position) {
                      - kMinDrawLoss * draws) / games.size();
 }
 
+double EntropyLossNodeSuite(size_t nodes_per_position) {
+  std::cout << "Running benchmark!" << std::endl;
+  std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
+  //We want to count the number of drawn games in order to calculate the
+  //minimal achievable error our engine can achieve on the data.
+  double total_error = 0, decisive_error = 0, draw_error = 0;
+  int draws = 0;
+  int l_margin = games.size() / 10;
+  int u_margin = l_margin * 2;
+  search::set_print_info(false);
+  for (int idx = 0; idx < games.size(); idx++) {
+    int num_made_moves = games[idx].moves.size();
+    games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
+                                        / (games.size() + u_margin));
+    double target = games[idx].result;
+    if (target == 0.5) {
+      draws++;
+    }
+    if (games[idx].board.get_turn() == kBlack) {
+      target = 1 - target;
+    }
+    table::ClearTable();
+    search::NodeSearch(games[idx].board, nodes_per_position);
+    total_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
+    if (target == 0.5) {
+      draw_error +=
+          SigmoidCrossEntropyLoss(search::get_last_search_score(), target) - kMinDrawLoss;
+    }
+    else {
+      decisive_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
+    }
+    if ((idx + 1) % 100 == 0) {
+      std::cout << (idx + 1) << std::endl
+          << "Total Error: " << ((total_error - kMinLoss * (idx + 1 - draws)
+              - kMinDrawLoss * draws) / (idx + 1)) << std::endl;
+      if (idx + 1 > draws) {
+        std::cout << "Decisive Error: " << ((decisive_error) / (idx + 1 - draws)) << std::endl;
+      }
+      if (draws > 0) {
+        std::cout << "Draw Error: " << ((draw_error) / (draws)) << std::endl;
+      }
+    }
+  }
+  search::set_print_info(true);
+  std::cout << "Final Avg Error: " << ((total_error - kMinLoss * (games.size() - draws)
+      - kMinDrawLoss * draws) / games.size()) << std::endl;
+  return (total_error - kMinLoss * (games.size() - draws)
+                     - kMinDrawLoss * draws) / games.size();
+}
+
 }
 
 

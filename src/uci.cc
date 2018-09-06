@@ -306,12 +306,25 @@ void Loop() {
       int ms = atoi(tokens[index++].c_str());
       benchmark::EntropyLossTimedSuite(Milliseconds(ms));
     }
+    else if (Equals(command, "benchmark_node")) {
+      long n = atol(tokens[index++].c_str());
+      benchmark::EntropyLossNodeSuite(n);
+    }
     else if (Equals(command, "fen")) {
       std::vector<std::string> fen = board.GetFen();
       for (std::string fen_token : fen) {
         std::cout << fen_token << " ";
       }
       std::cout << std::endl;
+    }
+    else if (Equals(command, "can_repeat")) {
+      std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
+      if (board.MoveInListCanRepeat(moves)) {
+        std::cout << "yes" << std::endl;
+      }
+      else {
+        std::cout << "no" << std::endl;
+      }
     }
     else {
       Reply("Received unknown command: " + command);
