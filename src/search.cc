@@ -197,12 +197,30 @@ template<> inline void AddFeature<int>(int &s,  const int index) {
   s += search_weights[index];
 }
 
+inline Move get_last_move(const Board &board) {
+  if (board.get_num_made_moves() > 0) {
+    return board.get_last_move();
+  }
+  return kNullMove;
+}
+
+struct MoveOrderInfo {
+  const Move tt_entry;
+  const Move last_move;
+  const Vec<BitBoard, 6> direct_checks;
+  const Vec<BitBoard, 6> taboo_squares;
+  MoveOrderInfo(const Board &board, Move tt_entry_ = kNullMove) :
+    tt_entry(tt_entry_),
+    last_move(get_last_move(board)),
+    direct_checks(board.GetDirectCheckingSquares()),
+    taboo_squares(board.GetTabooSquares())
+      { }
+};
+
 template<typename T>
-T GetMoveWeight(const Move move, Board &board, const Move tt_entry,
-                const Move last_move, const Vec<BitBoard, 6> &direct_checks,
-                const Vec<BitBoard, 6> &taboo_squares) {
+T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
   T move_weight = init<T>();
-  if (move == tt_entry) {
+  if (move == info.tt_entry) {
     AddFeature<T>(move_weight, kPWIHashMove);
     return move_weight;
   }
@@ -237,35 +255,28 @@ T GetMoveWeight(const Move move, Board &board, const Move tt_entry,
       AddFeature<T>(move_weight, kPWIPawnRankDestination + rank);
     }
   }
-  if (last_move != kNullMove && GetMoveDestination(last_move) == GetMoveDestination(move)) {
+  if (info.last_move != kNullMove && GetMoveDestination(info.last_move) == GetMoveDestination(move)) {
     AddFeature<T>(move_weight, kPWICaptureLastMoved);
   }
-  if (GetSquareBitBoard(GetMoveDestination(move)) & direct_checks[moving_piece]) {
+  if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece]) {
     AddFeature(move_weight, kPWIGivesCheck);
     if (GetMoveType(move) < kEnPassant && !board.NonNegativeSEE(move)) {
       AddFeature<T>(move_weight, kPWISEE + 1);
     }
   }
   else if (GetMoveType(move) == kNormalMove
-      && (GetSquareBitBoard(GetMoveDestination(move)) & taboo_squares[moving_piece])) {
+      && (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece])) {
     AddFeature<T>(move_weight, kPWITabooDestination);
   }
-  AddFeature<T>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(last_move));
+  AddFeature<T>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(info.last_move));
   return move_weight;
 }
 
 void SortMovesML(std::vector<Move> &moves, Board &board, const Move best_move) {
-  Move last_move = kNullMove;
-  if (board.get_num_made_moves() > 0) {
-    last_move = board.get_last_move();
-  }
-  const Vec<BitBoard, 6> direct_checks = board.GetDirectCheckingSquares();
-  const Vec<BitBoard, 6> taboo_squares = board.GetTabooSquares();
+  MoveOrderInfo info(board, best_move);
 
   for (unsigned int i = 0; i < moves.size(); i++) {
-    moves[i] |= ((10000 + GetMoveWeight<int>(moves[i], board, best_move,
-                                             last_move, direct_checks,
-                                             taboo_squares)) << 16);
+    moves[i] |= ((10000 + GetMoveWeight<int>(moves[i], board, info)) << 16);
   }
   std::sort(moves.begin(), moves.end(), Sorter());
   for (unsigned int i = 0; i < moves.size(); i++) {
@@ -639,7 +650,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       continue;
     }
     assert(depth > 0);
-    if (false && NodeType == kNW && depth < kLMP.size()  && !in_check && (i >= kLMP[depth])
+    if (NodeType == kNW && depth < kLMP.size()  && !in_check && (i >= kLMP[depth])
         && GetMoveType(move) < kEnPassant
         && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
@@ -1049,20 +1060,13 @@ void TrainSearchParamsOrderBased(bool from_scratch) {
       continue;
     }
     end_time = get_infinite_time();
-    Move last_move = kNullMove;
-    if (sampled_board.get_num_made_moves() > 0) {
-      last_move = sampled_board.get_last_move();
-    }
     std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
     std::shuffle(moves.begin(), moves.end(), rng);
     SortMovesML(moves, sampled_board, kNullMove);
     std::vector<std::vector<int> > features;
-    Vec<BitBoard, 6> direct_checks = sampled_board.GetDirectCheckingSquares();
-    Vec<BitBoard, 6> taboo_squares = sampled_board.GetTabooSquares();
+    MoveOrderInfo info(sampled_board);
     for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board,
-                                                            kNullMove, last_move,
-                                                            direct_checks, taboo_squares));
+      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
     }
     Score alpha = sampled_alpha - 1;
     Score beta = kMaxScore;
@@ -1149,20 +1153,13 @@ void CreateSearchParamDataset(bool from_scratch) {
       continue;
     }
     end_time = get_infinite_time();
-    Move last_move = kNullMove;
-    if (sampled_board.get_num_made_moves() > 0) {
-      last_move = sampled_board.get_last_move();
-    }
     std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
     std::shuffle(moves.begin(), moves.end(), rng);
     SortMovesML(moves, sampled_board, kNullMove);
     std::vector<std::vector<int> > features;
-    Vec<BitBoard, 6> direct_checks = sampled_board.GetDirectCheckingSquares();
-    Vec<BitBoard, 6> taboo_squares = sampled_board.GetTabooSquares();
+    MoveOrderInfo info(sampled_board);
     for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board,
-                                                             kNullMove,last_move,
-                                                             direct_checks, taboo_squares));
+      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
     }
     std::vector<Score> scores(features.size());
     int low = 0, high = 0;
@@ -1267,20 +1264,13 @@ void TrainSearchParams(bool from_scratch) {
       continue;
     }
     end_time = get_infinite_time();
-    Move last_move = kNullMove;
-    if (sampled_board.get_num_made_moves() > 0) {
-      last_move = sampled_board.get_last_move();
-    }
     std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
     std::shuffle(moves.begin(), moves.end(), rng);
     SortMovesML(moves, sampled_board, kNullMove);
     std::vector<std::vector<int> > features;
-    Vec<BitBoard, 6> direct_checks = sampled_board.GetDirectCheckingSquares();
-    Vec<BitBoard, 6> taboo_squares = sampled_board.GetTabooSquares();
+    MoveOrderInfo info(sampled_board);
     for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board,
-                                                             kNullMove,last_move,
-                                                             direct_checks, taboo_squares));
+      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
     }
     std::vector<Score> scores(features.size());
     int low = 0, high = 0;
@@ -1410,23 +1400,16 @@ void TrainSearchParamsPairwise(bool from_scratch) {
         tt_move = pv_entry.best_move;
       }
     }
-    Move last_move = kNullMove;
-    if (sampled_board.get_num_made_moves() > 0) {
-      last_move = sampled_board.get_last_move();
-    }
     std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
     if (moves.size() <= 1) {
       continue;
     }
     std::shuffle(moves.begin(), moves.end(), rng);
     SortMovesML(moves, board, tt_move);
-    Vec<BitBoard, 6> direct_checks = sampled_board.GetDirectCheckingSquares();
-    Vec<BitBoard, 6> taboo_squares = sampled_board.GetTabooSquares();
     std::vector<std::vector<int> > features;
+    MoveOrderInfo info(sampled_board);
     for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board,
-                                                                   tt_move,last_move,
-                                                                   direct_checks, taboo_squares));
+      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
     }
     std::vector<Score> scores(features.size());
     int above_alpha = 0;
