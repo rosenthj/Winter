@@ -204,16 +204,40 @@ inline Move get_last_move(const Board &board) {
   return kNullMove;
 }
 
+inline BitBoard get_passed_pawn_squares(const Board &board) {
+  if (board.get_turn() == kWhite) {
+    BitBoard covered = board.get_piece_bitboard(kBlack, kPawn);
+    covered |= bitops::SW(covered) | bitops::SE(covered);
+    return ~bitops::FillSouth(covered, ~0);
+  }
+  BitBoard covered = board.get_piece_bitboard(kWhite, kPawn);
+  covered |= bitops::NW(covered) | bitops::NE(covered);
+  return ~bitops::FillNorth(covered, ~0);
+}
+
+inline BitBoard get_pawn_attack_squares(const Board &board) {
+  if (board.get_turn() == kWhite) {
+    BitBoard targets = board.get_color_bitboard(kBlack) & (~board.get_piecetype_bitboard(kPawn));
+    return bitops::SE(targets) | bitops::SW(targets);
+  }
+  BitBoard targets = board.get_color_bitboard(kWhite) & (~board.get_piecetype_bitboard(kPawn));
+  return bitops::NE(targets) | bitops::NW(targets);
+}
+
 struct MoveOrderInfo {
   const Move tt_entry;
   const Move last_move;
   const Vec<BitBoard, 6> direct_checks;
   const Vec<BitBoard, 6> taboo_squares;
+  const BitBoard passed_pawn_squares;
+  const BitBoard pawn_attack_squares;
   MoveOrderInfo(const Board &board, Move tt_entry_ = kNullMove) :
     tt_entry(tt_entry_),
     last_move(get_last_move(board)),
     direct_checks(board.GetDirectCheckingSquares()),
-    taboo_squares(board.GetTabooSquares())
+    taboo_squares(board.GetTabooSquares()),
+    passed_pawn_squares(get_passed_pawn_squares(board)),
+    pawn_attack_squares(get_pawn_attack_squares(board))
       { }
 };
 
@@ -233,9 +257,10 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
     AddFeature<T>(move_weight, kPWIKiller + 1);
     return move_weight;
   }
-  PieceType moving_piece = GetPieceType(board.get_piece(GetMoveSource(move)));
+  const PieceType moving_piece = GetPieceType(board.get_piece(GetMoveSource(move)));
   PieceType target = GetPieceType(board.get_piece(GetMoveDestination(move)));
-  if (GetMoveType(move) >= kCapture && (target < moving_piece || target == kNoPiece)) {
+  const MoveType move_type = GetMoveType(move);
+  if (move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
     if (!board.NonNegativeSEE(move)) {
       AddFeature<T>(move_weight, kPWISEE);
     }
@@ -244,15 +269,26 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
   AddFeature<T>(move_weight, kPWIPieceTypeXTargetPieceType
                             + (moving_piece * 6) + target);
   AddFeature<T>(move_weight, kPWIMoveType + GetMoveType(move));
-  if (GetMoveType(move) == kNormalMove) {
+  if (move_type == kNormalMove || move_type == kDoublePawnMove) {
     if (moving_piece != kPawn) {
       AddFeature<T>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
       AddFeature<T>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
     }
     else {
-      int rank = GetSquareY(GetMoveDestination(move));
-      rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
-      AddFeature<T>(move_weight, kPWIPawnRankDestination + rank);
+      const BitBoard des = GetSquareBitBoard(GetMoveDestination(move));
+      if (des & info.passed_pawn_squares) {
+        int rank = GetSquareY(GetMoveDestination(move));
+        rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
+        AddFeature<T>(move_weight, kPWIPassedRankDestination + rank);
+      }
+      else {
+        int rank = GetSquareY(GetMoveDestination(move));
+        rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
+        AddFeature<T>(move_weight, kPWIPawnRankDestination + rank);
+      }
+      if (des & info.pawn_attack_squares) {
+        AddFeature<T>(move_weight, kPWIPawnAttack);
+      }
     }
   }
   if (info.last_move != kNullMove && GetMoveDestination(info.last_move) == GetMoveDestination(move)) {
@@ -1354,7 +1390,7 @@ void TrainSearchParams(bool from_scratch) {
       }
       SaveSearchVariables();
     }
-    if (sampled_positions % 300000 == 0) {
+    if (sampled_positions % 100000 == 0) {
       nu /= 2;
       std::cout << "New nu: " << nu << std::endl;
     }

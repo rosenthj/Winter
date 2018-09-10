@@ -141,9 +141,11 @@ const int kPWITabooDestination = kPWIGivesCheck + 1;
 const int kPWIForcingChanges = kPWITabooDestination + 1;
 const int kPWIPawnRankDestination = kPWIForcingChanges + 4;
 //const int kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
-const int kNumMoveProbabilityFeatures = kPWIPawnRankDestination + 6;
+const int kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
+const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
+const int kNumMoveProbabilityFeatures = kPWIPawnAttack + 1;
 
-const std::array<FeatureInfo, 13> kFeatureInfos = {{
+const std::array<FeatureInfo, 15> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
     FeatureInfo("Moving and Target Piece Type", kPWIPieceTypeXTargetPieceType),
@@ -156,6 +158,8 @@ const std::array<FeatureInfo, 13> kFeatureInfos = {{
     FeatureInfo("Move Destination Taboo", kPWITabooDestination),
     FeatureInfo("Changes Between Non-/Forcing States", kPWIForcingChanges),
     FeatureInfo("Rank of pawn destination", kPWIPawnRankDestination),
+    FeatureInfo("Rank of passed pawn destination", kPWIPassedRankDestination),
+    FeatureInfo("Pawn move attacks a piece", kPWIPawnAttack),
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};
 
