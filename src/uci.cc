@@ -178,6 +178,12 @@ void Loop() {
         std::cout << parse::MoveToString(moves[i]) << std::endl;
       }
     }
+    else if (Equals(command, "print_moves_sorted")) {
+      std::vector<Move> moves = search::GetSortedMovesML(board);
+      for (unsigned int i = 0; i < moves.size(); i++) {
+        std::cout << parse::MoveToString(moves[i]) << std::endl;
+      }
+    }
     else if (Equals(command, "position")) {
       if (index < tokens.size()) {
         std::string arg = tokens[index++];
@@ -309,6 +315,9 @@ void Loop() {
     else if (Equals(command, "benchmark_node")) {
       long n = atol(tokens[index++].c_str());
       benchmark::EntropyLossNodeSuite(n);
+    }
+    else if (Equals(command, "benchmark_move_order")) {
+      benchmark::MoveOrderTest();
     }
     else if (Equals(command, "fen")) {
       std::vector<std::string> fen = board.GetFen();

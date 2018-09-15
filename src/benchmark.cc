@@ -92,6 +92,69 @@ struct SymmetryTest {
 
 namespace benchmark {
 
+double MoveOrderTest() {
+  std::cout << "Running move order benchmark!" << std::endl;
+  std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
+  double count = 0, top_1 = 0, top_2 = 0, top_3 = 0, top_5 = 0, top_half = 0;
+  double top_1r = 0, top_2r = 0, top_3r = 0, top_5r = 0, top_halfr = 0;
+
+  for (int idx = 0; idx < games.size(); idx++) {
+    Game game = games[idx];
+    game.set_to_position_after(0);
+    while (game.board.get_num_made_moves() < game.moves.size() - 1) {
+      int move_num = game.board.get_num_made_moves();
+      std::vector<Move> moves = search::GetSortedMovesML(game.board);
+      if (moves.size() < 10) {
+        game.forward();
+        continue;
+      }
+      int i;
+      for (i = 0; i < moves.size(); i++) {
+        if (game.moves[move_num] == moves[i])
+          break;
+      }
+      if (i == 0)
+        top_1++;
+      if (i <= 1)
+        top_2++;
+      if (i <= 2)
+        top_3++;
+      if (i <= 5)
+        top_5++;
+      if (i <= moves.size() / 2)
+        top_half++;
+      count++;
+
+      top_1r += 1.0 / moves.size();
+      top_2r += 2.0 / moves.size();
+      top_3r += 3.0 / moves.size();
+      top_5r += 5.0 / moves.size();
+      top_halfr += (moves.size() / 2) / ((double)moves.size());
+
+      game.forward();
+    }
+    //total_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
+
+    if ((idx + 1) % 10000 == 0) {
+      std::cout << "Stats after " << (idx+1) << " games:"
+          << "\nTop 1: " << (top_1 / count) << "\nTop 2: " << (top_2 / count)
+          << "\nTop 3: " << (top_3 / count) << "\nTop 5: " << (top_5 / count)
+          << "\nTop Half: " << (top_half / count) << "\nCount: " << count << std::endl;
+    }
+  }
+
+  std::cout << "\nStats after " << games.size() << " games:"
+      << "\nTop 1: " << (top_1 / count) << "\nTop 2: " << (top_2 / count)
+      << "\nTop 3: " << (top_3 / count) << "\nTop 5: " << (top_5 / count)
+      << "\nTop Half: " << (top_half / count) << "\nCount: " << count << std::endl;
+//  std::cout << "\nRandom ordering stats after " << games.size() << " games:"
+//      << "\nTop 1 Random: " << (top_1r / count) << "\nTop 2 Random: " << (top_2r / count)
+//      << "\nTop 3 Random: " << (top_3r / count) << "\nTop 5 Random: " << (top_5r / count)
+//      << "\nTop Half Random: " << (top_halfr / count) << "\nCount: " << count << std::endl;
+
+  return top_1 / count;
+}
+
 void SymmetrySuite() {
   std::vector<SymmetryTest> test_sets;
   std::string line;
