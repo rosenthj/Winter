@@ -114,6 +114,8 @@ public:
   bool GivesCheck(const Move move);
   void SetToSamePosition(const Board &board);
   bool NonNegativeSEE(const Move move) const;
+  bool NonNegativeSEESquare(const Square target) const;
+
   Board copy() const;
   Move get_last_move() const { return move_history.back(); }
   BitBoard PlayerBitBoardControl(Color color, BitBoard all_pieces) const;

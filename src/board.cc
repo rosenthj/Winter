@@ -1094,6 +1094,33 @@ PieceType Board::next_see_attacker<kNoPiece>(const Color color, const Square tar
   return kNoPiece;
 }
 
+bool Board::NonNegativeSEESquare(const Square target) const {
+  Color cturn = turn^0x1;
+  BitBoard all_pieces = get_all_pieces();
+  Score score = 0;
+  Score victim = see_values[GetPieceType(get_piece(target))];
+
+  BitBoard targetBB = GetSquareBitBoard(target);
+  BitBoard attackers = (bitops::SE(targetBB) | bitops::SW(targetBB)) & get_piece_bitboard(kWhite, kPawn);
+  attackers |= (bitops::NE(targetBB) | bitops::NW(targetBB)) & get_piece_bitboard(kBlack, kPawn);
+  attackers |= magic::GetAttackMap<kKnight>(target, all_pieces) & pt_bitboards[kKnight];
+  attackers |= magic::GetAttackMap<kBishop>(target, all_pieces) & (pt_bitboards[kBishop] | pt_bitboards[kQueen]);
+  attackers |= magic::GetAttackMap<kRook>(target, all_pieces) & (pt_bitboards[kRook] | pt_bitboards[kQueen]);
+  attackers |= magic::GetAttackMap<kKing>(target, all_pieces) & (pt_bitboards[kKing]);
+  attackers &= all_pieces;
+  while ((attackers & color_bitboards[cturn]) && score <= 0) {
+    if (cturn == turn && score == 0) {
+      return true;
+    }
+    PieceType pt = next_see_attacker<kPawn>(cturn, target, attackers, all_pieces);
+    score = -(score + victim);
+    victim = see_values[pt];
+    cturn ^= 0x1;
+  }
+
+  return (score >= 0 && cturn == get_turn()) || (score <= 0 && cturn == get_not_turn());
+}
+
 bool Board::NonNegativeSEE(const Move move) const {
   Color cturn = turn^0x1;
   Square target = GetMoveDestination(move);
@@ -1199,7 +1226,16 @@ Vec<BitBoard, 6> Board::GetTabooSquares() const {
     bitops::PopLSB(piece_bb);
   }
   taboo_squares[kQueen] = taboo;
-  taboo_squares[kKing] = 0;
+
+  piece_bb = get_piece_bitboard(not_turn, kQueen);
+  while (piece_bb) {
+    taboo |= magic::GetAttackMap<kQueen>(bitops::NumberOfTrailingZeros(piece_bb),
+                                          all_pieces);
+    bitops::PopLSB(piece_bb);
+  }
+  taboo |= magic::GetAttackMap<kKing>(bitops::NumberOfTrailingZeros(get_piece_bitboard(not_turn, kKing)),
+                                        all_pieces);
+  taboo_squares[kKing] = taboo;
   return taboo_squares;
 }
 
