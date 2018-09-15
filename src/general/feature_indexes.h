@@ -134,24 +134,29 @@ const int kPWIPieceTypeXTargetPieceType = kPWIKiller + 2;
 const int kPWIMoveType = kPWIPieceTypeXTargetPieceType + 36;
 const int kPWIMoveSource = kPWIMoveType + 9;
 const int kPWIMoveDestination = kPWIMoveSource + 10;
-const int kPWICaptureLastMoved = kPWIMoveDestination + 10;
+const int kPWIKnightMoveSource = kPWIMoveDestination + 10;
+const int kPWIKnightMoveDestination = kPWIKnightMoveSource + 10;
+const int kPWICaptureLastMoved = kPWIKnightMoveDestination + 10;
 const int kPWISEE = kPWICaptureLastMoved + 1;
 const int kPWIGivesCheck = kPWISEE + 2;
-const int kPWITabooDestination = kPWIGivesCheck + 1;
+const int kPWITabooDestination = kPWIGivesCheck + 2;
 const int kPWIForcingChanges = kPWITabooDestination + 1;
 const int kPWIPawnRankDestination = kPWIForcingChanges + 4;
 //const int kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
 const int kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
 const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
-const int kNumMoveProbabilityFeatures = kPWIPawnAttack + 1;
+const int kPWIPieceUnderAttack = kPWIPawnAttack + 1;
+const int kNumMoveProbabilityFeatures = kPWIPieceUnderAttack + 2;
 
-const std::array<FeatureInfo, 15> kFeatureInfos = {{
+const std::array<FeatureInfo, 18> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
     FeatureInfo("Moving and Target Piece Type", kPWIPieceTypeXTargetPieceType),
     FeatureInfo("Move Type", kPWIMoveType),
     FeatureInfo("Move Source", kPWIMoveSource),
     FeatureInfo("Move Destination", kPWIMoveDestination),
+    FeatureInfo("Knight Move Source", kPWIKnightMoveSource),
+    FeatureInfo("Knight Move Destination", kPWIKnightMoveDestination),
     FeatureInfo("Move Captures Last Moved Piece", kPWICaptureLastMoved),
     FeatureInfo("Move SEE", kPWISEE),
     FeatureInfo("Move Gives Check", kPWIGivesCheck),
@@ -160,6 +165,7 @@ const std::array<FeatureInfo, 15> kFeatureInfos = {{
     FeatureInfo("Rank of pawn destination", kPWIPawnRankDestination),
     FeatureInfo("Rank of passed pawn destination", kPWIPassedRankDestination),
     FeatureInfo("Pawn move attacks a piece", kPWIPawnAttack),
+    FeatureInfo("Piece under attack", kPWIPieceUnderAttack),
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};
 

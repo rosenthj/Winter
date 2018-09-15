@@ -35,6 +35,7 @@
 #include "general/debug.h"
 #include "general/bookkeeping.h"
 #include "general/feature_indexes.h"
+#include "general/magic.h"
 #include <random>
 #include <algorithm>
 #include <iostream>
@@ -53,7 +54,7 @@ const int kSamplingSearchMode = 1;
 const int kSamplingEvalMode = 2;
 int kNodeCountSampleAt = 1000;
 int kNodeCountSampleEvalAt = 5000;
-const int kMaxDepthSampled = 3;
+const int kMaxDepthSampled = 32;
 
 Board sampled_board;
 Score sampled_alpha;
@@ -224,6 +225,37 @@ inline BitBoard get_pawn_attack_squares(const Board &board) {
   return bitops::NE(targets) | bitops::NW(targets);
 }
 
+inline BitBoard get_under_threat_squares(const Board &board) {
+  if (board.get_num_made_moves() == 0) {
+    return 0;
+  }
+  BitBoard pot_targets;
+  const Move last_move = board.get_last_move();
+  const PieceType moved_piece = GetPieceType(board.get_piece(GetMoveDestination(last_move)));
+  if (moved_piece == kPawn) {
+    BitBoard move_des = GetSquareBitBoard(GetMoveDestination(last_move));
+    if (board.get_turn() == kWhite) {
+      pot_targets = bitops::SE(move_des) | bitops::SW(move_des);
+    }
+    else {
+      pot_targets = bitops::NE(move_des) | bitops::NW(move_des);
+    }
+  }
+  else {
+    pot_targets = magic::GetAttackMap(moved_piece, GetMoveDestination(last_move), board.get_all_pieces());
+  }
+  pot_targets &= board.get_color_bitboard(board.get_turn());
+  BitBoard targets = 0;
+  while (pot_targets) {
+    BitBoard lsb = bitops::GetLSB(pot_targets);
+    if (!board.NonNegativeSEESquare(bitops::NumberOfTrailingZeros(lsb))) {
+      targets |= lsb;
+    }
+    bitops::PopLSB(pot_targets);
+  }
+  return targets;
+}
+
 struct MoveOrderInfo {
   const Move tt_entry;
   const Move last_move;
@@ -231,13 +263,15 @@ struct MoveOrderInfo {
   const Vec<BitBoard, 6> taboo_squares;
   const BitBoard passed_pawn_squares;
   const BitBoard pawn_attack_squares;
+  const BitBoard under_threat;
   MoveOrderInfo(const Board &board, Move tt_entry_ = kNullMove) :
     tt_entry(tt_entry_),
     last_move(get_last_move(board)),
     direct_checks(board.GetDirectCheckingSquares()),
     taboo_squares(board.GetTabooSquares()),
     passed_pawn_squares(get_passed_pawn_squares(board)),
-    pawn_attack_squares(get_pawn_attack_squares(board))
+    pawn_attack_squares(get_pawn_attack_squares(board)),
+    under_threat(get_under_threat_squares(board))
       { }
 };
 
@@ -270,11 +304,10 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
                             + (moving_piece * 6) + target);
   AddFeature<T>(move_weight, kPWIMoveType + GetMoveType(move));
   if (move_type == kNormalMove || move_type == kDoublePawnMove) {
-    if (moving_piece != kPawn) {
-      AddFeature<T>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
-      AddFeature<T>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
+    if (GetSquareBitBoard(GetMoveSource(move)) & info.under_threat) {
+      AddFeature<T>(move_weight, kPWIPieceUnderAttack + 1);
     }
-    else {
+    if (moving_piece == kPawn) {
       const BitBoard des = GetSquareBitBoard(GetMoveDestination(move));
       if (des & info.passed_pawn_squares) {
         int rank = GetSquareY(GetMoveDestination(move));
@@ -290,25 +323,45 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
         AddFeature<T>(move_weight, kPWIPawnAttack);
       }
     }
+    else if (moving_piece == kKnight) {
+      AddFeature<T>(move_weight, kPWIKnightMoveSource + kPSTindex[GetMoveSource(move)]);
+      AddFeature<T>(move_weight, kPWIKnightMoveDestination + kPSTindex[GetMoveDestination(move)]);
+    }
+    else {
+      AddFeature<T>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
+      AddFeature<T>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
+    }
+  }
+  else {
+    if (GetSquareBitBoard(GetMoveSource(move)) & info.under_threat) {
+      AddFeature<T>(move_weight, kPWIPieceUnderAttack);
+    }
   }
   if (info.last_move != kNullMove && GetMoveDestination(info.last_move) == GetMoveDestination(move)) {
     AddFeature<T>(move_weight, kPWICaptureLastMoved);
   }
   if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece]) {
-    AddFeature(move_weight, kPWIGivesCheck);
-    if (GetMoveType(move) < kEnPassant && !board.NonNegativeSEE(move)) {
-      AddFeature<T>(move_weight, kPWISEE + 1);
+    if (GetMoveType(move) >= kEnPassant) {
+      AddFeature(move_weight, kPWIGivesCheck);
+    }
+    else {
+      AddFeature(move_weight, kPWIGivesCheck + 1);
     }
   }
-  else if (GetMoveType(move) == kNormalMove
-      && (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece])) {
-    AddFeature<T>(move_weight, kPWITabooDestination);
+  if ((GetMoveType(move) == kNormalMove || GetMoveType(move) == kDoublePawnMove)
+      && (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[kKing])) {
+    if (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece]) {
+      AddFeature<T>(move_weight, kPWITabooDestination);
+    }
+    else if (!board.NonNegativeSEE(move)) {
+      AddFeature<T>(move_weight, kPWISEE + 1);
+    }
   }
   AddFeature<T>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(info.last_move));
   return move_weight;
 }
 
-void SortMovesML(std::vector<Move> &moves, Board &board, const Move best_move) {
+void SortMovesML(std::vector<Move> &moves, Board &board, const Move best_move = kNullMove) {
   MoveOrderInfo info(board, best_move);
 
   for (unsigned int i = 0; i < moves.size(); i++) {
@@ -388,6 +441,12 @@ inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score 
 }
 
 namespace search {
+
+std::vector<Move> GetSortedMovesML(Board &board) {
+  std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
+  SortMovesML(moves, board);
+  return moves;
+}
 
 uint64_t Perft(Board &board, Depth depth) {
   if (depth <= 0) {
@@ -672,11 +731,29 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
 //                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
 //      reduction = (i >= 8) ? 2 : 1;
 //    }
-    if (!in_check && GetMoveType(move) <= kDoublePawnMove
-        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
+
+//    if (!in_check && GetMoveType(move) <= kDoublePawnMove
+//        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+//                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
+//      reduction = get_lmr_reduction<NodeType>(depth, i);
+//    }
+
+//    if (!in_check && GetMoveType(move) <= kDoublePawnMove) {
+//      reduction = get_lmr_reduction<NodeType>(depth, i);
+//      if (checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+//                                      & GetSquareBitBoard(GetMoveDestination(move))) {
+//        reduction >>= 1;
+//      }
+//    }
+
+    if (!in_check && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
+                              & GetSquareBitBoard(GetMoveDestination(move)))) {
       reduction = get_lmr_reduction<NodeType>(depth, i);
+      if (GetMoveType(move) > kDoublePawnMove && reduction > 0) {
+        reduction = (2 * reduction) / 3;
+      }
     }
+
     assert(reduction < depth);
     if (NodeType == kNW && settings::kUseScoreBasedPruning
         && depth - reduction <= 3 && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval))//futility_margin *(depth - reduction))
@@ -1379,6 +1456,7 @@ void TrainSearchParams(bool from_scratch) {
       weights[kPWIMoveType + kEnPassant] = 0;
       weights[kPWIPieceTypeXTargetPieceType + kKing * 6 + kNoPiece - 1] = 0;
       weights[kPWIMoveSource] = 0;
+      weights[kPWIKnightMoveSource + 1] = 0;
     }
     if (sampled_positions % 1000 == 0) {
       std::cout << "Sampled " << sampled_positions << " positions!" << std::endl;
