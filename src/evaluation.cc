@@ -29,6 +29,7 @@
 #include "learning/statistics.h"
 #include "learning/machine_learning.h"
 #include "benchmark.h"
+#include "search.h"
 #include "general/feature_indexes.h"
 #include "general/magic.h"
 #include "general/settings.h"

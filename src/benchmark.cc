@@ -97,6 +97,7 @@ double MoveOrderTest() {
   std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
   double count = 0, top_1 = 0, top_2 = 0, top_3 = 0, top_5 = 0, top_half = 0;
   double top_1r = 0, top_2r = 0, top_3r = 0, top_5r = 0, top_halfr = 0;
+  search::clear_killers();
 
   for (int idx = 0; idx < games.size(); idx++) {
     Game game = games[idx];

@@ -30,6 +30,7 @@
 #include "general/debug.h"
 #include "general/bookkeeping.h"
 #include "board.h"
+#include "search.h"
 
 int main() {
   debug::EnterFunction(debug::kMain, "Main", "");

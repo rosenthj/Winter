@@ -89,6 +89,7 @@ public:
   int get_phase() const { return phase; }
   //Print unicode chess board.
   bool IsMoveLegal(const Move move) const;
+  bool IsTriviallyDrawnEnding() const;
   bool IsDraw() const;
   std::vector<std::string> GetFen() const;
   void Print() const;
@@ -150,7 +151,5 @@ private:
   HashType hash;
   int32_t fifty_move_count;
 };
-
-#include "search.h"
 
 #endif /* BOARD_H_ */

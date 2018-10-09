@@ -36,6 +36,7 @@
 #include "general/bookkeeping.h"
 #include "general/feature_indexes.h"
 #include "general/magic.h"
+#include "benchmark.h"
 #include <random>
 #include <algorithm>
 #include <iostream>
@@ -504,6 +505,9 @@ Score SQSearch(Board &board) {
 template<int Mode>
 Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   max_ply = std::max(board.get_num_made_moves(), max_ply);
+  if (board.IsTriviallyDrawnEnding()) {
+    return 0;
+  }
 
   table::Entry entry = table::GetEntry(board.get_hash());
   bool valid_hash = table::ValidateHash(entry,board.get_hash());
@@ -1329,7 +1333,7 @@ void TrainSearchParams(bool from_scratch) {
       all_above++;
       continue;
     }
-    else if (high > low) {
+    else if (high > (low / 3)) {
       too_easy++;
       continue;
     }
@@ -1383,6 +1387,9 @@ void TrainSearchParams(bool from_scratch) {
         search_weights[idx] = std::round(weights[idx]);
       }
       SaveSearchVariables();
+    }
+    if (sampled_positions % 10000 == 0) {
+      benchmark::MoveOrderTest();
     }
     if (sampled_positions % 100000 == 0) {
       nu /= 2;

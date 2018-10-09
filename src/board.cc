@@ -25,6 +25,7 @@
  */
 
 #include "board.h"
+#include "search.h"
 #include "general/debug.h"
 #include "general/settings.h"
 #include "general/magic.h"
@@ -328,6 +329,7 @@ void PrintStandardRow(std::string first_delim, std::string mid_delim, std::strin
 
 Board::Board() {
   hash = 0;
+  previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
   phase = 0;
@@ -502,9 +504,17 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   }
   evaluate_castling_rights(fen_tokens[2]);
 
+  if (fen_tokens.size() == 3){
+    return;
+  }
   if (fen_tokens[3] != "-") {
     en_passant = parse::StringToSquare(fen_tokens[3]);
   }
+
+  if (fen_tokens.size() == 4){
+    return;
+  }
+  fifty_move_count = atoi(fen_tokens[4].c_str());
 }
 
 void Board::evaluate_castling_rights(std::string fen_code){
@@ -1248,13 +1258,17 @@ bool Board::GivesCheck(const Move move) {
   return gives_check;
 }
 
+bool Board::IsTriviallyDrawnEnding() const {
+  return (get_num_pieces() == 3 && ((get_piecetype_bitboard(kKnight) | get_piecetype_bitboard(kBishop))
+      || (get_piecetype_bitboard(kPawn) && clearly_drawn_pawn_ending(get_piecetype_bitboard(kPawn),
+                                                                     get_piecetype_bitboard(kKing),
+                                                                     get_color_bitboard(kWhite))))) || get_num_pieces() == 2;
+}
+
+
 bool Board::IsDraw() const {
   return (fifty_move_count >= 100) || CountRepetitions() >= settings::kRepsForDraw
-      || (get_num_pieces() == 3 && ((get_piecetype_bitboard(kKnight) | get_piecetype_bitboard(kBishop))
-          || (get_piecetype_bitboard(kPawn) && clearly_drawn_pawn_ending(get_piecetype_bitboard(kPawn),
-                                                                         get_piecetype_bitboard(kKing),
-                                                                         get_color_bitboard(kWhite)))))
-      || get_num_pieces() == 2;
+      || IsTriviallyDrawnEnding();
 }
 
 Board Board::copy() const {
