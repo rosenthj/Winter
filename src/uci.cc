@@ -90,14 +90,18 @@ void Go(Board *board, Timer timer) {
   }
   else if (timer.movetime != 0) {
     Milliseconds duration = Milliseconds(maxtime(timer.movetime));
-    move = search::TimeSearch((*board), duration);
+    move = search::FixedTimeSearch((*board), duration);
   }
   else {
     if (timer.moves_to_go == 0) {
       timer.moves_to_go = 40;
     }
     Color color = board->get_turn();
-    int time = (timer.time[color] / timer.moves_to_go) + timer.inc[color];
+    int time = timer.time[color] + ((timer.time[color] * board->get_phase()) / kMaxPhase);
+    time = (6 * time) / 5;
+    time /= timer.moves_to_go + 8;
+    time = std::max(time, timer.time[color] / timer.moves_to_go + 4);
+    time += timer.inc[color];
     Milliseconds duration = Milliseconds(maxtime(time));
     move = search::TimeSearch((*board), duration);
   }

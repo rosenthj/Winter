@@ -111,7 +111,7 @@ const int kOpening = 0;
 const int kEnding = 1;
 
 const int piece_phases[7] = {0, 3, 3, 4, 9, 0, 0};
-const int max_phase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
+const int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
               + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
               + 2 * piece_phases[kQueen];
 

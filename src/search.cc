@@ -134,6 +134,7 @@ const long kInfiniteNodes = 1000000000000;
 long max_nodes = kInfiniteNodes;
 long sample_nodes = 0;
 long evaluation_nodes = 0;
+bool fixed_search_time;
 
 Time end_time = now();
 
@@ -1048,9 +1049,12 @@ inline Score MTDf(Board &board, Depth current_depth, Score score, std::vector<Mo
 }
 
 template<int Mode>
-Move RootSearch(Board &board, Depth depth){
+Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)){
   // Measure complete search time
   const Time begin = now();
+  end_time = begin+duration;
+  double time_factor = 1.0;
+  Move last_best = kNullMove;
   max_ply = board.get_num_made_moves();
   min_ply = board.get_num_made_moves();
   Score score = 0;
@@ -1073,7 +1077,7 @@ Move RootSearch(Board &board, Depth depth){
     //score = sMTDf<Mode>(board, current_depth, score, moves);
 
 
-    if(!finished()){
+    if(!finished()) {
       last_search_score = score;
       std::vector<Move> pv;
       build_pv(board, pv, current_depth);
@@ -1104,6 +1108,18 @@ Move RootSearch(Board &board, Depth depth){
         }
         std::cout << std::endl;
       }
+      if (!fixed_search_time) {
+        if (last_best == moves[0]) {
+          time_factor = std::max(time_factor * 0.9, 0.5);
+          if (time_used.count() > (duration.count() * time_factor)) {
+            return moves[0];
+          }
+        }
+        else {
+          last_best = moves[0];
+          time_factor = 1.0;
+        }
+      }
     }
   }
   return moves[0];
@@ -1118,20 +1134,26 @@ Score get_last_search_score() {
 }
 
 Move DepthSearch(Board board, Depth depth) {
+  fixed_search_time = true;
   max_nodes = kInfiniteNodes;
-  end_time = get_infinite_time();
   return RootSearch<kNormalSearchMode>(board, depth);
 }
 
-Move TimeSearch(Board board, Milliseconds duration) {
+Move FixedTimeSearch(Board board, Milliseconds duration) {
+  fixed_search_time = true;
   max_nodes = kInfiniteNodes;
-  end_time = now()+duration;
-  return RootSearch<kNormalSearchMode>(board, 1000);
+  return RootSearch<kNormalSearchMode>(board, 1000, duration);
+}
+
+Move TimeSearch(Board board, Milliseconds duration) {
+  fixed_search_time = false;
+  max_nodes = kInfiniteNodes;
+  return RootSearch<kNormalSearchMode>(board, 1000, duration);
 }
 
 Move NodeSearch(Board board, size_t num_nodes) {
+  fixed_search_time = true;
   max_nodes = num_nodes;
-  end_time = get_infinite_time();
   return RootSearch<kNormalSearchMode>(board, 1000);
 }
 
@@ -1173,11 +1195,10 @@ void CreateSearchParamDataset(bool from_scratch) {
     }
     game.set_to_position_after((1 * game.moves.size() / 3)
                                + (rng() % (2 * game.moves.size() / 3)) - 2);
-    end_time = now() + Milliseconds(200);
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128);
+    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(200));
     if (sampled_alpha == kMinScore) {
       continue;
     }
@@ -1288,11 +1309,10 @@ void TrainSearchParams(bool from_scratch) {
     }
     game.set_to_position_after((2 * game.moves.size() / 3)
                                + (rng() % (game.moves.size() / 3)) - 2);
-    end_time = now() + Milliseconds(150);
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128);
+    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(150));
     if (sampled_alpha == kMinScore) {
       continue;
     }
@@ -1403,9 +1423,8 @@ Score QSearch(Board &board) {
 }
 
 Board SampleEval(Board board) {
-  end_time = now() + Milliseconds(5000);
   evaluation_nodes = 0;
-  RootSearch<kSamplingEvalMode>(board, 128);
+  RootSearch<kSamplingEvalMode>(board, 128, Milliseconds(5000));
   return sampled_board;
 }
 
@@ -1459,15 +1478,13 @@ void EvaluateScoreDistributions(const int focus) {
     table::ClearTable();
 
     kNodeCountSampleAt = 300 + rng() % 150;
-    end_time = now() + Milliseconds(150);
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128);
+    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(150));
     if (sampled_alpha == kMinScore || sampled_board.InCheck()) {
       continue;
     }
-    end_time = get_infinite_time();
     Score score = evaluation::ScoreBoard(sampled_board);
     Score score_bin_idx = score;
     score_bin_idx += score_bin_size / 2;
