@@ -505,16 +505,22 @@ Score SQSearch(Board &board) {
 
 template<int Mode>
 Score QuiescentSearch(Board &board, Score alpha, Score beta) {
+  //Update max ply reached in search
   max_ply = std::max(board.get_num_made_moves(), max_ply);
+
+  //End search immediately if trivial draw is reached
   if (board.IsTriviallyDrawnEnding()) {
     return 0;
   }
 
+  //TT probe
   table::Entry entry = table::GetEntry(board.get_hash());
   bool valid_hash = table::ValidateHash(entry,board.get_hash());
   if (valid_hash && sufficient_bounds(board, entry, alpha, beta, 0)) {
     return entry.get_score(board);
   }
+
+  //Static evaluation
   bool in_check = board.InCheck();
   Score static_eval = kMinScore;
   if (!in_check) {
@@ -531,17 +537,26 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
       static_eval = entry.get_score(board);
     }
 
+    //Stand pat
     if (static_eval >= beta) {
       return static_eval;
     }
+
+    //Update alpha in PV nodes if possible
     if (static_eval > alpha) {
       alpha = static_eval;
     }
   }
+
+  //Get moves
   std::vector<Move> moves = board.GetMoves<kQuiescent>();
+
+  //In check all moves are generated, so if we have no moves in check it is mate.
   if (in_check && moves.size() == 0) {
     return kMinScore+board.get_num_made_moves();
   }
+
+  //Sort move list
   if (table::ValidateHash(entry,board.get_hash())) {
     SortMoves<kQuiescent>(moves, board, entry.best_move);
     //SortMovesML(moves, board, entry.best_move);
@@ -551,21 +566,32 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
     //SortMovesML(moves, board, 0);
   }
 
+  //Move loop
   for (Move move : moves) {
+    //SEE pruning
+    //TODO test making exception for checking moves
     if (!in_check && GetMoveType(move) != kEnPassant && !board.NonNegativeSEE(move)) {
         continue;
     }
+
+    //Make move, search and unmake
     board.Make(move);
     Score score = -QuiescentSearch<Mode>(board, -beta, -alpha);
     board.UnMake();
+
+    //Return beta if we fail high
     if (score >= beta) {
       table::SaveEntry(board, move, score, kLowerBound, 0);
       return beta;
     }
+
+    //Update alpha in PV nodes if possible
     if (score > alpha) {
       alpha = score;
     }
   }
+
+  //Return the lower bound after all has been said and done.
   return alpha;
 }
 
@@ -613,15 +639,19 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
-  Score original_alpha = alpha;
+  const Score original_alpha = alpha;
+
+  //Immediately return 0 if we detect a draw.
   if (board.IsDraw() || (settings::kRepsForDraw == 3 && board.CountRepetitions(min_ply) >= 2)) {
     return 0;
   }
 
+  //We drop to QSearch if we run out of depth.
   if (depth <= 0) {
     return QuiescentSearch<Mode>(board, alpha, beta);
   }
 
+  //Transposition Table Probe
   table::Entry entry = table::GetEntry(board.get_hash());
   bool valid_entry = table::ValidateHash(entry,board.get_hash());
   if (NodeType != kPV && valid_entry
@@ -631,8 +661,11 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
 
   bool in_check = board.InCheck();
   Score static_eval = alpha;
+
+  //Speculative pruning methods
   if (NodeType == kNW && beta > kMinScore + 2000 && alpha < kMaxScore - 2000 && !in_check) {
-    //Score static_eval;
+
+    //Set static eval from board and TT entry.
     if (valid_entry) {
       if (entry.bound == kExactBound) {
         static_eval = entry.get_score(board);
@@ -648,6 +681,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       static_eval = evaluation::ScoreBoard(board);
     }
 
+    //Static Null Move Pruning
     if (NodeType == kNW && depth <= 5) {
       if (false && Mode == kSamplingSearchMode && static_eval > beta
                 && depth <= kMaxDepthSampled) {
@@ -662,6 +696,8 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
         return beta;
       }
     }
+
+    //Null Move Pruning
     if (static_eval >= beta && is_null_move_allowed(board, depth)) {
       board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
@@ -673,8 +709,8 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       }
     }
   }
-  Vec<BitBoard, 6> checking_squares = board.GetDirectCheckingSquares();
 
+  //Get move list and return result if there are no legal moves
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   if (moves.size() == 0) {
     if (in_check) {
@@ -682,6 +718,8 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
     }
     return 0;
   }
+
+
 
 //  This tested negative. Perhaps a retry for before NMP and other cutoffs is required
 //  if (false && NodeType == kNW && depth >= 2) {
@@ -724,73 +762,71 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
     depth++;
   }
 
+  //Init checking squares for efficient detection of checking moves.
+  //Moves detected always give check, but only direct checks are detected.
+  //Ie no checks from special moves or discovered checks.
+  Vec<BitBoard, 6> checking_squares = board.GetDirectCheckingSquares();
+
+  //Move loop
   for (unsigned int i = 0; i < moves.size(); i++) {
     if (i == 1 && !moves_sorted) {
       SortMovesML(moves, board, tt_entry);
       moves_sorted = true;
     }
-    Move move = moves[i];
+    const Move move = moves[i];
     Depth reduction = 0;
-//    if (NodeType == kNW && !in_check && depth >= 3 && i >= 4
-//        && GetMoveType(move) <= kDoublePawnMove
-//        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-//                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
-//      reduction = (i >= 8) ? 2 : 1;
-//    }
-
-//    if (!in_check && GetMoveType(move) <= kDoublePawnMove
-//        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-//                                      & GetSquareBitBoard(GetMoveDestination(move)))) {
-//      reduction = get_lmr_reduction<NodeType>(depth, i);
-//    }
-
-//    if (!in_check && GetMoveType(move) <= kDoublePawnMove) {
-//      reduction = get_lmr_reduction<NodeType>(depth, i);
-//      if (checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-//                                      & GetSquareBitBoard(GetMoveDestination(move))) {
-//        reduction >>= 1;
-//      }
-//    }
 
     if (!in_check && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
+      //Late Move Pruning
+      assert(depth > 0);
+      if (NodeType == kNW && depth < kLMP.size() && (i >= kLMP[depth])
+          && GetMoveType(move) < kEnPassant) {
+        continue;
+      }
+
+      //Late Move Reduction factor
       reduction = get_lmr_reduction<NodeType>(depth, i);
       if (GetMoveType(move) > kDoublePawnMove && reduction > 0) {
         reduction = (2 * reduction) / 3;
       }
+      assert(reduction < depth);
+
+      //Futility Pruning
+      if (NodeType == kNW && settings::kUseScoreBasedPruning
+          && depth - reduction <= 3 && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval))
+          && GetMoveType(move) < kEnPassant) {
+        continue;
+      }
     }
 
-    assert(reduction < depth);
-    if (NodeType == kNW && settings::kUseScoreBasedPruning
-        && depth - reduction <= 3 && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval))//futility_margin *(depth - reduction))
-        && GetMoveType(move) < kEnPassant && !in_check
-        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-                              & GetSquareBitBoard(GetMoveDestination(move)))) {
-      continue;
-    }
-    assert(depth > 0);
-    if (NodeType == kNW && depth < kLMP.size()  && !in_check && (i >= kLMP[depth])
-        && GetMoveType(move) < kEnPassant
-        && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
-                              & GetSquareBitBoard(GetMoveDestination(move)))) {
-      continue;
-    }
+    //Make moves, search and unmake
     board.Make(move);
     Score score;
     if (i == 0) {
+      //First move gets searched at full depth and window
       score = -AlphaBeta<NodeType, Mode>(board, -beta, -alpha, depth - 1, expected_node ^ 0x1);
     }
     else {
+      //Assume we have searched the best move already and search with closed window and possibly reduction
       score = -AlphaBeta<kNW, Mode>(board, -(alpha+1), -alpha, depth - 1 - reduction, 1);
+      //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (NodeType == kPV || reduction > 0)) {
         score = -AlphaBeta<NodeType, Mode>(board, -beta, -alpha, depth - 1, 0);
       }
     }
+    assert(score >= kMinScore && score <= kMaxScore);
     board.UnMake();
+
+    //Ensure we still have time and our score was not prematurely terminated
     if (finished()) {
       return alpha;
     }
+
+    //Check if search failed high
     if (score >= beta) {
+
+      //Bookkeeping
       if (!in_check && GetMoveType(move) <= kDoublePawnMove
               && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                             & GetSquareBitBoard(GetMoveDestination(move)))) {
@@ -798,7 +834,10 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
                         bookkeeping::Trigger::kFailHigh);
       }
 
+      //Save TT entry
       table::SaveEntry(board, move, score, kLowerBound, depth);
+
+      //Update Killers
       if (GetMoveType(move) < kCapture) {
         int num_made_moves = board.get_num_made_moves();
         if (killers[num_made_moves][0] != move) {
@@ -808,17 +847,22 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       }
       return beta;
     }
+
+    //In PV nodes we might be improving Alpha without breaking Beta
     if (score > alpha) {
+      //Bookkeeping
       if (!in_check && GetMoveType(move) <= kDoublePawnMove
               && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                             & GetSquareBitBoard(GetMoveDestination(move)))) {
         bookkeeping_log(NodeType, board, tt_entry, depth, i, expected_node,
                       bookkeeping::Trigger::kImproveAlpha);
       }
+      //Update score and expected best move
       alpha = score;
       best_local_move = move;
     }
     else {
+      //Bookkeeping
       if (!in_check && GetMoveType(move) <= kDoublePawnMove
               && !(checking_squares[GetPieceType(board.get_piece(GetMoveSource(move)))]
                                             & GetSquareBitBoard(GetMoveDestination(move)))) {
@@ -827,6 +871,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
       }
     }
   }
+  //Bookkeeping
   if (!in_check) {
     bookkeeping_log(NodeType, board, tt_entry, depth, moves.size(), expected_node,
                   bookkeeping::Trigger::kReturnAlpha);
@@ -903,7 +948,7 @@ Score RootSearchLoop(Board &board, Score original_alpha, Score beta, Depth curre
 
 template<int Mode>
 inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
-  if (current_depth == 1) {
+  if (current_depth <= 4) {
     score = RootSearchLoop<Mode>(board, kMinScore, kMaxScore, current_depth, moves);
   }
   else {
