@@ -551,9 +551,12 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   //Get moves
   std::vector<Move> moves = board.GetMoves<kQuiescent>();
 
-  //In check all moves are generated, so if we have no moves in check it is mate.
-  if (in_check && moves.size() == 0) {
-    return kMinScore+board.get_num_made_moves();
+  if (moves.size() == 0) {
+    if (in_check) {
+      //In check all moves are generated, so if we have no moves in check it is mate.
+      return kMinScore+board.get_num_made_moves();
+    }
+    return alpha;
   }
 
   //Sort move list
@@ -569,7 +572,7 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   //Move loop
   for (Move move : moves) {
     //SEE pruning
-    //TODO test making exception for checking moves
+    //Exception for checking moves: -16.03 +/- 10.81
     if (!in_check && GetMoveType(move) != kEnPassant && !board.NonNegativeSEE(move)) {
         continue;
     }
@@ -596,15 +599,6 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
 }
 
 inline Score get_futility_margin(Depth depth, Score score) {
-  if (false) {
-    depth--;
-
-    const Score intercept[3] = { 113, 204, 706 };
-    const double w_score[3] = { 0, 0.036, 0.371 };
-    const double w_abs_score[3] = { 0.009, -0.009, 0.373 };
-    return std::round(intercept[depth] + w_score[depth] * score
-                                       + w_abs_score[depth] * std::abs(score));
-  }
   return kFutileMargin[depth];
 }
 
@@ -908,7 +902,7 @@ Score RootSearchLoop(Board &board, Score original_alpha, Score beta, Depth curre
         score = 0;
       }
       board.UnMake();
-      if (score <= original_alpha || score >= beta) {
+      if (score >= beta) {
         return score;
       }
       alpha = std::max(score, alpha);
@@ -946,13 +940,28 @@ Score RootSearchLoop(Board &board, Score original_alpha, Score beta, Depth curre
   return alpha;
 }
 
+inline Score estimate_Delta(const std::vector<Score> &previous_scores) {
+  double weight = 1, discount = 0.9, weighted_sum = 0, sum_weights = 0;
+  Score belief = previous_scores.back();
+  for (int i = previous_scores.size() - 2; i >= 0; i--) {
+    Score diff = belief - previous_scores[i];
+    weighted_sum += diff * diff * weight;
+    sum_weights += weight;
+    weight *= discount;
+  }
+  weighted_sum += 400 * 400 * weight;
+  sum_weights += weight;
+  return 10 + std::round(std::sqrt(weighted_sum / sum_weights));
+}
+
 template<int Mode>
-inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Move> &moves) {
+inline Score PVS(Board &board, Depth current_depth, const std::vector<Score> &previous_scores, std::vector<Move> &moves) {
   if (current_depth <= 4) {
-    score = RootSearchLoop<Mode>(board, kMinScore, kMaxScore, current_depth, moves);
+    return RootSearchLoop<Mode>(board, kMinScore, kMaxScore, current_depth, moves);
   }
   else {
-    Score delta = 500;
+    Score score = previous_scores.back();
+    Score delta = 2 * estimate_Delta(previous_scores);
     Score alpha = std::max(score-delta, kMinScore);
     Score beta = std::min(score+delta, kMaxScore);
     SortMovesML(moves, board, moves[0]);
@@ -973,8 +982,8 @@ inline Score PVS(Board &board, Depth current_depth, Score score, std::vector<Mov
       score = RootSearchLoop<Mode>(board, alpha, beta, current_depth, moves);
       delta *= 2;
     }
+    return score;
   }
-  return score;
 }
 
 template<int Mode>
@@ -1112,18 +1121,20 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     tt_move = entry.best_move;
   }
   SortMovesML(moves, board, tt_move);
+  std::vector<Score> previous_scores;
   for (Depth current_depth = 1; current_depth <= depth; current_depth++) {
     if(finished()) {
       break;
     }
 
-    score = PVS<Mode>(board, current_depth, score, moves);
+    score = PVS<Mode>(board, current_depth, previous_scores, moves);
     //score = MTDf<Mode>(board, current_depth, score, moves);
     //score = sMTDf<Mode>(board, current_depth, score, moves);
 
 
     if(!finished()) {
       last_search_score = score;
+      previous_scores.emplace_back(score);
       std::vector<Move> pv;
       build_pv(board, pv, current_depth);
       Time end = now();
