@@ -54,7 +54,7 @@ std::vector<Move> GetSortedMovesML(Board &board);
 
 std::vector<Board> GenerateEvalSampleSet(std::string filename);
 
-void clear_killers();
+void clear_killers_and_counter_moves();
 
 void CreateSearchParamDataset(bool from_scratch);
 void TrainSearchParams(bool from_scratch);

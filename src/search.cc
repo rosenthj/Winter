@@ -107,6 +107,7 @@ const std::array<int, 4> kLMP = {0, 6, 9, 13};
 std::vector<int> search_weights(kNumMoveProbabilityFeatures);
 
 Array2d<Move, 1024, 2> killers;
+Array3d<Move, 2, 6, 64> counter_moves;
 Score last_search_score = 0;
 
 bool print_info = true;
@@ -292,6 +293,13 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
   else if (move == killers[num_made_moves][1]) {
     AddFeature<T>(move_weight, kPWIKiller + 1);
     return move_weight;
+  }
+  if (board.get_num_made_moves() > 0) {
+    const Square last_destination = GetMoveDestination(board.get_last_move());
+    PieceType last_moved_piece = GetPieceType(board.get_piece(last_destination));
+    if (move == counter_moves[board.get_turn()][last_moved_piece][last_destination]) {
+      AddFeature<T>(move_weight, kPWICounterMove);
+    }
   }
   const PieceType moving_piece = GetPieceType(board.get_piece(GetMoveSource(move)));
   PieceType target = GetPieceType(board.get_piece(GetMoveDestination(move)));
@@ -839,6 +847,13 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
           killers[num_made_moves][0] = move;
         }
       }
+
+      //Update Counter Move
+      if (board.get_num_made_moves() > 0) {
+        const Square last_destination = GetMoveDestination(board.get_last_move());
+        PieceType last_moved_piece = GetPieceType(board.get_piece(last_destination));
+        counter_moves[board.get_turn()][last_moved_piece][last_destination] = move;
+      }
       return beta;
     }
 
@@ -1225,10 +1240,18 @@ void end_search() {
   end_time = now();
 }
 
-void clear_killers() {
+void clear_killers_and_counter_moves() {
   for (size_t i = 0; i < killers.size(); i++) {
     killers[i][0] = 0;
     killers[i][1] = 0;
+  }
+
+  for (size_t c = 0; c < 2; c++) {
+    for (PieceType pt = kPawn; pt <= kKing; pt++) {
+      for (Square sq = 0; sq < 64; sq++) {
+        counter_moves[c][pt][sq] = kNullMove;
+      }
+    }
   }
 }
 
@@ -1242,7 +1265,7 @@ void CreateSearchParamDataset(bool from_scratch) {
   int sampled_positions = 0;
   int all_above = 0, all_below = 0, too_easy = 0;
   while (samples.size() < 1 * kMillion) {
-    clear_killers();
+    clear_killers_and_counter_moves();
     table::ClearTable();
     kNodeCountSampleAt = 1000 + rng() % 500;
     Game game = games[rng() % games.size()];
@@ -1356,7 +1379,7 @@ void TrainSearchParams(bool from_scratch) {
   int sampled_positions = 0;
   int all_above = 0, all_below = 0, too_easy = 0;
   while (true) {
-    clear_killers();
+    clear_killers_and_counter_moves();
     table::ClearTable();
     kNodeCountSampleAt = 800 + rng() % 400;
     Game game = games[rng() % games.size()];
@@ -1409,7 +1432,7 @@ void TrainSearchParams(bool from_scratch) {
       all_above++;
       continue;
     }
-    else if (high > (low / 3)) {
+    else if (high > (low / 2)) {
       too_easy++;
       continue;
     }
@@ -1530,7 +1553,7 @@ void EvaluateScoreDistributions(const int focus) {
     Game game = games[rng() % games.size()];
     int index = (rng() % (2 * game.moves.size() / 3)) + (game.moves.size() / 3) - 2;
     game.set_to_position_after(index);
-    clear_killers();
+    clear_killers_and_counter_moves();
     table::ClearTable();
 
     kNodeCountSampleAt = 300 + rng() % 150;

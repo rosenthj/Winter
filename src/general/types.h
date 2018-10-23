@@ -62,6 +62,9 @@ inline Time now() { return std::chrono::steady_clock::now(); }
 template<typename T, size_t i, size_t j>
 using Array2d = std::array<std::array< T, j>, i>;
 
+template<typename T, size_t i, size_t j, size_t k>
+using Array3d = std::array<Array2d< T, j, k>, i>;
+
 const Color kWhite = 0;
 const Color kBlack = 1;
 

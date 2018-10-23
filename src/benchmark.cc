@@ -97,7 +97,7 @@ double MoveOrderTest() {
   std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
   double count = 0, top_1 = 0, top_2 = 0, top_3 = 0, top_5 = 0, top_half = 0;
   double top_1r = 0, top_2r = 0, top_3r = 0, top_5r = 0, top_halfr = 0;
-  search::clear_killers();
+  search::clear_killers_and_counter_moves();
 
   for (int idx = 0; idx < games.size(); idx++) {
     Game game = games[idx];
@@ -243,7 +243,7 @@ int TimeToDepthSuite() {
     Time test_end = now();
     auto test_time = std::chrono::duration_cast<Milliseconds>(test_end-test_start);
     std::cout << "test " << t << " completed in " << test_time.count() << std::endl;
-    search::clear_killers();
+    search::clear_killers_and_counter_moves();
     table::ClearTable();
   }
   Time end = now();

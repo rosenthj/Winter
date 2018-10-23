@@ -130,7 +130,8 @@ namespace move_features {
 
 const int kPWIHashMove = 0;
 const int kPWIKiller = kPWIHashMove + 1;
-const int kPWIPieceTypeXTargetPieceType = kPWIKiller + 2;
+const int kPWICounterMove = kPWIKiller + 2;
+const int kPWIPieceTypeXTargetPieceType = kPWICounterMove + 1;
 const int kPWIMoveType = kPWIPieceTypeXTargetPieceType + 36;
 const int kPWIMoveSource = kPWIMoveType + 9;
 const int kPWIMoveDestination = kPWIMoveSource + 10;
@@ -148,9 +149,10 @@ const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
 const int kPWIPieceUnderAttack = kPWIPawnAttack + 1;
 const int kNumMoveProbabilityFeatures = kPWIPieceUnderAttack + 2;
 
-const std::array<FeatureInfo, 18> kFeatureInfos = {{
+const std::array<FeatureInfo, 19> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
+    FeatureInfo("Counter Move", kPWICounterMove),
     FeatureInfo("Moving and Target Piece Type", kPWIPieceTypeXTargetPieceType),
     FeatureInfo("Move Type", kPWIMoveType),
     FeatureInfo("Move Source", kPWIMoveSource),
