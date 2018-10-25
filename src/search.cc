@@ -84,6 +84,24 @@ const Depth get_lmr_reduction(const Depth depth, const int move_number) {
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, 63)];
 }
 
+const std::array<int, 15*15> relative_king_map = {
+    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0,
+    1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
+    2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
+    3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
+    4, 11, 17, 22, 26, 27, 28, 29, 28, 27, 26, 22, 17, 11, 4,
+    5, 12, 18, 23, 27, 30, 31, 32, 31, 30, 27, 23, 18, 12, 5,
+    6, 13, 19, 24, 28, 31, 33, 34, 33, 31, 28, 24, 19, 13, 6,
+    7, 14, 20, 25, 29, 32, 34, 35, 34, 32, 29, 25, 20, 14, 7,
+    6, 13, 19, 24, 28, 31, 33, 34, 33, 31, 28, 24, 19, 13, 6,
+    5, 12, 18, 23, 27, 30, 31, 32, 31, 30, 27, 23, 18, 12, 5,
+    4, 11, 17, 22, 26, 27, 28, 29, 28, 27, 26, 22, 17, 11, 4,
+    3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
+    2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
+    1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
+    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
+};
+
 const Vec<Score, 4> init_futility_margins() {
   Vec<Score, 4> kFutilityMargins;
   if (false) {
@@ -340,6 +358,12 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
     else {
       AddFeature<T>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
       AddFeature<T>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
+      if (moving_piece == kBishop) {
+        Square enemy_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(board.get_not_turn(), kKing));
+        int relative_x = GetSquareX(GetMoveDestination(move)) - GetSquareX(enemy_king_square) + 7;
+        int relative_y = GetSquareY(GetMoveDestination(move)) - GetSquareY(enemy_king_square) + 7;
+        AddFeature<T>(move_weight, kPWIBishopRelativeToKing + relative_king_map[relative_x + 15 * relative_y]);
+      }
     }
   }
   else {

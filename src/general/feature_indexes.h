@@ -147,9 +147,10 @@ const int kPWIPawnRankDestination = kPWIForcingChanges + 4;
 const int kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
 const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
 const int kPWIPieceUnderAttack = kPWIPawnAttack + 1;
-const int kNumMoveProbabilityFeatures = kPWIPieceUnderAttack + 2;
+const int kPWIBishopRelativeToKing = kPWIPieceUnderAttack + 2;
+const int kNumMoveProbabilityFeatures = kPWIBishopRelativeToKing + 36;
 
-const std::array<FeatureInfo, 19> kFeatureInfos = {{
+const std::array<FeatureInfo, 20> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
     FeatureInfo("Counter Move", kPWICounterMove),
@@ -168,6 +169,7 @@ const std::array<FeatureInfo, 19> kFeatureInfos = {{
     FeatureInfo("Rank of passed pawn destination", kPWIPassedRankDestination),
     FeatureInfo("Pawn move attacks a piece", kPWIPawnAttack),
     FeatureInfo("Piece under attack", kPWIPieceUnderAttack),
+    FeatureInfo("Relative position of bishop to enemy king after quiet move", kPWIBishopRelativeToKing),
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};
 
