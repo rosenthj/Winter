@@ -34,6 +34,9 @@
 #include "general/types.h"
 #include "general/settings.h"
 #include "board.h"
+#include <vector>
+
+typedef Vec<Score,settings::kGMMk> PScore;
 
 namespace evaluation {
 
@@ -56,6 +59,8 @@ Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board);
 Score EvaluateQuietMoveValue();
 void SGDDrawMarginTrain();
 void PrintEvaluationGMM();
+
+std::vector<PScore> GetEvaluationWeights();
 
 }
 

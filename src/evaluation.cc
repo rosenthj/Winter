@@ -52,8 +52,6 @@ const double kEuler = std::exp(1);
 std::mt19937_64 rng;
 const double eval_scaling = 1024.0;
 
-typedef Vec<Score,settings::kGMMk> PScore;
-
 const BitBoard fourth_row = parse::StringToBitBoard("a4") | parse::StringToBitBoard("b4")
                       | parse::StringToBitBoard("c4") | parse::StringToBitBoard("d4")
                       | parse::StringToBitBoard("e4") | parse::StringToBitBoard("f4")
@@ -1682,6 +1680,10 @@ void PrintEvaluationGMM() {
       std::cout << feature_GMM_score_values[i][j] << " ";
     std::cout << std::endl;
   }
+}
+
+std::vector<PScore> GetEvaluationWeights() {
+  return feature_GMM_score_values;
 }
 
 }
