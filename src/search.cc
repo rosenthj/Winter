@@ -123,6 +123,8 @@ const Vec<Score, 4> kFutileMargin = init_futility_margins();
 const std::array<int, 4> kLMP = {0, 6, 9, 13};
 
 std::vector<int> search_weights(kNumMoveProbabilityFeatures);
+std::vector<int> search_weights_in_check(kNumMoveProbabilityFeatures);
+
 
 Array2d<Move, 1024, 2> killers;
 Array3d<Move, 2, 6, 64> counter_moves;
@@ -210,13 +212,17 @@ T init() {
 
 template<> int init<int>() { return 0; }
 
-template<typename T> inline
+template<typename T, bool in_check> inline
 void AddFeature(T &s, const int index) {
   s[index] = 1;
 }
 
-template<> inline void AddFeature<int>(int &s,  const int index) {
+template<> inline void AddFeature<int, false>(int &s,  const int index) {
   s += search_weights[index];
+}
+
+template<> inline void AddFeature<int, true>(int &s,  const int index) {
+  s += search_weights_in_check[index];
 }
 
 inline Move get_last_move(const Board &board) {
@@ -296,27 +302,31 @@ struct MoveOrderInfo {
       { }
 };
 
-template<typename T>
+enum SlidingCheckType {
+  kNoSlideCheck = 0, kBishopCheck, kRookCheck, kQueenDiagCheck, kQueenRooklikeCheck
+};
+
+template<typename T, bool in_check>
 T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
   T move_weight = init<T>();
   if (move == info.tt_entry) {
-    AddFeature<T>(move_weight, kPWIHashMove);
+    AddFeature<T, in_check>(move_weight, kPWIHashMove);
     return move_weight;
   }
   int num_made_moves = board.get_num_made_moves();
   if (move == killers[num_made_moves][0]) {
-    AddFeature<T>(move_weight, kPWIKiller);
-    return move_weight;
+    AddFeature<T, in_check>(move_weight, kPWIKiller);
+    //return move_weight;
   }
   else if (move == killers[num_made_moves][1]) {
-    AddFeature<T>(move_weight, kPWIKiller + 1);
-    return move_weight;
+    AddFeature<T, in_check>(move_weight, kPWIKiller + 1);
+    //return move_weight;
   }
   if (board.get_num_made_moves() > 0) {
     const Square last_destination = GetMoveDestination(board.get_last_move());
     PieceType last_moved_piece = GetPieceType(board.get_piece(last_destination));
     if (move == counter_moves[board.get_turn()][last_moved_piece][last_destination]) {
-      AddFeature<T>(move_weight, kPWICounterMove);
+      AddFeature<T, in_check>(move_weight, kPWICounterMove);
     }
   }
   const PieceType moving_piece = GetPieceType(board.get_piece(GetMoveSource(move)));
@@ -324,82 +334,118 @@ T GetMoveWeight(const Move move, Board &board, const MoveOrderInfo &info) {
   const MoveType move_type = GetMoveType(move);
   if (move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
     if (!board.NonNegativeSEE(move)) {
-      AddFeature<T>(move_weight, kPWISEE);
+      AddFeature<T, in_check>(move_weight, kPWISEE);
     }
   }
   target -= target / kKing;//The target cannot be a king, so we ignore that case.
-  AddFeature<T>(move_weight, kPWIPieceTypeXTargetPieceType
+  AddFeature<T, in_check>(move_weight, kPWIPieceTypeXTargetPieceType
                             + (moving_piece * 6) + target);
-  AddFeature<T>(move_weight, kPWIMoveType + GetMoveType(move));
+  AddFeature<T, in_check>(move_weight, kPWIMoveType + GetMoveType(move));
   if (move_type == kNormalMove || move_type == kDoublePawnMove) {
     if (GetSquareBitBoard(GetMoveSource(move)) & info.under_threat) {
-      AddFeature<T>(move_weight, kPWIPieceUnderAttack + 1);
+      AddFeature<T, in_check>(move_weight, kPWIPieceUnderAttack + 1);
     }
     if (moving_piece == kPawn) {
-      const BitBoard des = GetSquareBitBoard(GetMoveDestination(move));
-      if (des & info.passed_pawn_squares) {
-        int rank = GetSquareY(GetMoveDestination(move));
-        rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
-        AddFeature<T>(move_weight, kPWIPassedRankDestination + rank);
-      }
-      else {
-        int rank = GetSquareY(GetMoveDestination(move));
-        rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
-        AddFeature<T>(move_weight, kPWIPawnRankDestination + rank);
-      }
-      if (des & info.pawn_attack_squares) {
-        AddFeature<T>(move_weight, kPWIPawnAttack);
+      if (true || !in_check) {
+        const BitBoard des = GetSquareBitBoard(GetMoveDestination(move));
+        if (des & info.passed_pawn_squares) {
+          int rank = GetSquareY(GetMoveDestination(move));
+          rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
+          AddFeature<T, in_check>(move_weight, kPWIPassedRankDestination + rank);
+        }
+        else {
+          int rank = GetSquareY(GetMoveDestination(move));
+          rank = rank + (board.get_turn() * (7 - 2 * rank)) - 2;
+          AddFeature<T, in_check>(move_weight, kPWIPawnRankDestination + rank);
+        }
+        if (des & info.pawn_attack_squares) {
+          AddFeature<T, in_check>(move_weight, kPWIPawnAttack);
+        }
       }
     }
     else if (moving_piece == kKnight) {
-      AddFeature<T>(move_weight, kPWIKnightMoveSource + kPSTindex[GetMoveSource(move)]);
-      AddFeature<T>(move_weight, kPWIKnightMoveDestination + kPSTindex[GetMoveDestination(move)]);
+      AddFeature<T, in_check>(move_weight, kPWIKnightMoveSource + kPSTindex[GetMoveSource(move)]);
+      AddFeature<T, in_check>(move_weight, kPWIKnightMoveDestination + kPSTindex[GetMoveDestination(move)]);
     }
     else {
-      AddFeature<T>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
-      AddFeature<T>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
-      if (moving_piece == kBishop) {
-        Square enemy_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(board.get_not_turn(), kKing));
-        int relative_x = GetSquareX(GetMoveDestination(move)) - GetSquareX(enemy_king_square) + 7;
-        int relative_y = GetSquareY(GetMoveDestination(move)) - GetSquareY(enemy_king_square) + 7;
-        AddFeature<T>(move_weight, kPWIBishopRelativeToKing + relative_king_map[relative_x + 15 * relative_y]);
-      }
+      AddFeature<T, in_check>(move_weight, kPWIMoveSource + kPSTindex[GetMoveSource(move)]);
+      AddFeature<T, in_check>(move_weight, kPWIMoveDestination + kPSTindex[GetMoveDestination(move)]);
+// Bishop relative to king position tested slightly negative. Presumably there is no major benefit
+// and the Elo cost is purely the slowdown.
+//      if (moving_piece == kBishop) {
+//        Square enemy_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(board.get_not_turn(), kKing));
+//        int relative_x = GetSquareX(GetMoveDestination(move)) - GetSquareX(enemy_king_square) + 7;
+//        int relative_y = GetSquareY(GetMoveDestination(move)) - GetSquareY(enemy_king_square) + 7;
+//        AddFeature<T>(move_weight, kPWIBishopRelativeToKing + relative_king_map[relative_x + 15 * relative_y]);
+//      }
     }
+//    if (in_check && check_type != kNoSlideCheck) {
+//      AddFeature<T, in_check>(move_weight, kPWICheckInterjection + moving_piece * 4 + check_type - 1);
+//    }
   }
   else {
     if (GetSquareBitBoard(GetMoveSource(move)) & info.under_threat) {
-      AddFeature<T>(move_weight, kPWIPieceUnderAttack);
+      AddFeature<T, in_check>(move_weight, kPWIPieceUnderAttack);
     }
   }
   if (info.last_move != kNullMove && GetMoveDestination(info.last_move) == GetMoveDestination(move)) {
-    AddFeature<T>(move_weight, kPWICaptureLastMoved);
+    AddFeature<T, in_check>(move_weight, kPWICaptureLastMoved);
   }
   if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece]) {
     if (GetMoveType(move) >= kEnPassant) {
-      AddFeature(move_weight, kPWIGivesCheck);
+      AddFeature<T, in_check>(move_weight, kPWIGivesCheck);
     }
     else {
-      AddFeature(move_weight, kPWIGivesCheck + 1);
+      AddFeature<T, in_check>(move_weight, kPWIGivesCheck + 1);
     }
   }
   if ((GetMoveType(move) == kNormalMove || GetMoveType(move) == kDoublePawnMove)
       && (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[kKing])) {
     if (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece]) {
-      AddFeature<T>(move_weight, kPWITabooDestination);
+      AddFeature<T, in_check>(move_weight, kPWITabooDestination);
     }
     else if (!board.NonNegativeSEE(move)) {
-      AddFeature<T>(move_weight, kPWISEE + 1);
+      AddFeature<T, in_check>(move_weight, kPWISEE + 1);
     }
   }
-  AddFeature<T>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(info.last_move));
+  AddFeature<T, in_check>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(info.last_move));
   return move_weight;
+}
+
+SlidingCheckType GetSlidingCheckType(const Board &board) {
+  const Square king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(board.get_turn(), kKing));
+  const BitBoard all_pieces = board.get_all_pieces();
+  const BitBoard diag_access = magic::GetAttackMap<kBishop>(king_square, all_pieces);
+  if (diag_access & board.get_piece_bitboard(board.get_not_turn(), kBishop)) {
+    return kBishopCheck;
+  }
+  else if (diag_access & board.get_piece_bitboard(board.get_not_turn(), kQueen)) {
+    return kQueenDiagCheck;
+  }
+  else {
+    const BitBoard vertical_or_horizontal_access = magic::GetAttackMap<kRook>(king_square, all_pieces);
+    if (vertical_or_horizontal_access & board.get_piece_bitboard(board.get_not_turn(), kRook)) {
+      return kRookCheck;
+    }
+    else if (vertical_or_horizontal_access & board.get_piece_bitboard(board.get_not_turn(), kQueen)) {
+      return kQueenRooklikeCheck;
+    }
+  }
+  return kNoSlideCheck;
 }
 
 void SortMovesML(std::vector<Move> &moves, Board &board, const Move best_move = kNullMove) {
   MoveOrderInfo info(board, best_move);
 
-  for (unsigned int i = 0; i < moves.size(); i++) {
-    moves[i] |= ((10000 + GetMoveWeight<int>(moves[i], board, info)) << 16);
+  if (board.InCheck()) {
+    for (unsigned int i = 0; i < moves.size(); i++) {
+      moves[i] |= ((10000 + GetMoveWeight<int, true>(moves[i], board, info)) << 16);
+    }
+  }
+  else {
+    for (unsigned int i = 0; i < moves.size(); i++) {
+      moves[i] |= ((10000 + GetMoveWeight<int, false>(moves[i], board, info)) << 16);
+    }
   }
   std::sort(moves.begin(), moves.end(), Sorter());
   for (unsigned int i = 0; i < moves.size(); i++) {
@@ -685,7 +731,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
     return entry.get_score(board);
   }
 
-  bool in_check = board.InCheck();
+  const bool in_check = board.InCheck();
   Score static_eval = alpha;
 
   //Speculative pruning methods
@@ -756,7 +802,7 @@ Score AlphaBeta(Board &board, Score alpha, Score beta, Depth depth, int expected
 
   if (Mode == kSamplingSearchMode && NodeType == kNW && depth <= kMaxDepthSampled) {
     sample_nodes++;
-    if (sample_nodes == kNodeCountSampleAt) {
+    if (sample_nodes >= kNodeCountSampleAt && (in_check || sample_nodes >= kNodeCountSampleAt + 10)) {
       return sample_node_and_return_alpha(board, depth, NodeType, alpha);
     }
   }
@@ -1279,7 +1325,7 @@ void clear_killers_and_counter_moves() {
   }
 }
 
-void CreateSearchParamDataset(bool from_scratch) {
+void CreateSearchParamDataset2(bool from_scratch) {
   if (from_scratch) {
     debug::Error("Dataset creation from scratch not supported at the moment.");
   }
@@ -1311,8 +1357,15 @@ void CreateSearchParamDataset(bool from_scratch) {
     SortMovesML(moves, sampled_board, kNullMove);
     std::vector<std::vector<int> > features;
     MoveOrderInfo info(sampled_board);
-    for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
+    if (sampled_board.InCheck()) {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, true>(moves[i], sampled_board, info));
+      }
+    }
+    else {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, false>(moves[i], sampled_board, info));
+      }
     }
     std::vector<Score> scores(features.size());
     int low = 0, high = 0;
@@ -1386,15 +1439,20 @@ void TrainSearchParams(bool from_scratch) {
   const int scaling = 128;
   set_print_info(false);
   std::vector<double> weights(kNumMoveProbabilityFeatures);
+  std::vector<double> weights_in_check(kNumMoveProbabilityFeatures);
   if (!from_scratch) {
     LoadSearchVariables();
     for (int i = 0; i < kNumMoveProbabilityFeatures; i++) {
       weights[i] = search_weights[i];
+      weights_in_check[i] = search_weights_in_check[i];
     }
   }
   weights[kPWIHashMove] = 2000;
   weights[kPWIMoveType + kRookPromotion] = -2000;
   weights[kPWIMoveType + kBishopPromotion] = -2000;
+  weights_in_check[kPWIHashMove] = 2000;
+  weights_in_check[kPWIMoveType + kRookPromotion] = -2000;
+  weights_in_check[kPWIMoveType + kBishopPromotion] = -2000;
   std::vector<Game> games = data::LoadGames();
   double nu = 4.;
   if (!from_scratch) {
@@ -1425,8 +1483,15 @@ void TrainSearchParams(bool from_scratch) {
     SortMovesML(moves, sampled_board, kNullMove);
     std::vector<std::vector<int> > features;
     MoveOrderInfo info(sampled_board);
-    for (int i = 0; i < moves.size(); i++) {
-      features.emplace_back(GetMoveWeight<std::vector<int> >(moves[i], sampled_board, info));
+    if (sampled_board.InCheck()) {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, true>(moves[i], sampled_board, info));
+      }
+    }
+    else {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, false>(moves[i], sampled_board, info));
+      }
     }
     std::vector<Score> scores(features.size());
     int low = 0, high = 0;
@@ -1482,14 +1547,27 @@ void TrainSearchParams(bool from_scratch) {
         target = 1;
       }
       double final_score = 0;
-      for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
-        final_score += features[i][idx] * weights[idx];
+      if (sampled_board.InCheck()) {
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          final_score += features[i][idx] * weights_in_check[idx];
+        }
+        final_score /= scaling;
+        double sigmoid = 1 / ( 1 + std::exp(-final_score) );
+        double gradient = sigmoid - target;
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          weights_in_check[idx] -= (2 * nu * gradient * features[i][idx]) / (1);
+        }
       }
-      final_score /= scaling;
-      double sigmoid = 1 / ( 1 + std::exp(-final_score) );
-      double gradient = sigmoid - target;
-      for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
-        weights[idx] -= (nu * gradient * features[i][idx]) / (1);
+      else {
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          final_score += features[i][idx] * weights[idx];
+        }
+        final_score /= scaling;
+        double sigmoid = 1 / ( 1 + std::exp(-final_score) );
+        double gradient = sigmoid - target;
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          weights[idx] -= (nu * gradient * features[i][idx]) / (1);
+        }
       }
     }
     sampled_positions++;
@@ -1500,6 +1578,10 @@ void TrainSearchParams(bool from_scratch) {
       weights[kPWIPieceTypeXTargetPieceType + kKing * 6 + kNoPiece - 1] = 0;
       weights[kPWIMoveSource] = 0;
       weights[kPWIKnightMoveSource + 1] = 0;
+      weights_in_check[kPWIMoveType + kEnPassant] = 0;
+      weights_in_check[kPWIPieceTypeXTargetPieceType + kKing * 6 + kNoPiece - 1] = 0;
+      weights_in_check[kPWIMoveSource] = 0;
+      weights_in_check[kPWIKnightMoveSource + 1] = 0;
     }
     if (sampled_positions % 1000 == 0) {
       std::cout << "Sampled " << sampled_positions << " positions!" << std::endl;
@@ -1508,6 +1590,7 @@ void TrainSearchParams(bool from_scratch) {
                               << too_easy << " too easy nodes!" << std::endl;
       for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
         search_weights[idx] = std::round(weights[idx]);
+        search_weights_in_check[idx] = std::round(weights_in_check[idx]);
       }
       SaveSearchVariables();
     }
@@ -1517,6 +1600,309 @@ void TrainSearchParams(bool from_scratch) {
     if (sampled_positions % 100000 == 0) {
       nu /= 2;
       std::cout << "New nu: " << nu << std::endl;
+    }
+  }
+}
+
+struct SearchTrainHelper {
+  Move move;
+  Score score;
+  std::vector<int> features;
+};
+
+double get_score_target(const Score score, const std::vector<SearchTrainHelper> &moves_and_scores) {
+  double equal = 0, greater = 0;
+  for (int i = 0; i < moves_and_scores.size(); i++) {
+    if (moves_and_scores[i].score == score) {
+      equal++;
+    }
+    else if (moves_and_scores[i].score > score) {
+      greater++;
+    }
+  }
+  assert(equal >= 1);//score is expected to be taken from amongst moves in list.
+  equal--;
+  return 1 - ( (greater + equal/2) / (moves_and_scores.size() - 1.0) );
+}
+
+void TrainSearchParams2(bool from_scratch) {
+  const int scaling = 128;
+  set_print_info(false);
+  std::vector<double> weights(kNumMoveProbabilityFeatures);
+  std::vector<double> weights_in_check(kNumMoveProbabilityFeatures);
+  if (!from_scratch) {
+    LoadSearchVariables();
+    for (int i = 0; i < kNumMoveProbabilityFeatures; i++) {
+      weights[i] = search_weights[i];
+      weights_in_check[i] = search_weights_in_check[i];
+    }
+  }
+  weights[kPWIHashMove] = 2000;
+  weights[kPWIMoveType + kRookPromotion] = -2000;
+  weights[kPWIMoveType + kBishopPromotion] = -2000;
+  weights_in_check[kPWIHashMove] = 2000;
+  weights_in_check[kPWIMoveType + kRookPromotion] = -2000;
+  weights_in_check[kPWIMoveType + kBishopPromotion] = -2000;
+  std::vector<Game> games = data::LoadGames();
+  double nu = 4.;
+  if (!from_scratch) {
+    nu /= 8;
+  }
+  int sampled_positions = 0;
+  int all_above = 0, all_below = 0, too_easy = 0;
+  while (true) {
+    clear_killers_and_counter_moves();
+    table::ClearTable();
+    kNodeCountSampleAt = 800 + rng() % 400;
+    Game game = games[rng() % games.size()];
+    if (game.moves.size() < 25) {
+      continue;
+    }
+    game.set_to_position_after((2 * game.moves.size() / 3)
+                               + (rng() % (game.moves.size() / 3)) - 2);
+    Board board = game.board;
+    sample_nodes = 0;
+    sampled_alpha = kMinScore;
+    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(150));
+    if (sampled_alpha == kMinScore) {
+      continue;
+    }
+    end_time = get_infinite_time();
+    std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
+    if (moves.size() <= 1) {
+      continue;
+    }
+    std::shuffle(moves.begin(), moves.end(), rng);
+    SortMovesML(moves, sampled_board, kNullMove);
+    std::vector<std::vector<int> > features;
+    MoveOrderInfo info(sampled_board);
+    if (sampled_board.InCheck()) {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, true>(moves[i], sampled_board, info));
+      }
+    }
+    else {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, false>(moves[i], sampled_board, info));
+      }
+    }
+    std::vector<SearchTrainHelper> moves_and_scores;
+    for (int i = 0; i < moves.size(); i++) {
+      if (GetMoveType(moves[i]) == kRookPromotion
+          || GetMoveType(moves[i]) == kBishopPromotion) {
+        continue;
+      }
+      sampled_board.Make(moves[i]);
+      Score score = -AlphaBeta<kPV, kNormalSearchMode>(sampled_board,
+                                                       kMinScore,
+                                                       kMaxScore,
+                                                       3);//sampled_depth - 1);
+      sampled_board.UnMake();
+      SearchTrainHelper sth;
+      sth.move = moves[i];
+      sth.score = score;
+      sth.features = features[i];
+      moves_and_scores.emplace_back(sth);
+    }
+    for (int i = 0; i < moves_and_scores.size(); i++) {
+      double target = get_score_target(moves_and_scores[i].score, moves_and_scores);
+      double final_score = 0;
+      if (sampled_board.InCheck()) {
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          final_score += moves_and_scores[i].features[idx] * weights_in_check[idx];
+        }
+        final_score /= scaling;
+        double sigmoid = 1 / ( 1 + std::exp(-final_score) );
+        double gradient = sigmoid - target;
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          weights_in_check[idx] -= (2 * nu * gradient * moves_and_scores[i].features[idx]) / (1);
+        }
+      }
+      else {
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          final_score += moves_and_scores[i].features[idx] * weights[idx];
+        }
+        final_score /= scaling;
+        double sigmoid = 1 / ( 1 + std::exp(-final_score) );
+        double gradient = sigmoid - target;
+        for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+          weights[idx] -= (nu * gradient * moves_and_scores[i].features[idx]) / (1);
+        }
+      }
+    }
+    sampled_positions++;
+    if (sampled_positions % 10 == 0) {
+      //Our reference is a king moving into the corner with nothing else special.
+      //Everything else is set relative to this situation.
+      weights[kPWIMoveType + kEnPassant] = 0;
+      weights[kPWIPieceTypeXTargetPieceType + kKing * 6 + kNoPiece - 1] = 0;
+      weights[kPWIMoveSource] = 0;
+      weights[kPWIKnightMoveSource + 1] = 0;
+      weights_in_check[kPWIMoveType + kEnPassant] = 0;
+      weights_in_check[kPWIPieceTypeXTargetPieceType + kKing * 6 + kNoPiece - 1] = 0;
+      weights_in_check[kPWIMoveSource] = 0;
+      weights_in_check[kPWIKnightMoveSource + 1] = 0;
+    }
+    if (sampled_positions % 1000 == 0) {
+      std::cout << "Sampled " << sampled_positions << " positions!" << std::endl;
+      std::cout << "Further " << all_above << " all cut nodes, "
+                              << all_below << " all nodes and "
+                              << too_easy << " too easy nodes!" << std::endl;
+      for (int idx = 0; idx < kNumMoveProbabilityFeatures; idx++) {
+        search_weights[idx] = std::round(weights[idx]);
+        search_weights_in_check[idx] = std::round(weights_in_check[idx]);
+      }
+      SaveSearchVariables();
+    }
+    if (sampled_positions % 10000 == 0) {
+      benchmark::MoveOrderTest();
+    }
+    if (sampled_positions % 100000 == 0) {
+      nu /= 2;
+      std::cout << "New nu: " << nu << std::endl;
+    }
+  }
+}
+
+struct SearchParamPositionSample {
+  Move move;
+  int num_moves;
+  int better_moves;
+  int equal_moves;
+  Score score;
+  int break_beta;
+  std::vector<int> features;
+};
+
+int CountGreater(const Score score, const std::vector<SearchTrainHelper> &moves_and_scores) {
+  int res = 0;
+  for (int i = 0; i < moves_and_scores.size(); i++) {
+    if (moves_and_scores[i].score > score)
+      res++;
+  }
+  return res;
+}
+
+int CountEqual(const Score score, const std::vector<SearchTrainHelper> &moves_and_scores) {
+  int res = 0;
+  for (int i = 0; i < moves_and_scores.size(); i++) {
+    if (moves_and_scores[i].score == score)
+      res++;
+  }
+  return res-1;
+}
+
+void PrintDataset(const std::vector<SearchParamPositionSample> &samples, const std::string filename) {
+  std::ofstream file(filename);
+  //print header first
+  file << "move, num_moves, better_moves, equal_moves, score, break_beta";
+  for (int i = 0; i < samples[i].features.size(); i++) {
+    file << ", fe" << i;
+  }
+  file << std::endl;
+  for (int i = 0; i < samples.size(); i++) {
+    file << samples[i].move << ", " << samples[i].num_moves << ", "
+        << samples[i].better_moves << ", " << samples[i].equal_moves << ", "
+        << samples[i].score << ", " << samples[i].break_beta;
+    for (int j = 0; j < samples[i].features.size(); j++) {
+      file << ", " << samples[i].features[j];
+    }
+    file << std::endl;
+  }
+  file.flush();
+  file.close();
+}
+
+void CreateSearchParamDataset() {
+  set_print_info(false);
+  std::vector<Game> games = data::LoadGames();
+  int sampled_positions = 0;
+  std::vector<SearchParamPositionSample> samples, samples_in_check;
+  while (true) {
+    clear_killers_and_counter_moves();
+    table::ClearTable();
+    kNodeCountSampleAt = 40000 + rng() % 400;
+    Game game = games[rng() % games.size()];
+    if (game.moves.size() < 25) {
+      continue;
+    }
+    game.set_to_position_after((game.moves.size() / 3)
+                               + (rng() % (2 * game.moves.size() / 3)) - 2);
+    Board board = game.board;
+    sample_nodes = 0;
+    sampled_alpha = kMinScore;
+    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(7500));
+    if (sampled_alpha == kMinScore) {
+      continue;
+    }
+    end_time = get_infinite_time();
+    std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
+    if (moves.size() <= 1) {
+      continue;
+    }
+    std::shuffle(moves.begin(), moves.end(), rng);
+    SortMovesML(moves, sampled_board, kNullMove);
+    std::vector<std::vector<int> > features;
+    MoveOrderInfo info(sampled_board);
+    if (sampled_board.InCheck()) {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, true>(moves[i], sampled_board, info));
+      }
+    }
+    else {
+      for (int i = 0; i < moves.size(); i++) {
+        features.emplace_back(GetMoveWeight<std::vector<int>, false>(moves[i], sampled_board, info));
+      }
+    }
+    std::vector<SearchTrainHelper> moves_and_scores;
+    for (int i = 0; i < moves.size(); i++) {
+      if (GetMoveType(moves[i]) == kRookPromotion
+          || GetMoveType(moves[i]) == kBishopPromotion) {
+        continue;
+      }
+      sampled_board.Make(moves[i]);
+      Score score = -AlphaBeta<kPV, kNormalSearchMode>(sampled_board,
+                                                       kMinScore,
+                                                       kMaxScore,
+                                                       6);//sampled_depth - 1);
+      sampled_board.UnMake();
+      SearchTrainHelper sth;
+      sth.move = moves[i];
+      sth.score = score;
+      sth.features = features[i];
+      moves_and_scores.emplace_back(sth);
+    }
+    if (CountGreater(sampled_alpha, moves_and_scores) > moves_and_scores.size() / 2
+        || CountGreater(sampled_alpha, moves_and_scores) == 0) {
+      continue;
+    }
+    for (int i = 0; i < moves_and_scores.size(); i++) {
+      SearchParamPositionSample sample;
+      sample.move = moves_and_scores[i].move;
+      sample.score = moves_and_scores[i].score;
+      sample.break_beta = sample.score > sampled_alpha ? 1 : 0;
+      sample.features = moves_and_scores[i].features;
+      sample.better_moves = CountGreater(moves_and_scores[i].score, moves_and_scores);
+      sample.equal_moves = CountEqual(moves_and_scores[i].score, moves_and_scores);
+      sample.num_moves = moves_and_scores.size();
+      if (sampled_board.InCheck()) {
+        samples_in_check.emplace_back(sample);
+      }
+      else {
+        samples.emplace_back(sample);
+      }
+    }
+    sampled_positions++;
+    if (sampled_positions % 100 == 0) {
+      std::cout << "Sampled " << sampled_positions << " positions!" << std::endl;
+    }
+    if (sampled_positions % 1000 == 0) {
+      if (!samples.empty()) {
+        PrintDataset(samples, "search_params/DSet3.csv");
+      }
+      if (!samples_in_check.empty()) {
+        PrintDataset(samples_in_check, "search_params/DSetInCheck3.csv");
+      }
     }
   }
 }
@@ -1547,6 +1933,22 @@ void SaveSearchVariables() {
   file.close();
   description_file.flush();
   description_file.close();
+
+  std::ofstream fileic(settings::kSearchParamInCheckFile);
+  std::ofstream description_fileic(settings::kSearchParamInCheckExplanationFile);
+  idx = 0;
+  for (int i = 0; i < kNumMoveProbabilityFeatures; i++) {
+    if (i == kFeatureInfos[idx + 1].idx) {
+      idx++;
+    }
+    fileic << search_weights_in_check[i] << " " << std::endl;
+    description_fileic  << search_weights_in_check[i]
+                      << " <-- " << kFeatureInfos[idx].info << std::endl;
+  }
+  fileic.flush();
+  fileic.close();
+  description_fileic.flush();
+  description_fileic.close();
 }
 
 void LoadSearchVariables() {
@@ -1555,6 +1957,12 @@ void LoadSearchVariables() {
     file >> search_weights[i];
   }
   file.close();
+
+  std::ifstream fileic(settings::kSearchParamInCheckFile);
+  for (size_t i = 0; i < kNumMoveProbabilityFeatures; i++) {
+    fileic >> search_weights_in_check[i];
+  }
+  fileic.close();
 }
 
 void EvaluateScoreDistributions(const int focus) {

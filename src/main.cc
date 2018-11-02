@@ -47,6 +47,7 @@ int main() {
   //search::CreateSearchParamDataset(false);
   //if (settings::kExperimental)
   //  search::TrainSearchParams(false);
+  //search::CreateSearchParamDataset();
   //evaluation::SGDDrawMarginTrain();
   //evaluation::CheckFeatureMagnitude();
   //evaluation::CheckVariableInfluence();
