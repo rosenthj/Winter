@@ -60,10 +60,15 @@ const std::string kGMMParamsFile =
 const std::string kParamExplanationFile = kGMMParamsFile + ".info";
 
 const std::string kSearchParamPath = "search_params/";
-const std::string kSearchParamFile =
-                     kExperimental ? kSearchParamPath + "sparams.txt"
-                                   : kSearchParamPath + "sparams.txt";
+const std::string kSearchParamVersionExtension = kExperimental ? "181031b" : "";
+
+const std::string kSearchParamFile = kSearchParamPath + "sparams"
+    + kSearchParamVersionExtension + ".txt";
 const std::string kSearchParamExplanationFile = kSearchParamFile + ".info";
+
+const std::string kSearchParamInCheckFile = kSearchParamPath + "sparams_in_check"
+    + kSearchParamVersionExtension + ".txt";
+const std::string kSearchParamInCheckExplanationFile = kSearchParamInCheckFile + ".info";
 
 const std::string kCCRLPath = "data/CCRL.ucig";
 const std::string kCEGTPath = "data/CEGT.ucig";
