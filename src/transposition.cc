@@ -95,11 +95,19 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
   assert(index >= 0 && index < table.size());
 
   HashType best_move_cast = best_move;
-  table[index].hash = hash ^ best_move_cast;
-  table[index].best_move = best_move;
-  table[index].set_score(score, board);
-  table[index].bound = bound;
-  table[index].depth = depth;
+  Entry entry;
+  entry.hash = hash ^ best_move_cast;
+  entry.best_move = best_move;
+  entry.bound = bound;
+  entry.depth = depth;
+  entry.set_score(score, board);
+  table[index] = entry;
+
+//  table[index].hash = hash ^ best_move_cast;
+//  table[index].best_move = best_move;
+//  table[index].set_score(score, board);
+//  table[index].bound = bound;
+//  table[index].depth = depth;
 }
 
 void SavePVEntry(const Board &board, const Move best_move) {

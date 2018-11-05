@@ -34,6 +34,7 @@
 #include "search.h"
 #include "transposition.h"
 #include "general/debug.h"
+#include "search_thread.h"
 #include <cstdint>
 #include <vector>
 #include <sstream>
@@ -63,7 +64,7 @@ const std::string kEngineNamePrefix = "id name ";
 const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
-    "option name Hash type spin default 32 min 1 max 104576";
+    "option name Hash type spin default 32 min 1 max 104576\noption name Threads type spin default 1 min 1 max 64";
 
 struct Timer {
   Timer() {
@@ -174,6 +175,11 @@ void Loop() {
         index++;
         int MB = atoi(tokens[index++].c_str());
         table::SetTableSize(MB);
+      }
+      if (Equals(command, "Threads")) {
+        index++;
+        int num_threads = atoi(tokens[index++].c_str());
+        search::Threads.set_num_threads(num_threads);
       }
     }
     else if (Equals(command, "print_moves")) {

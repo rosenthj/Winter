@@ -44,8 +44,6 @@ Move NodeSearch(Board board, size_t num_nodes);
 Board SampleEval(Board board);
 Score QSearch(Board &board);
 Score SQSearch(Board &board);
-void inc_node_count();
-void dec_node_count();
 Score get_last_search_score();
 void set_print_info(bool print_info);
 void end_search();

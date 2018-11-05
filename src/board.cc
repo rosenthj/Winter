@@ -658,7 +658,6 @@ void Board::Make(const Move move) {
   move_history_information.emplace_back(information);
   move_history.emplace_back(move);
   SwapTurn();
-  search::inc_node_count();
 }
 
 void Board::UnMake() {
@@ -868,7 +867,6 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
         }
         SwapTurn();
         UnMake();
-        search::dec_node_count();
       }
     }
     else {
@@ -879,7 +877,6 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
       }
       SwapTurn();
       UnMake();
-      search::dec_node_count();
     }
     if (add) {
       if (GetPieceType(pieces[GetMoveSource(move)]) == kPawn
@@ -1254,7 +1251,6 @@ bool Board::GivesCheck(const Move move) {
   Make(move);
   bool gives_check = InCheck();
   UnMake();
-  search::dec_node_count();
   return gives_check;
 }
 
