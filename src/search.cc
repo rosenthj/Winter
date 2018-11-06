@@ -1438,6 +1438,9 @@ void Thread::search() {
       t->board.SetToSamePosition(board);
       t->moves = moves;
       t->perturb_root_moves();
+      while(rng() % 2) {
+        t->perturb_root_moves();
+      }
       t->current_depth = 1;
     }
     for (Thread* t : Threads.helpers) {
@@ -1475,6 +1478,9 @@ void Thread::search() {
         continue;
       }
       lock.unlock();
+      if ((rng() % (2 * current_depth)) == 0) {
+        perturb_root_moves();
+      }
     }
 
     if (rsearch_mode == kNormalSearchMode) {
