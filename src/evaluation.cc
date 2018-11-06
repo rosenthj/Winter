@@ -34,6 +34,7 @@
 #include "general/magic.h"
 #include "general/settings.h"
 #include "general/bit_operations.h"
+#include "general/hardcoded_params.h"
 #include "data.h"
 #include <random>
 #include <algorithm>
@@ -1023,6 +1024,45 @@ void SaveGMM(GMM<k,kPhaseVecLength> &gmm, std::string file_name) {
   file.close();
 }
 
+void SaveGMMHardCode(std::string file_name) {
+  std::ofstream file(file_name);
+  file << "const std::array<double, (" << settings::kGMMk << "+" << settings::kGMMk << "*("
+      << kPhaseVecLength << "+1)*" << kPhaseVecLength << ")> gmm_components = {" << std::endl;
+
+  for (size_t m = 0; m < settings::kGMMk; m++) {
+    file << "    // Component " << m << " weights" << std::endl
+        << "    " << gmm_main.weights[m] << "," << std::endl;
+
+    file << "    // Component " << m << " means" << std::endl << "    ";
+    for (size_t i = 0; i < kPhaseVecLength; i++) {
+      file << gmm_main.mixtures[m].mu[i] << ", ";
+    }
+    file << std::endl;
+    file << "    // Component " << m << " covariances" << std::endl;
+    for (size_t i = 0; i < kPhaseVecLength; i++) {
+      for (size_t j = 0; j < kPhaseVecLength; j++) {
+        if (j > 0) {
+          file << ", ";
+        }
+        else {
+          file << "    ";
+        }
+        file << gmm_main.mixtures[m].sigma[i][j];
+      }
+      if (i+1 < kPhaseVecLength || m+1 < settings::kGMMk) {
+        file << ",";
+      }
+      file << std::endl;
+    }
+    if (m+1 == settings::kGMMk) {
+      file << "};";
+    }
+    file << std::endl;
+  }
+  file.flush();
+  file.close();
+}
+
 void SaveGMMVariables() {
   std::ofstream file(settings::kGMMParamsFile);
   std::ofstream description_file(settings::kParamExplanationFile);
@@ -1042,6 +1082,37 @@ void SaveGMMVariables() {
   file.close();
   description_file.flush();
   description_file.close();
+}
+
+void SaveGMMVariablesHardCode(std::string filename) {
+  std::ofstream file(filename);
+  file << "const std::array<int, (" << kNumFeatures << "*"
+      << settings::kGMMk << ")> eval_weights = {" << std::endl;
+
+  int idx = 0;
+  for (int i = 0; i < kNumFeatures; i++) {
+    if (i == kFeatureInfos[idx + 1].idx) {
+      idx++;
+    }
+    file << "    ";
+    for (int j = 0; j < settings::kGMMk; j++) {
+      file  << feature_GMM_score_values[i][j];
+      if (j+1 < settings::kGMMk || i+1 < kNumFeatures) {
+        file << ", ";
+      }
+      else {
+        file << "  ";
+      }
+      int val = 5 - parse::CountChars(feature_GMM_score_values[i][j]);
+      while (0 < val--) {
+        file << " ";
+      }
+    }
+    file << "// " << kFeatureInfos[idx].info << std::endl;
+  }
+  file << "};" << std::endl;
+  file.flush();
+  file.close();
 }
 
 void LoadMixtures() {
@@ -1073,6 +1144,35 @@ void LoadGMMVariables() {
   file.close();
 
   LoadMixtures();
+}
+
+void LoadMixturesHardCoded() {
+  const int k = settings::kGMMk;
+  int c = 0;
+  for (size_t m = 0; m < k; m++) {
+    gmm_main.weights[m] = hardcode::gmm_components[c++];
+    for (size_t i = 0; i < kPhaseVecLength; i++) {
+      gmm_main.mixtures[m].mu[i] = hardcode::gmm_components[c++];
+    }
+    for (size_t i = 0; i < kPhaseVecLength; i++) {
+      for (size_t j = 0; j < kPhaseVecLength; j++) {
+        gmm_main.mixtures[m].sigma[i][j] = hardcode::gmm_components[c++];
+      }
+    }
+    gmm_main.mixtures[m].set_sigma_inv();
+  }
+}
+
+void LoadGMMVariablesHardCoded() {
+  const int k = settings::kGMMk;
+  int c = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
+    for (size_t j = 0; j < k; j++) {
+      feature_GMM_score_values[i][j] = hardcode::eval_weights[c++];
+    }
+  }
+
+  LoadMixturesHardCoded();
 }
 
 enum SGDVariantType {

@@ -76,6 +76,7 @@ template <typename T>
 void Save2dVecToCSV(const std::vector< std::vector<T> > &vec, const std::string filename);
 
 void PrintBitboard(const BitBoard bitboard);
+int CountChars(int i);
 
 }
 

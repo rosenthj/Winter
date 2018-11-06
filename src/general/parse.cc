@@ -131,6 +131,19 @@ Move StringToMove(std::string move) {
   return 0;
 }
 
+int CountChars(int i) {
+  int c = 1;
+  if (i < 0) {
+    i = -i;
+    c++;
+  }
+  while (i > 9) {
+    i /= 10;
+    c++;
+  }
+  return c;
+}
+
 template <typename T>
 void Save2dVecToCSV(const std::vector< std::vector<T> > &vec, const std::string filename) {
   std::ofstream file(filename);

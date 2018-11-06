@@ -38,9 +38,11 @@ int main() {
   if (settings::kTrainFromScratch) {
     evaluation::Train(true);
   }
-  evaluation::LoadGMMVariables();
-  search::LoadSearchVariables();
-
+  evaluation::LoadGMMVariablesHardCoded();
+  search::LoadSearchVariablesHardCoded();
+  //search::SaveHardcodeSearchVariables();
+  //evaluation::SaveGMMHardCode("gmm_hardcode.txt");
+  //evaluation::SaveGMMVariablesHardCode("gmm_score_weights_hardcode.txt");
   //The following commented lines remain to remind me how to do stuff =)
   //if (settings::kExperimental)
   //  evaluation::Train(false);

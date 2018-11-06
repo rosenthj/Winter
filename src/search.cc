@@ -35,6 +35,7 @@
 #include "general/debug.h"
 #include "general/bookkeeping.h"
 #include "general/feature_indexes.h"
+#include "general/hardcoded_params.h"
 #include "general/magic.h"
 #include "benchmark.h"
 #include "search_thread.h"
@@ -2032,6 +2033,54 @@ void SaveSearchVariables() {
   description_fileic.close();
 }
 
+void SaveHardcodeSearchVariables() {
+  std::ofstream file("hardcoded_search_params.txt");
+  int idx = 0;
+  file << "const std::array<int, " << kNumMoveProbabilityFeatures << "> search_params = {" << std::endl;
+  for (int i = 0; i < kNumMoveProbabilityFeatures; i++) {
+    if (i == kFeatureInfos[idx + 1].idx) {
+      idx++;
+    }
+    file  << "    " << search_weights[i];
+    if (i+1 < kNumMoveProbabilityFeatures) {
+      file << ",";
+    }
+    else {
+      file << " ";
+    }
+    int val = 5 - parse::CountChars(search_weights[i]);
+    while (0 < val--) {
+      file << " ";
+    }
+    file << "// " << kFeatureInfos[idx].info << std::endl;
+  }
+  file << "};" << std::endl << std::endl;
+
+  file << "const std::array<int, " << kNumMoveProbabilityFeatures << "> search_params_in_check = {" << std::endl;
+  idx = 0;
+  for (int i = 0; i < kNumMoveProbabilityFeatures; i++) {
+    if (i == kFeatureInfos[idx + 1].idx) {
+      idx++;
+    }
+    file  << "    " << search_weights_in_check[i];
+    if (i+1 < kNumMoveProbabilityFeatures) {
+      file << ",";
+    }
+    else {
+      file << " ";
+    }
+    int val = 5 - parse::CountChars(search_weights_in_check[i]);
+    while (0 < val--) {
+      file << " ";
+    }
+    file << "// " << kFeatureInfos[idx].info << std::endl;
+  }
+  file << "};" << std::endl;
+
+  file.flush();
+  file.close();
+}
+
 void LoadSearchVariables() {
   std::ifstream file(settings::kSearchParamFile);
   for (size_t i = 0; i < kNumMoveProbabilityFeatures; i++) {
@@ -2044,6 +2093,14 @@ void LoadSearchVariables() {
     fileic >> search_weights_in_check[i];
   }
   fileic.close();
+}
+
+void LoadSearchVariablesHardCoded() {
+  int c = 0;
+  for (size_t i = 0; i < kNumMoveProbabilityFeatures; i++) {
+    search_weights[i] = hardcode::search_params[c];
+    search_weights_in_check[i] = hardcode::search_params_in_check[c++];
+  }
 }
 
 void EvaluateScoreDistributions(const int focus) {

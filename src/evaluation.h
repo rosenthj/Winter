@@ -46,6 +46,7 @@ T ScoreBoard(const Board &board);
 void PrintFeatureValues(const Board &board);
 void SaveGMMVariables();
 void LoadGMMVariables();
+void LoadGMMVariablesHardCoded();
 void Train(bool from_scratch);
 int ScoreToCentipawn(const Score score, const Board &board);
 Score GetPawnBaseValue(const Board &board);
@@ -61,6 +62,9 @@ void SGDDrawMarginTrain();
 void PrintEvaluationGMM();
 
 std::vector<PScore> GetEvaluationWeights();
+
+void SaveGMMVariablesHardCode(std::string filename);
+void SaveGMMHardCode(std::string file_name);
 
 }
 

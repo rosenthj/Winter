@@ -59,6 +59,8 @@ void CreateSearchParamDataset();
 void TrainSearchParams(bool from_scratch);
 void SaveSearchVariables();
 void LoadSearchVariables();
+void SaveHardcodeSearchVariables();
+void LoadSearchVariablesHardCoded();
 
 void EvaluateCaptureMoveValue(int n);
 void EvaluateScoreDistributions(const int focus);
