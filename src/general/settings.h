@@ -84,6 +84,8 @@ const bool kUseNullMoves = true && kUseExtensions;
 const Depth kRepsForDraw = 2;
 const Depth kMaxDepth = 128;
 
+const bool kUseQS = true;
+
 }
 
 #endif /* GENERAL_SETTINGS_H_ */

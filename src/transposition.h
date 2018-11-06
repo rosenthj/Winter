@@ -33,19 +33,27 @@
 namespace table {
 
 struct Entry {
-  HashType hash;
-  Move best_move;
-  int bound;
-  Depth depth;
   Score get_score(const Board &board) const;
   void set_score(const Score new_score, const Board &board);
+  HashType hash;  // 8
+  //int32_t bound;  // 4
+  //Depth depth;    // 4
+  int64_t bound;  // 8 //Temporary hack to see what happens with possible false sharing.
+  int64_t depth;  // 8
+  Move best_move; // 4
 private:
-  Score score;
+  Score score;    // 4
+};
+
+struct CacheLineEntryHolder {
+  Entry entries[3];
+
 };
 
 struct PVEntry {
   HashType hash;
-  Move best_move;
+  int64_t best_move; //Temporary hack to see what happens with possible false sharing.
+  //Move best_move;
 };
 
 void SetTableSize(const long MB);

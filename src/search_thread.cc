@@ -79,7 +79,8 @@ void Thread::idle_loop() {
 
 
 ThreadPool::ThreadPool() {
-  main_thread.id = 0;
+  main_thread = new Thread();
+  main_thread->id = 0;
 }
 
 

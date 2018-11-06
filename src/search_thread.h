@@ -72,7 +72,7 @@ struct ThreadPool {
   //Set number of threads including main thread
   void set_num_threads(size_t num_threads);
   void clear_killers_and_countermoves() {
-    main_thread.clear_killers_and_counter_moves();
+    main_thread->clear_killers_and_counter_moves();
     for (Thread* thread : helpers) {
       thread->clear_killers_and_counter_moves();
     }
@@ -81,7 +81,7 @@ struct ThreadPool {
     return helpers.size() + 1;
   }
   size_t node_count() {
-    size_t sum = main_thread.nodes;
+    size_t sum = main_thread->nodes;
     for (Thread* helper : helpers) {
       sum += helper->nodes;
     }
@@ -89,7 +89,7 @@ struct ThreadPool {
   }
 
   void reset_node_count() {
-    main_thread.nodes = 0;
+    main_thread->nodes = 0;
     for (Thread* helper : helpers) {
       helper->nodes = 0;
     }
@@ -97,7 +97,7 @@ struct ThreadPool {
 
   std::atomic_bool end_search;
   std::vector<Thread*> helpers;
-  Thread main_thread;
+  Thread* main_thread;
 };
 
 //The only instance of Threads
