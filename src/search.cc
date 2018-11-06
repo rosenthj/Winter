@@ -68,6 +68,7 @@ Board sampled_board;
 Score sampled_alpha;
 int sampled_node_type;
 Depth sampled_depth;
+int skip_time_check = 0;
 
 const Array2d<Depth, 64, 64> init_lmr_reductions() {
   Array2d<Depth, 64, 64> lmr_reductions;
@@ -167,7 +168,12 @@ Time end_time = now();
 
 inline bool finished(search::Thread &thread) {
   if (thread.id == 0) {
-    return end_time <= now() || max_nodes < search::Threads.node_count() || search::Threads.end_search;
+    if (skip_time_check <= 0) {
+      skip_time_check = 256;
+      return end_time <= now() || max_nodes < search::Threads.node_count() || search::Threads.end_search;
+    }
+    skip_time_check--;
+    return search::Threads.end_search;
   }
   return search::Threads.end_search;
 }
