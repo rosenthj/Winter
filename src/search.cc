@@ -474,13 +474,13 @@ void build_pv(Board &board, std::vector<Move> &pv, Depth depth) {
   }
   table::Entry entry = table::GetEntry(board.get_hash());
   bool entry_verified = table::ValidateHash(entry, board.get_hash());
-  table::PVEntry pv_entry = table::GetPVEntry(board.get_hash());
-  bool pv_entry_verified = table::ValidateHash(pv_entry, board.get_hash());
-  if (entry_verified || pv_entry_verified) {
+  //table::PVEntry pv_entry = table::GetPVEntry(board.get_hash());
+  //bool pv_entry_verified = table::ValidateHash(pv_entry, board.get_hash());
+  if (entry_verified) {
     std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
     for (Move move : moves) {
-      if ((move == entry.best_move && entry_verified)
-          || (move == pv_entry.best_move && pv_entry_verified)) {
+      if ((move == entry.get_best_move() && entry_verified)) {
+          //|| (move == pv_entry.best_move && pv_entry_verified)) {
         pv.emplace_back(move);
         board.Make(move);
         build_pv(board, pv, depth-1);
@@ -654,7 +654,7 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
 
   //Sort move list
   if (table::ValidateHash(entry,board.get_hash())) {
-    SortMoves<kQuiescent>(moves, board, entry.best_move);
+    SortMoves<kQuiescent>(moves, board, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
   else {
@@ -677,7 +677,7 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
 
     //Return beta if we fail high
     if (score >= beta) {
-      //table::SaveEntry(board, move, score, kLowerBound, 0);
+      //table::SaveEntry(board, move, score, 0);
       return beta;
     }
 
@@ -1072,14 +1072,14 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
   Move tt_entry = kNullMove;
   if (valid_entry) {
-    tt_entry = entry.best_move;
+    tt_entry = entry.get_best_move();
   }
-  else {
-    table::PVEntry pv_entry = table::GetPVEntry(t.board.get_hash());
-    if (table::ValidateHash(pv_entry,t.board.get_hash())) {
-      tt_entry = pv_entry.best_move;
-    }
-  }
+//  else {
+//    table::PVEntry pv_entry = table::GetPVEntry(t.board.get_hash());
+//    if (table::ValidateHash(pv_entry,t.board.get_hash())) {
+//      tt_entry = pv_entry.best_move;
+//    }
+//  }
   bool moves_sorted = false, swapped = false;
   if (tt_entry != kNullMove) {
     swapped = SwapToFront(moves, tt_entry);
@@ -1162,7 +1162,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     //Check if search failed high
     if (score >= beta) {
       //Save TT entry
-      table::SaveEntry(t.board, move, score, kLowerBound, depth);
+      table::SaveEntry(t.board, move, score, depth);
 
       //Update Killers
       if (GetMoveType(move) < kCapture) {
@@ -1198,8 +1198,8 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   }
   if (alpha > original_alpha) {
     // We should save any best move which has improved alpha.
-    table::SaveEntry(t.board, best_local_move, alpha, kExactBound, depth);
-    table::SavePVEntry(t.board, best_local_move);
+    table::SavePVEntry(t.board, best_local_move, alpha, depth);
+    //table::SavePVEntry(t.board, best_local_move);
   }
   return alpha;
 }
@@ -1258,8 +1258,8 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     }
   }
   if (t.id == 0) {
-    table::SaveEntry(t.board, moves[0], alpha, kExactBound, current_depth);
-    table::SavePVEntry(t.board, moves[0]);
+    table::SavePVEntry(t.board, moves[0], alpha, current_depth);
+    //table::SavePVEntry(t.board, moves[0]);
   }
   return alpha;
 }
@@ -1566,7 +1566,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   table::Entry entry = table::GetEntry(board.get_hash());
   Move tt_move = kNullMove;
   if (table::ValidateHash(entry,board.get_hash())) {
-    tt_move = entry.best_move;
+    tt_move = entry.get_best_move();
   }
   Threads.main_thread->board.SetToSamePosition(board);
   SortMovesML(moves, *Threads.main_thread, tt_move);

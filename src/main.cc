@@ -40,6 +40,20 @@ int main() {
   }
   evaluation::LoadGMMVariablesHardCoded();
   search::LoadSearchVariablesHardCoded();
+
+//  for (Square src = 0; src < 64; src++) {
+//    for (Square des = 0; des < 64; des++) {
+//      for (MoveType mt = kNormalMove; mt <= kQueenPromotion; mt++) {
+//        Move move = GetMove(src, des, mt);
+//        table::Entry entry;
+//        entry.set_best_move(move);
+//        if (move != entry.get_best_move()) {
+//          std::cout << "Found error! " << move << std::endl;
+//        }
+//      }
+//    }
+//  }
+//  std::cout << "Finished looking for mistakes!";
   //search::SaveHardcodeSearchVariables();
   //evaluation::SaveGMMHardCode("gmm_hardcode.txt");
   //evaluation::SaveGMMVariablesHardCode("gmm_score_weights_hardcode.txt");

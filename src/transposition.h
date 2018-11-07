@@ -35,35 +35,44 @@ namespace table {
 struct Entry {
   Score get_score(const Board &board) const;
   void set_score(const Score new_score, const Board &board);
-  HashType hash;  // 8
-  //int32_t bound;  // 4
-  //Depth depth;    // 4
-  int64_t bound;  // 8 //Temporary hack to see what happens with possible false sharing.
-  int64_t depth;  // 8
-  Move best_move; // 4
+  Move get_best_move() const {
+    return best_move;
+  }
+  void set_best_move(const Move move) {
+    best_move = move;
+  }
+  HashType hash;      // 8
+  //int32_t bound;
+  //Depth depth;
+//  int64_t bound; // Temporary hack to see what happens with possible false sharing.
 private:
-  Score score;    // 4
+  Score score;        // 4
+  uint16_t best_move; // 2
+public:
+  uint8_t depth;      // 1
+  uint8_t bound;      // 1
 };
 
-struct CacheLineEntryHolder {
-  Entry entries[3];
-
+struct DualEntryHolder {
+  Entry nw_entry;
+  Entry pv_entry;
 };
 
-struct PVEntry {
-  HashType hash;
-  int64_t best_move; //Temporary hack to see what happens with possible false sharing.
-  //Move best_move;
-};
+
+//struct PVEntry {
+//  HashType hash;
+//  int64_t best_move; //Temporary hack to see what happens with possible false sharing.
+//  //Move best_move;
+//};
 
 void SetTableSize(const long MB);
 Entry GetEntry(const HashType hash);
-void SaveEntry(const Board &board, const Move best_move, const Score score, const int bound,
-    const Depth depth);
+void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
+void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
 bool ValidateHash(const Entry &entry, const HashType hash);
-PVEntry GetPVEntry(const HashType hash);
-void SavePVEntry(const Board &board, const Move best_move);
-bool ValidateHash(const PVEntry &entry, const HashType hash);
+//PVEntry GetPVEntry(const HashType hash);
+//void SavePVEntry(const Board &board, const Move best_move);
+//bool ValidateHash(const PVEntry &entry, const HashType hash);
 void ClearTable();
 
 }

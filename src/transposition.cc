@@ -58,37 +58,46 @@ Score tt_score_to_score(Score score, size_t num_made_moves) {
 namespace table {
 
 int size = 1600000;
-int size_pvt = 10001;
-std::vector<Entry> table(size);
-std::vector<PVEntry> table_pv(size_pvt);
+//int size_pvt = 10001;
+std::vector<DualEntryHolder> table(size);
+//std::vector<PVEntry> table_pv(size_pvt);
 
 void SetTableSize(const long MB) {
-  size = (MB << 20) / 21;
-  size_pvt = size / 12;
+//  size = (MB << 20) / 21;
+  //size_pvt = size / 12;
+  size = (MB << 15);
   table.resize(size);
-  table_pv.resize(size_pvt);
+  //table_pv.resize(size_pvt);
 }
 
 int HashFunction(const HashType hash) {
   return hash % size;
 }
 
-int PVHashFunction(const HashType hash) {
-  return hash % size_pvt;
-}
+//int PVHashFunction(const HashType hash) {
+//  return hash % size_pvt;
+//}
 
 Entry GetEntry(const HashType hash) {
-  Entry entry = table.at(HashFunction(hash));
-  return entry;
+  DualEntryHolder entries = table.at(HashFunction(hash));
+  if (!ValidateHash(entries.nw_entry, hash)) {
+    return entries.pv_entry;
+  }
+  if (!ValidateHash(entries.pv_entry, hash)) {
+    return entries.nw_entry;
+  }
+  if (entries.nw_entry.depth > entries.pv_entry.depth) {
+    return entries.nw_entry;
+  }
+  return entries.pv_entry;
 }
 
-PVEntry GetPVEntry(const HashType hash) {
-  PVEntry entry = table_pv.at(PVHashFunction(hash));
-  return entry;
-}
+//PVEntry GetPVEntry(const HashType hash) {
+//  PVEntry entry = table_pv.at(PVHashFunction(hash));
+//  return entry;
+//}
 
-void SaveEntry(const Board &board, const Move best_move, const Score score, const int bound,
-    const Depth depth) {
+void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
   int index = HashFunction(hash);
 
@@ -97,11 +106,11 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
   HashType best_move_cast = best_move;
   Entry entry;
   entry.hash = hash ^ best_move_cast;
-  entry.best_move = best_move;
-  entry.bound = bound;
-  entry.depth = depth;
   entry.set_score(score, board);
-  table[index] = entry;
+  entry.set_best_move(best_move);
+  entry.depth = depth;
+  entry.bound = kLowerBound;
+  table[index].nw_entry = entry;
 
 //  table[index].hash = hash ^ best_move_cast;
 //  table[index].best_move = best_move;
@@ -110,35 +119,53 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
 //  table[index].depth = depth;
 }
 
-void SavePVEntry(const Board &board, const Move best_move) {
+void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
-  int index = PVHashFunction(hash);
-  assert(index >= 0 && index < table_pv.size());
+  int index = HashFunction(hash);
+
+  assert(index >= 0 && index < table.size());
+
   HashType best_move_cast = best_move;
-  table_pv[index].hash = hash ^ best_move_cast;
-  table_pv[index].best_move = best_move;
+  Entry entry;
+  entry.hash = hash ^ best_move_cast;
+  entry.set_score(score, board);
+  entry.set_best_move(best_move);
+  entry.depth = depth;
+  entry.bound = kExactBound;
+  table[index].pv_entry = entry;
 }
+
+//void SavePVEntry(const Board &board, const Move best_move) {
+//  HashType hash = board.get_hash();
+//  int index = PVHashFunction(hash);
+//  assert(index >= 0 && index < table_pv.size());
+//  HashType best_move_cast = best_move;
+//  table_pv[index].hash = hash ^ best_move_cast;
+//  table_pv[index].best_move = best_move;
+//}
 
 bool ValidateHash(const Entry &entry, const HashType hash){
-  HashType best_move_cast = entry.best_move;
+  HashType best_move_cast = entry.get_best_move();
   return entry.hash == (hash ^ best_move_cast);
 }
 
-bool ValidateHash(const PVEntry &entry, const HashType hash){
-  HashType best_move_cast = entry.best_move;
-  return entry.hash == (hash ^ best_move_cast);
-}
+//bool ValidateHash(const PVEntry &entry, const HashType hash){
+//  HashType best_move_cast = entry.best_move;
+//  return entry.hash == (hash ^ best_move_cast);
+//}
 
 
 void ClearTable() {
   for (unsigned int i = 0; i < table.size(); i++) {
-    table[i].hash = 0;
-    table[i].best_move = 0;
+    table[i].nw_entry.hash = 0;
+    table[i].nw_entry.set_best_move(kNullMove);
+    table[i].pv_entry.hash = 0;
+    table[i].pv_entry.set_best_move(kNullMove);
   }
-  for (unsigned int i = 0; i < table_pv.size(); i++) {
-    table_pv[i].hash = 0;
-    table_pv[i].best_move = 0;
-  }
+//  for (unsigned int i = 0; i < table_pv.size(); i++) {
+//    table_pv[i].hash = 0;
+//    table_pv[i].best_move = 0;
+//  }
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {
