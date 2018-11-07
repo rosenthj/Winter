@@ -58,38 +58,42 @@ Score tt_score_to_score(Score score, size_t num_made_moves) {
 namespace table {
 
 int size = 1600000;
-//int size_pvt = 10001;
-std::vector<DualEntryHolder> table(size);
+int size_pvt = 10001;
+std::vector<Entry> table(size);
+std::vector<Entry> table_pv(size_pvt);
 //std::vector<PVEntry> table_pv(size_pvt);
 
 void SetTableSize(const long MB) {
 //  size = (MB << 20) / 21;
   //size_pvt = size / 12;
-  size = (MB << 15);
+  size = (6 * (MB << 16)) / 7;
+  size_pvt = size / 6;
   table.resize(size);
-  //table_pv.resize(size_pvt);
+  table_pv.resize(size_pvt);
 }
 
 int HashFunction(const HashType hash) {
   return hash % size;
 }
 
-//int PVHashFunction(const HashType hash) {
-//  return hash % size_pvt;
-//}
+int PVHashFunction(const HashType hash) {
+  return hash % size_pvt;
+}
 
 Entry GetEntry(const HashType hash) {
-  DualEntryHolder entries = table.at(HashFunction(hash));
-  if (!ValidateHash(entries.nw_entry, hash)) {
-    return entries.pv_entry;
+  Entry entry = table.at(HashFunction(hash));
+  Entry entry_pv = table_pv.at(PVHashFunction(hash));
+
+  if (!ValidateHash(entry, hash)) {
+    return entry_pv;
   }
-  if (!ValidateHash(entries.pv_entry, hash)) {
-    return entries.nw_entry;
+  if (!ValidateHash(entry_pv, hash)) {
+    return entry;
   }
-  if (entries.nw_entry.depth > entries.pv_entry.depth) {
-    return entries.nw_entry;
+  if (entry.depth > entry_pv.depth) {
+    return entry;
   }
-  return entries.pv_entry;
+  return entry_pv;
 }
 
 //PVEntry GetPVEntry(const HashType hash) {
@@ -110,7 +114,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
   entry.set_best_move(best_move);
   entry.depth = depth;
   entry.bound = kLowerBound;
-  table[index].nw_entry = entry;
+  table[index] = entry;
 
 //  table[index].hash = hash ^ best_move_cast;
 //  table[index].best_move = best_move;
@@ -122,6 +126,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
   int index = HashFunction(hash);
+  int index_pv = PVHashFunction(hash);
 
   assert(index >= 0 && index < table.size());
 
@@ -132,7 +137,8 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   entry.set_best_move(best_move);
   entry.depth = depth;
   entry.bound = kExactBound;
-  table[index].pv_entry = entry;
+  table[index] = entry;
+  table_pv[index_pv] = entry;
 }
 
 //void SavePVEntry(const Board &board, const Move best_move) {
@@ -157,15 +163,15 @@ bool ValidateHash(const Entry &entry, const HashType hash){
 
 void ClearTable() {
   for (unsigned int i = 0; i < table.size(); i++) {
-    table[i].nw_entry.hash = 0;
-    table[i].nw_entry.set_best_move(kNullMove);
-    table[i].pv_entry.hash = 0;
-    table[i].pv_entry.set_best_move(kNullMove);
+    table[i].hash = 0;
+    table[i].set_best_move(kNullMove);
+    //table[i].pv_entry.hash = 0;
+    //table[i].pv_entry.set_best_move(kNullMove);
   }
-//  for (unsigned int i = 0; i < table_pv.size(); i++) {
-//    table_pv[i].hash = 0;
-//    table_pv[i].best_move = 0;
-//  }
+  for (unsigned int i = 0; i < table_pv.size(); i++) {
+    table_pv[i].hash = 0;
+    table_pv[i].set_best_move(kNullMove);
+  }
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {
