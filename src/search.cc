@@ -1285,7 +1285,8 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score delta = 2 * estimate_Delta(previous_scores);
+    Score std_dev_estimate = estimate_Delta(previous_scores);
+    Score delta = 2 * std_dev_estimate;
     Score alpha = std::max(score-delta, kMinScore);
     Score beta = std::min(score+delta, kMaxScore);
     SortMovesML(moves, t, moves[0]);
@@ -1296,12 +1297,28 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
           beta = (alpha + 3 * beta) / 4;
         }
         alpha = std::max(alpha-delta, kMinScore);
+        if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
+          if (alpha > 0) {
+            alpha = 0;
+          }
+          else {
+            alpha = kMinScore;
+          }
+        }
       }
       else if (score >= beta) {
         if (!is_mate_score(alpha) && !is_mate_score(beta)) {
           alpha = (3 * alpha + beta) / 4;
         }
         beta = std::min(beta+delta, kMaxScore);
+        if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
+          if (beta < 0) {
+            beta = 0;
+          }
+          else {
+            beta = kMaxScore;
+          }
+        }
       }
       score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
       delta *= 2;
