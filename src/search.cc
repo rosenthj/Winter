@@ -74,7 +74,7 @@ const Array2d<Depth, 64, 64> init_lmr_reductions() {
   Array2d<Depth, 64, 64> lmr_reductions;
   for (int i = 0; i < 64; i++) {
     for (int j = 0; j < 64; j++) {
-      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.8);
+      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.7);
       lmr_reductions[i][j] = std::min(lmr_reductions[i][j], i);
     }
   }
