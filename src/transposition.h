@@ -65,7 +65,7 @@ struct DualEntryHolder {
 //  //Move best_move;
 //};
 
-void SetTableSize(const long MB);
+void SetTableSize(const size_t MB);
 Entry GetEntry(const HashType hash);
 void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth);

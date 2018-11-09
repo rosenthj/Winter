@@ -124,9 +124,9 @@ const size_t kPhaseVecLength = 6;
 const size_t kPhaseVecLength = 6;
 #endif
 
-const long kThousand = 1000;
-const long kMillion = kThousand * kThousand;
-const long kBillion = kThousand * kMillion;
+const int64_t kThousand = 1000;
+const int64_t kMillion = kThousand * kThousand;
+const int64_t kBillion = kThousand * kMillion;
 
 /**
  * In the following we define data extraction and translation functions,

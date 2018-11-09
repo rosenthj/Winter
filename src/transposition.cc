@@ -57,13 +57,13 @@ Score tt_score_to_score(Score score, size_t num_made_moves) {
 
 namespace table {
 
-int size = 1600000;
-int size_pvt = 10001;
+size_t size = 1600000;
+size_t size_pvt = 10001;
 std::vector<Entry> table(size);
 std::vector<Entry> table_pv(size_pvt);
 //std::vector<PVEntry> table_pv(size_pvt);
 
-void SetTableSize(const long MB) {
+void SetTableSize(const size_t MB) {
 //  size = (MB << 20) / 21;
   //size_pvt = size / 12;
   size = (6 * (MB << 16)) / 7;

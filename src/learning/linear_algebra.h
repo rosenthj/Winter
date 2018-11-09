@@ -30,7 +30,7 @@
 #include <cmath>
 #include <iostream>
 
-template <typename type,int length>
+template <typename type, size_t length>
 struct Vec {
   Vec() {
     for (size_t i = 0; i < length; i++) {
@@ -50,6 +50,10 @@ struct Vec {
       t += values[i];
     }
     return t;
+  }
+
+  inline size_t size() const {
+    return length;
   }
 
   void print() const {
@@ -169,31 +173,31 @@ struct Vec {
   type values[length];
 };
 
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> operator*(Vec<t,l> lhs, const int rhs) {
   lhs *= rhs;
   return lhs;
 }
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> operator/(Vec<t,l> lhs, const int rhs) {
   lhs /= rhs;
   return lhs;
 }
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> operator*(const double &rhs, Vec<t,l> lhs) {
   lhs *= rhs;
   return lhs;
 }
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> operator*(const int &rhs, Vec<t,l> lhs) { return lhs * rhs; }
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> operator-(Vec<t,l> score) {
   for (size_t i = 0; i < l; i++) {
     score[i] = -score[i];
   }
   return score;
 }
-template<typename t, int l>
+template<typename t, size_t l>
 inline bool operator==(const Vec<t,l>& lhs, const Vec<t,l>& rhs) {
   bool res = true;
   for (size_t i = 0; i < l; i++) {
@@ -201,10 +205,10 @@ inline bool operator==(const Vec<t,l>& lhs, const Vec<t,l>& rhs) {
   }
   return res;
 }
-template<typename t, int l>
+template<typename t, size_t l>
 inline bool operator!=(const Vec<t,l>& lhs, const Vec<t,l>& rhs) { return !(lhs == rhs); }
 
-template<typename t, int l>
+template<typename t, size_t l>
 Vec<t,l> squared_differences(const Vec<t,l> &v1, const Vec<t,l> &v2) {
   Vec<t,l> v;
   for (size_t i = 0; i < l; i++) {
@@ -213,7 +217,7 @@ Vec<t,l> squared_differences(const Vec<t,l> &v1, const Vec<t,l> &v2) {
   return v;
 }
 
-template <typename type,int length>
+template <typename type,size_t length>
 struct SqMatrix {
   SqMatrix() {
     for (size_t i = 0; i < length; i++) {
@@ -290,7 +294,7 @@ template Vec<double, kPhaseVecLength>
     SqMatrix<double, kPhaseVecLength>::dot<Score>(
         const Vec<Score, kPhaseVecLength> &other);
 
-template<typename type, int length>
+template<typename type, size_t length>
 struct DeterminantHelper {
   static type calculate(const SqMatrix<type, length> &mat) {
     SqMatrix<type, length - 1> h_mat;
@@ -328,12 +332,12 @@ struct DeterminantHelper<type, 1> {
 
 template struct DeterminantHelper<double, 2>;
 
-template<typename type, int length> type Determinant(const SqMatrix<type, length> &mat) {
+template<typename type, size_t length> type Determinant(const SqMatrix<type, length> &mat) {
   return DeterminantHelper<type, length>::calculate(mat);
 }
 
 
-template<typename type, int length> SqMatrix<type, length> SymmetricSquareMatrixInv(
+template<typename type, size_t length> SqMatrix<type, length> SymmetricSquareMatrixInv(
       const SqMatrix<type, length> &mat) {
   double det = Determinant<type, length>(mat);
   SqMatrix<type, length> adj_mat;
