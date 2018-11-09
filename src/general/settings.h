@@ -40,7 +40,7 @@ constexpr bool kExperimental = false;
 
 const std::string engine_name = "Winter";
 const std::string engine_version =
-                   kExperimental ? "Beta 181107 Experimental"
+                   kExperimental ? "Beta 181110 Experimental"
                                  : "0.2";
 const std::string engine_author = "Jonathan Rosenthal";
 
@@ -51,10 +51,10 @@ const std::string kParamPath = "params/";
 const std::string kSampledMixtureFile = kParamPath + "v2Smixtures" + std::to_string(kGMMk) + ".txt";
 
 const std::string kMixtureFile =
-                 kExperimental ? kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt"
+                 kExperimental ? kParamPath + "mixtures_noisy" + std::to_string(kGMMk) + ".txt"
                                : kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt";
 const std::string kGMMParamsFile =
-                   kExperimental ? kParamPath + "gmm_params" + std::to_string(kGMMk) + ".txt"
+                   kExperimental ? kParamPath + "gmm_params_noisy" + std::to_string(kGMMk) + ".txt"
                                  : kParamPath + "gmm_params" + std::to_string(kGMMk) + ".txt";
 
 const std::string kParamExplanationFile = kGMMParamsFile + ".info";

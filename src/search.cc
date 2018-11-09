@@ -74,7 +74,7 @@ const Array2d<Depth, 64, 64> init_lmr_reductions() {
   Array2d<Depth, 64, 64> lmr_reductions;
   for (int i = 0; i < 64; i++) {
     for (int j = 0; j < 64; j++) {
-      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.7);
+      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.6);
       lmr_reductions[i][j] = std::min(lmr_reductions[i][j], i);
     }
   }
@@ -128,7 +128,7 @@ const Vec<Score, 4> init_futility_margins() {
 }
 
 const Vec<Score, 4> kFutileMargin = init_futility_margins();
-const std::array<int, 4> kLMP = {0, 6, 9, 13};
+const std::array<int, 5> kLMP = {0, 6, 9, 13, 18};
 
 std::vector<int> search_weights(kNumMoveProbabilityFeatures);
 std::vector<int> search_weights_in_check(kNumMoveProbabilityFeatures);
@@ -1495,7 +1495,8 @@ void Thread::search() {
         continue;
       }
       lock.unlock();
-      if ((rng() % (2 * current_depth)) == 0) {
+//      if ((rng() % (2 * current_depth)) == 0) {
+      if ((rng() % 4) == 0) {
         perturb_root_moves();
       }
     }
