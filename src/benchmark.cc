@@ -352,6 +352,64 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
                      - kMinDrawLoss * draws) / games.size();
 }
 
+void GenerateDatasetFromEPD() {
+  std::string line;
+  std::ifstream file("quiet-labeled.epd");
+  std::ofstream dfile("zurichess_epd_data.csv");
+  size_t samples = 0;
+  while(std::getline(file, line)) {
+    std::vector<std::string> tokens = parse::split(line, ' ');
+    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+    Board board(fen);
+    double result = -1;
+    if (tokens[5].compare("\"1-0\";") == 0) {
+      result = 1;
+    }
+    else if (tokens[5].compare("\"0-1\";") == 0) {
+      result = 0;
+    }
+    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
+      result = 0.5;
+    }
+    else {
+      std::cout << "Error detected! Line:" << std::endl;
+      std::cout << line << std::endl;
+      file.close();
+      return;
+    }
+    if (board.get_turn() == kBlack) {
+      result = 1 - result;
+    }
+    std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
+    Vec<double, settings::kGMMk> component_probs = evaluation::BoardMixtureProbability(board);
+    if (samples == 0) {
+      dfile << "res";
+      for (int i = 0; i < component_probs.size(); i++) {
+        dfile << ", cp" << i;
+      }
+      for (int i = 0; i < features.size(); i++) {
+        dfile << ", fe" << i;
+      }
+      dfile << std::endl;
+    }
+    dfile << result;
+    for (int i = 0; i < component_probs.size(); i++) {
+      dfile << ", " << component_probs[i];
+    }
+    for (int feature : features) {
+      dfile << ", " << feature;
+    }
+    dfile << std::endl;
+    samples++;
+    if (samples % 10000 == 0) {
+      std::cout << "Processed " << samples << " samples!" << std::endl;
+    }
+  }
+  file.close();
+  dfile.flush();
+  dfile.close();
+}
+
 }
 
 
