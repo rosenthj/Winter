@@ -27,6 +27,7 @@
 #ifndef SRC_LEARNING_MACHINE_LEARNING_H_
 #define SRC_LEARNING_MACHINE_LEARNING_H_
 
+#include "linear_algebra.h"
 #include <vector>
 
 namespace ml {
@@ -35,6 +36,18 @@ std::vector<double> Wrap(const double value);
 
 enum ActivatedLoss {
   kSigmoidCrossEntropy
+};
+
+template<size_t length>
+struct Normalizer {
+  Vec<double, length> means;
+  Vec<double, length> std_dev;
+  Vec<double, length> normalize(const Vec<double, length> &sample) const {
+    return (sample - means) / std_dev;
+  }
+  Vec<double, length> unnormalize(const Vec<double, length> &sample) const {
+    return (sample * std_dev) + means;
+  }
 };
 
 template<ActivatedLoss loss>

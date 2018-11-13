@@ -31,15 +31,26 @@
 #include "general/bookkeeping.h"
 #include "board.h"
 #include "search.h"
+#include "train.h"
+#include "learning/cluster.h"
 
 int main() {
   debug::EnterFunction(debug::kMain, "Main", "");
   table::SetTableSize(32);
   if (settings::kTrainFromScratch) {
-    evaluation::Train(true);
+    train::Train(true);
   }
+//  evaluation::LoadGMMVariables();
   evaluation::LoadGMMVariablesHardCoded();
+//  evaluation::LoadMixturesHardCoded();
+//  evaluation::LoadVariablesFromFile();
+//  evaluation::SaveGMMHardCode("gmm_hardcoded.txt");
+//  evaluation::SaveGMMVariablesHardCode("eval_weights_hardcoded.txt");
   search::LoadSearchVariablesHardCoded();
+//  train::RunEMForNFCM();
+//  evaluation::RunEMForGMM();
+
+//  benchmark::GenerateDatasetFromEPD();
 
 //  for (Square src = 0; src < 64; src++) {
 //    for (Square des = 0; des < 64; des++) {

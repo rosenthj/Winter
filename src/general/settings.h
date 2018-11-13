@@ -54,7 +54,7 @@ const std::string kMixtureFile =
                  kExperimental ? kParamPath + "mixtures_noisy" + std::to_string(kGMMk) + ".txt"
                                : kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt";
 const std::string kGMMParamsFile =
-                   kExperimental ? kParamPath + "gmm_params_noisy" + std::to_string(kGMMk) + ".txt"
+                   kExperimental ? kParamPath + "gmm_params_nfcm" + std::to_string(kGMMk) + ".txt"
                                  : kParamPath + "gmm_params" + std::to_string(kGMMk) + ".txt";
 
 const std::string kParamExplanationFile = kGMMParamsFile + ".info";
@@ -85,6 +85,13 @@ const Depth kRepsForDraw = 2;
 const Depth kMaxDepth = 128;
 
 const bool kUseQS = true;
+
+enum cluster_model_type {
+  kClusterGMM, kClusterNFCM
+};
+
+const cluster_model_type kClusterModelType = kClusterNFCM;
+
 
 }
 

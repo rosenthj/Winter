@@ -45,7 +45,7 @@ struct Gaussian {
     }
     return prob;
   }
-  double pdf(const Vec<double, length> &sample) {
+  double pdf(const Vec<double, length> &sample) const {
     //double prob = 1;
     float exponent = 0;
     Vec<double, length> dif = sample - mu;

@@ -33,6 +33,7 @@
 #include "board.h"
 #include "search.h"
 #include "transposition.h"
+#include "train.h"
 #include "general/debug.h"
 #include "search_thread.h"
 #include <cstdint>
@@ -301,7 +302,7 @@ void Loop() {
       evaluation::CheckVariableInfluence();
     }
     else if (Equals(command, "train_params")) {
-      evaluation::Train(false);
+      train::Train(false);
     }
     else if (Equals(command, "bookkeeping_reset")) {
       bookkeeping::reset_counters();

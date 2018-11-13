@@ -26,7 +26,8 @@
 
 #include "evaluation.h"
 #include "learning/linear_algebra.h"
-#include "learning/statistics.h"
+//#include "learning/statistics.h"
+#include "learning/cluster.h"
 #include "learning/machine_learning.h"
 #include "benchmark.h"
 #include "search.h"
@@ -60,28 +61,6 @@ const BitBoard fourth_row = parse::StringToBitBoard("a4") | parse::StringToBitBo
 
 const BitBoard fifth_row = fourth_row << 8;
 
-Vec<double,kPhaseVecLength> GetBoardPhaseVec(const Board &board) {
-  Vec<double,kPhaseVecLength> vec;
-//  if (settings::kExperimental) {
-//    for (PieceType pt = kKnight; pt <= kQueen; pt++) {
-//      vec[pt - 1] += board.get_piecetype_count(pt);
-//    }
-//    return vec;
-//  }
-
-  for (PieceType pt = kPawn; pt <= kQueen; pt++) {
-    vec[0] += std::abs(board.get_piece_count(kWhite, pt) - board.get_piece_count(kBlack, pt));
-  }
-  for (PieceType pt = kKnight; pt <= kQueen; pt++) {
-    vec[pt] += board.get_piecetype_count(pt);
-  }
-  Square wKing = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(kWhite, kKing));
-  Square bKing = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(kBlack, kKing));
-  vec[5] = std::abs(GetSquareX(wKing) - GetSquareX(bKing)) +
-      std::abs(GetSquareY(wKing) - GetSquareY(bKing));
-  return vec;
-}
-
 struct TrainingPosition{
   Board board;
   double target;
@@ -89,8 +68,24 @@ struct TrainingPosition{
 
 int kSign[2] = {1,-1};
 
-std::vector<PScore> feature_GMM_score_values(kNumFeatures);
-GMM<settings::kGMMk, kPhaseVecLength> gmm_main;
+std::vector<PScore> eval_score_values(kNumFeatures);
+
+cluster::ClusterModel<settings::kGMMk>* init_cluster_model() {
+  if (settings::kClusterModelType == settings::kClusterNFCM) {
+    return new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();
+  }
+  return new cluster::GaussianMixtureModel<settings::kGMMk, kPhaseVecLength>();
+}
+
+cluster::ClusterModel<settings::kGMMk>* cluster_model = init_cluster_model();
+
+//GMM<settings::kGMMk, kPhaseVecLength> gmm_main;
+//cluster::GaussianMixtureModel <settings::kGMMk, kPhaseVecLength>* gmm_main =
+//cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>* cluster_model = //settings::kClusterModelType == settings::kClusterNFCM ?
+//    new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();// :
+//cluster::ClusterModel<settings::kGMMk>* cluster_model = //settings::kClusterModelType == settings::kClusterNFCM ?
+//    new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();// :
+   //new cluster::GaussianMixtureModel<settings::kGMMk, kPhaseVecLength>();
 
 struct EvalStats{
   std::vector< std::vector<double> > means;
@@ -115,7 +110,8 @@ EvalStats GetEvalStats(std::vector<Board> &eval_positions) {
   for (Board board : eval_positions) {
     std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
     Vec<double, settings::kGMMk> weights =
-        gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+        cluster_model->GetWeightedProbabilities(board);
+//        gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
     for (int i = 0; i < kNumFeatures; i++) {
       for (int j = 0; j < settings::kGMMk; j++) {
         mins[i][j] = std::min(mins[i][j], features[i] * weights[j]);
@@ -236,7 +232,7 @@ void AddFeature(T &s,const Color color, const int index, const int value) {
 
 template<> inline void AddFeature<PScore>(PScore &s, const Color color, const int index,
     const int value) {
-  s.FMA(feature_GMM_score_values[index], kSign[color] * value);
+  s.FMA(eval_score_values[index], kSign[color] * value);
 }
 
 template<typename T>
@@ -555,10 +551,14 @@ T ScoreBoard(const Board &board) {
 Score ScoreBoard(const Board &board) {
   PScore score =  ScoreBoard<PScore>(board);
   Vec<double, settings::kGMMk> weights =
-      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+      cluster_model->GetWeightedProbabilities(board);
+//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+
   assert(std::abs(weights.sum() - 1.0) < 0.0001);
   return std::round(weights.dot(score));
 }
+
+template std::vector<double> ScoreBoard<std::vector<double> >(const Board &board);
 
 void PrintFeatureValues(const Board &board) {
   std::vector<int> features(ScoreBoard<std::vector<int> >(board));
@@ -573,440 +573,8 @@ void PrintFeatureValues(const Board &board) {
 }
 
 template<int k>
-GMM<k, kPhaseVecLength> EMForGMM(std::vector<Board> &positions, int iterations = 50) {
-  std::shuffle(positions.begin(), positions.end(), rng);
-  std::vector<Board> validation;
-  for (int i = 0; i < 10000; i++) {
-    validation.emplace_back(positions.back());
-    positions.pop_back();
-  }
-  GMM<k, kPhaseVecLength> best_gmm;
-  double log_prob = 0, best_log_prob = -100000000;
-  int initializations = 100;
-  while (initializations--) {
-    int it = iterations;
-    GMM<k, kPhaseVecLength> gmm;
-    std::cout << "setting random means" << std::endl;
-    for (size_t i = 0; i < k; i++) {
-      bool unique = false;
-      while (!unique) {
-        gmm.mixtures[i].mu = GetBoardPhaseVec(positions[rng() % positions.size()]);
-        unique = true;
-        for (size_t j = 0; j < i; j++) {
-          if (gmm.mixtures[i].mu == gmm.mixtures[j].mu) {
-            unique = false;
-          }
-        }
-      }
-      gmm.mixtures[i].mu.print();
-      std::cout << std::endl;
-    }
-    std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(positions.size());
-    for (size_t i = 0; i < positions.size(); i++) {
-      if (i < positions.size() / 25) {
-        assignments[i] = i % k;
-      }
-      else {
-        assignments[i] = gmm.GetD2MixtureAssignment(GetBoardPhaseVec(positions[i]));
-      }
-    }
-    while (it--) {
-      std::cout << "Remaining iterations: " << it << std::endl;
-      //Calculate Mu
-      std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
-      std::cout << "Counts: ";
-      counts.print(); std::cout << std::endl;
-      for (size_t i = 0; i < positions.size(); i++) {
-        for (size_t mix = 0; mix < k; mix++) {
-          sums.at(mix) += assignments[i][mix] * GetBoardPhaseVec(positions[i]);
-        }
-        counts += assignments[i];
-      }
-      for (size_t i = 0; i < k; i++) {
-        gmm.mixtures[i].mu = sums[i] / counts[i];
-        gmm.weights[i] = counts[i];
-        std::cout << "Mixture Count[" << i <<"]: "<< counts[i] << std::endl;
-        std::cout << "Mixture Means: ";
-        gmm.mixtures[i].mu.print();
-        std::cout << std::endl;
-      }
-      std::cout << "Calculating Standard Deviations" << std::endl;
-      //Calculate Sigma
-      for (size_t j = 0; j < k; j++) {
-        for (size_t m = 0; m < kPhaseVecLength; m++) {
-          for (size_t n = 0; n < kPhaseVecLength; n++) {
-            gmm.mixtures[j].sigma[m][n] = 0;
-          }
-        }
-      }
-      for (size_t i = 0; i < positions.size(); i++) {
-        Vec<double, kPhaseVecLength> game_vec = GetBoardPhaseVec(positions[i]);
-        for (size_t j = 0; j < k; j++) {
-          for (size_t m = 0; m < kPhaseVecLength; m++) {
-            double d1 = gmm.mixtures[j].mu[m] - game_vec[m];
-            for (size_t n = 0; n < kPhaseVecLength; n++) {
-              double d2 = gmm.mixtures[j].mu[n] - game_vec[n];
-              gmm.mixtures[j].sigma[m][n] += assignments[i][j] * (d1 * d2);
-            }
-          }
-        }
-      }
-      for (size_t j = 0; j < k; j++) {
-        if (counts[j] <= 1) {
-          std::cout << "Mixture " << j << " has no count!" << std::endl;
-          continue;
-        }
-        std::cout << "Mixture " << j << " Covariance Matrix:" << std::endl;
-        for (size_t m = 0; m < kPhaseVecLength; m++) {
-          for (size_t n = 0; n < kPhaseVecLength; n++) {
-            gmm.mixtures[j].sigma[m][n] /= (counts[j]-1);
-            if (m == n) {
-              gmm.mixtures[j].sigma[m][n] = std::max(gmm.mixtures[j].sigma[m][n], std::pow(0.004,2));
-            }
-            std::cout << gmm.mixtures[j].sigma[m][n] << " ";
-          }
-          std::cout << std::endl;
-        }
-        gmm.mixtures[j].set_sigma_inv();
-        std::cout << "Divisor " << j<< ":" << gmm.mixtures[j].sqrt_det_sigma_times_divisor << std::endl;
-      }
-      //Calculate Indexes
-      if (it > 0) {
-        std::cout << "Calculating Sample assignments" << std::endl;
-        for (size_t i = 0; i < positions.size(); i++) {
-          assignments[i] =
-              gmm.GetWeightedProbabilities(GetBoardPhaseVec(positions[i]));
-        }
-      }
-      //Calculate mixture probability
-      log_prob = 0;
-      for (size_t i = 0; i < validation.size(); i++) {
-        log_prob += std::log(gmm.GetSampleProbability(GetBoardPhaseVec(validation[i])));
-      }
-      std::cout << "Log Mixture probability: " << log_prob << std::endl;
-    }
-    if (log_prob > best_log_prob) {
-      best_log_prob = log_prob;
-      best_gmm = gmm;
-    }
-  }
-  while(validation.size() > 0) {
-    positions.emplace_back(validation.back());
-    validation.pop_back();
-  }
-  std::cout << "Best log probability validation sum: " << best_log_prob << std::endl;
-  return best_gmm;
-}
-
-
-template<int k>
-GMM<k, kPhaseVecLength> EMForGMM(std::vector<Game> &games, int iterations = 50) {
-  data::SetGamesToRandomQuiescent(games);
-  std::shuffle(games.begin(), games.end(), rng);
-  std::vector<Game> validation;
-  for (int i = 0; i < 10000; i++) {
-    validation.emplace_back(games.back());
-    games.pop_back();
-  }
-  GMM<k, kPhaseVecLength> best_gmm;
-  double log_prob = 0, best_log_prob = -100000000;
-  int initializations = 100;
-  while (initializations--) {
-    int it = iterations;
-    GMM<k, kPhaseVecLength> gmm;
-    std::cout << "setting random means" << std::endl;
-    for (size_t i = 0; i < k; i++) {
-      bool unique = false;
-      while (!unique) {
-        gmm.mixtures[i].mu = GetBoardPhaseVec(games[rng() % games.size()].board);
-        unique = true;
-        for (size_t j = 0; j < i; j++) {
-          if (gmm.mixtures[i].mu == gmm.mixtures[j].mu) {
-            unique = false;
-          }
-        }
-      }
-      gmm.mixtures[i].mu.print();
-      std::cout << std::endl;
-    }
-    std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(games.size());
-    for (size_t i = 0; i < games.size(); i++) {
-      if (i < games.size() / 25) {
-        assignments[i] = i % k;
-      }
-      else {
-        assignments[i] = gmm.GetD2MixtureAssignment(GetBoardPhaseVec(games[i].board));
-      }
-    }
-    while (it--) {
-      std::cout << "Remaining iterations: " << it << std::endl;
-      //Calculate Mu
-      std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
-      std::cout << "Counts: ";
-      counts.print(); std::cout << std::endl;
-      for (size_t i = 0; i < games.size(); i++) {
-        for (size_t mix = 0; mix < k; mix++) {
-          sums.at(mix) += assignments[i][mix] * GetBoardPhaseVec(games[i].board);
-        }
-        counts += assignments[i];
-      }
-      for (size_t i = 0; i < k; i++) {
-        gmm.mixtures[i].mu = sums[i] / counts[i];
-        gmm.weights[i] = counts[i];
-        std::cout << "Mixture Count[" << i <<"]: "<< counts[i] << std::endl;
-        std::cout << "Mixture Means: ";
-        gmm.mixtures[i].mu.print();
-        std::cout << std::endl;
-      }
-      std::cout << "Calculating Standard Deviations" << std::endl;
-      //Calculate Sigma
-      for (size_t j = 0; j < k; j++) {
-        for (size_t m = 0; m < kPhaseVecLength; m++) {
-          for (size_t n = 0; n < kPhaseVecLength; n++) {
-            gmm.mixtures[j].sigma[m][n] = 0;
-          }
-        }
-      }
-      for (size_t i = 0; i < games.size(); i++) {
-        Vec<double, kPhaseVecLength> game_vec = GetBoardPhaseVec(games[i].board);
-        for (size_t j = 0; j < k; j++) {
-          for (size_t m = 0; m < kPhaseVecLength; m++) {
-            double d1 = gmm.mixtures[j].mu[m] - game_vec[m];
-            for (size_t n = 0; n < kPhaseVecLength; n++) {
-              double d2 = gmm.mixtures[j].mu[n] - game_vec[n];
-              gmm.mixtures[j].sigma[m][n] += assignments[i][j] * (d1 * d2);
-            }
-          }
-        }
-      }
-      for (size_t j = 0; j < k; j++) {
-        if (counts[j] <= 1) {
-          std::cout << "Mixture " << j << " has no count!" << std::endl;
-          continue;
-        }
-        std::cout << "Mixture " << j << " Covariance Matrix:" << std::endl;
-        for (size_t m = 0; m < kPhaseVecLength; m++) {
-          for (size_t n = 0; n < kPhaseVecLength; n++) {
-            gmm.mixtures[j].sigma[m][n] /= (counts[j]-1);
-            if (m == n) {
-              gmm.mixtures[j].sigma[m][n] = std::max(gmm.mixtures[j].sigma[m][n], std::pow(0.004,2));
-            }
-            std::cout << gmm.mixtures[j].sigma[m][n] << " ";
-          }
-          std::cout << std::endl;
-        }
-        gmm.mixtures[j].set_sigma_inv();
-        std::cout << "Divisor " << j<< ":" << gmm.mixtures[j].sqrt_det_sigma_times_divisor << std::endl;
-      }
-      //Calculate Indexes
-      if (it > 0) {
-        std::cout << "Calculating Sample assignments" << std::endl;
-        for (size_t i = 0; i < games.size(); i++) {
-          assignments[i] =
-              gmm.GetWeightedProbabilities(GetBoardPhaseVec(games[i].board));
-        }
-      }
-      //Calculate mixture probability
-      log_prob = 0;
-      for (size_t i = 0; i < validation.size(); i++) {
-        log_prob += std::log(gmm.GetSampleProbability(GetBoardPhaseVec(validation[i].board)));
-      }
-      std::cout << "Log Mixture probability: " << log_prob << std::endl;
-    }
-    if (log_prob > best_log_prob) {
-      best_log_prob = log_prob;
-      best_gmm = gmm;
-    }
-  }
-  while(validation.size() > 0) {
-    games.emplace_back(validation.back());
-    validation.pop_back();
-  }
-  std::cout << "Best log probability validation sum: " << best_log_prob << std::endl;
-  return best_gmm;
-}
-
-void SampledEMForGMM(int iterations) {
-  search::set_print_info(false);
-  const int k = settings::kGMMk;
-  std::vector<Game> games = data::LoadGames();
-  data::SetGamesToRandom(games);
-  std::shuffle(games.begin(), games.end(), rng);
-  std::vector<Board> positions;
-  positions.reserve(games.size());
-  for (int i = 0; i < games.size(); i++) {
-    positions.emplace_back(search::SampleEval(games[i].board));
-    if (positions.size() % 1000 == 0) {
-      std::cout << "sampled " << positions.size() << " positions!" << std::endl;
-    }
-  }
-  games.clear();
-  std::vector<Board> validation;
-  for (int i = 0; i < 10000; i++) {
-    validation.emplace_back(positions.back());
-    positions.pop_back();
-  }
-  GMM<k, kPhaseVecLength> best_gmm;
-  double log_prob = 0, best_log_prob = -100000000;
-  int initializations = 1;
-  while (initializations--) {
-    int it = iterations;
-    GMM<k, kPhaseVecLength> gmm;
-    std::cout << "setting random means" << std::endl;
-    for (size_t i = 0; i < k; i++) {
-      bool unique = false;
-      while (!unique) {
-        gmm.mixtures[i].mu = GetBoardPhaseVec(positions[rng() % positions.size()]);
-        unique = true;
-        for (size_t j = 0; j < i; j++) {
-          if (gmm.mixtures[i].mu == gmm.mixtures[j].mu) {
-            unique = false;
-          }
-        }
-      }
-      gmm.mixtures[i].mu.print();
-      std::cout << std::endl;
-    }
-    std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(positions.size());
-    for (size_t i = 0; i < positions.size(); i++) {
-      assignments[i] = gmm.GetD2MixtureAssignment(GetBoardPhaseVec(positions[i]));
-    }
-    while (it--) {
-      std::cout << "Remaining iterations: " << it << std::endl;
-      //Calculate Mu
-      std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
-      std::cout << "Counts: ";
-      counts.print(); std::cout << std::endl;
-      for (size_t i = 0; i < positions.size(); i++) {
-        for (size_t mix = 0; mix < k; mix++) {
-          sums.at(mix) += assignments[i][mix] * GetBoardPhaseVec(positions[i]);
-        }
-        counts += assignments[i];
-      }
-      for (size_t i = 0; i < k; i++) {
-        gmm.mixtures[i].mu = sums[i] / counts[i];
-        gmm.weights[i] = counts[i];
-        std::cout << "Mixture Count[" << i <<"]: "<< counts[i] << std::endl;
-      }
-      std::cout << "Calculating Standard Deviations" << std::endl;
-      //Calculate Sigma
-      if (true) {
-        for (size_t j = 0; j < k; j++) {
-          for (size_t m = 0; m < kPhaseVecLength; m++) {
-            for (size_t n = 0; n < kPhaseVecLength; n++) {
-              gmm.mixtures[j].sigma[m][n] = 0;
-            }
-          }
-        }
-        for (size_t i = 0; i < positions.size(); i++) {
-          Vec<double, kPhaseVecLength> game_vec = GetBoardPhaseVec(positions[i]);
-          for (size_t j = 0; j < k; j++) {
-            for (size_t m = 0; m < kPhaseVecLength; m++) {
-              double d1 = gmm.mixtures[j].mu[m] - game_vec[m];
-              for (size_t n = 0; n < kPhaseVecLength; n++) {
-                double d2 = gmm.mixtures[j].mu[n] - game_vec[n];
-                gmm.mixtures[j].sigma[m][n] += assignments[i][j] * (d1 * d2);
-              }
-            }
-          }
-        }
-        for (size_t j = 0; j < k; j++) {
-          if (counts[j] <= 1) {
-            std::cout << "Mixture " << j << " has no count!" << std::endl;
-            continue;
-          }
-          std::cout << "Mixture " << j << " Covariance Matrix:" << std::endl;
-          for (size_t m = 0; m < kPhaseVecLength; m++) {
-            for (size_t n = 0; n < kPhaseVecLength; n++) {
-              gmm.mixtures[j].sigma[m][n] /= (counts[j]-1);
-              if (m == n) {
-                gmm.mixtures[j].sigma[m][n] = std::max(gmm.mixtures[j].sigma[m][n], std::pow(0.004,2));
-              }
-              else {
-                //gmm.mixtures[j].sigma[m][n] = 0;
-              }
-              std::cout << gmm.mixtures[j].sigma[m][n] << " ";
-            }
-            std::cout << std::endl;
-          }
-          gmm.mixtures[j].set_sigma_inv();
-          std::cout << "Divisor " << j<< ":" << gmm.mixtures[j].sqrt_det_sigma_times_divisor << std::endl;
-        }
-      }
-      //Calculate Indexes
-      if (it > 0) {
-        std::cout << "Calculating Sample assignments" << std::endl;
-        for (size_t i = 0; i < positions.size(); i++) {
-          assignments[i] =
-              gmm.GetWeightedProbabilities(GetBoardPhaseVec(positions[i]));
-        }
-      }
-      //Calculate mixture probability
-      log_prob = 0;
-      for (size_t i = 0; i < validation.size(); i++) {
-        log_prob += std::log(gmm.GetSampleProbability(GetBoardPhaseVec(validation[i])));
-      }
-      std::cout << "Log Mixture probability: " << log_prob << std::endl;
-    }
-    if (log_prob > best_log_prob) {
-      best_log_prob = log_prob;
-      best_gmm = gmm;
-    }
-  }
-  std::cout << "Best log probability validation sum: " << best_log_prob << std::endl;
-  std::ofstream file(settings::kSampledMixtureFile);
-  for (size_t m = 0; m < k; m++) {
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      file << best_gmm.mixtures[m].mu[i] << " ";
-    }
-    file << best_gmm.weights[m] << std::endl;
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        file << best_gmm.mixtures[m].sigma[i][j] << " ";
-      }
-      file << std::endl;
-    }
-  }
-  file.flush();
-  file.close();
-  search::set_print_info(true);
-}
-
-
-void RunEMForGMM() {
-  const int k = settings::kGMMk;
-  //std::vector<Game> games = data::LoadGames(1200000);
-  std::vector<Board> positions = data::LoadBoardFens("data/sample_evals.fen");
-  GMM<k,kPhaseVecLength> gmm = EMForGMM<k>(positions);
-  std::ofstream file(settings::kMixtureFile);
-  for (size_t m = 0; m < k; m++) {
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      file << gmm.mixtures[m].mu[i] << " ";
-
-    }
-    file << gmm.weights[m] << std::endl;
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        file << gmm.mixtures[m].sigma[i][j] << " ";
-      }
-      file << std::endl;
-    }
-  }
-  file.flush();
-  file.close();
-}
-
-template<int k>
-void SaveGMM(GMM<k,kPhaseVecLength> &gmm, std::string file_name) {
+void SaveGMM(cluster::GaussianMixtureModel<k,kPhaseVecLength> &gmm, std::string file_name) {
+//void SaveGMM(GMM<k,kPhaseVecLength> &gmm, std::string file_name) {
   std::ofstream file(file_name);
   for (size_t m = 0; m < k; m++) {
     for (size_t i = 0; i < kPhaseVecLength; i++) {
@@ -1025,42 +593,7 @@ void SaveGMM(GMM<k,kPhaseVecLength> &gmm, std::string file_name) {
 }
 
 void SaveGMMHardCode(std::string file_name) {
-  std::ofstream file(file_name);
-  file << "const std::array<double, (" << settings::kGMMk << "+" << settings::kGMMk << "*("
-      << kPhaseVecLength << "+1)*" << kPhaseVecLength << ")> gmm_components = {" << std::endl;
-
-  for (size_t m = 0; m < settings::kGMMk; m++) {
-    file << "    // Component " << m << " weights" << std::endl
-        << "    " << gmm_main.weights[m] << "," << std::endl;
-
-    file << "    // Component " << m << " means" << std::endl << "    ";
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      file << gmm_main.mixtures[m].mu[i] << ", ";
-    }
-    file << std::endl;
-    file << "    // Component " << m << " covariances" << std::endl;
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        if (j > 0) {
-          file << ", ";
-        }
-        else {
-          file << "    ";
-        }
-        file << gmm_main.mixtures[m].sigma[i][j];
-      }
-      if (i+1 < kPhaseVecLength || m+1 < settings::kGMMk) {
-        file << ",";
-      }
-      file << std::endl;
-    }
-    if (m+1 == settings::kGMMk) {
-      file << "};";
-    }
-    file << std::endl;
-  }
-  file.flush();
-  file.close();
+  cluster_model->SaveHardCode(file_name);
 }
 
 void SaveGMMVariables() {
@@ -1072,8 +605,8 @@ void SaveGMMVariables() {
       idx++;
     }
     for (int j = 0; j < settings::kGMMk; j++) {
-      file << feature_GMM_score_values[i][j] << " ";
-      description_file  << feature_GMM_score_values[i][j] << " ";
+      file << eval_score_values[i][j] << " ";
+      description_file  << eval_score_values[i][j] << " ";
     }
     file << std::endl;
     description_file << "<-- " << kFeatureInfos[idx].info << std::endl;
@@ -1096,14 +629,14 @@ void SaveGMMVariablesHardCode(std::string filename) {
     }
     file << "    ";
     for (int j = 0; j < settings::kGMMk; j++) {
-      file  << feature_GMM_score_values[i][j];
+      file  << eval_score_values[i][j];
       if (j+1 < settings::kGMMk || i+1 < kNumFeatures) {
         file << ", ";
       }
       else {
         file << "  ";
       }
-      int val = 5 - parse::CountChars(feature_GMM_score_values[i][j]);
+      int val = 5 - parse::CountChars(eval_score_values[i][j]);
       while (0 < val--) {
         file << " ";
       }
@@ -1115,52 +648,26 @@ void SaveGMMVariablesHardCode(std::string filename) {
   file.close();
 }
 
-void LoadMixtures() {
-  const int k = settings::kGMMk;
-  std::ifstream fileg(settings::kMixtureFile);
-  for (size_t m = 0; m < k; m++) {
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      fileg >> gmm_main.mixtures[m].mu[i];
-    }
-    fileg >> gmm_main.weights[m];
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        fileg >> gmm_main.mixtures[m].sigma[i][j];
-      }
-    }
-    gmm_main.mixtures[m].set_sigma_inv();
+void LoadMixturesHardCoded() {
+  if (settings::kClusterModelType == settings::kClusterNFCM) {
+    std::vector<double> params(hardcode::NFCM_params.begin(), hardcode::NFCM_params.end());
+    cluster_model->LoadFromParams(params);
   }
-  fileg.close();
+  else {
+    std::vector<double> params(hardcode::gmm_components.begin(), hardcode::gmm_components.end());
+    cluster_model->LoadFromParams(params);
+  }
 }
 
-void LoadGMMVariables() {
+void LoadVariablesFromFile() {
   const int k = settings::kGMMk;
   std::ifstream file(settings::kGMMParamsFile);
   for (size_t i = 0; i < kNumFeatures; i++) {
     for (size_t j = 0; j < k; j++) {
-      file >> feature_GMM_score_values[i][j];
+      file >> eval_score_values[i][j];
     }
   }
   file.close();
-
-  LoadMixtures();
-}
-
-void LoadMixturesHardCoded() {
-  const int k = settings::kGMMk;
-  int c = 0;
-  for (size_t m = 0; m < k; m++) {
-    gmm_main.weights[m] = hardcode::gmm_components[c++];
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      gmm_main.mixtures[m].mu[i] = hardcode::gmm_components[c++];
-    }
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        gmm_main.mixtures[m].sigma[i][j] = hardcode::gmm_components[c++];
-      }
-    }
-    gmm_main.mixtures[m].set_sigma_inv();
-  }
 }
 
 void LoadGMMVariablesHardCoded() {
@@ -1168,7 +675,12 @@ void LoadGMMVariablesHardCoded() {
   int c = 0;
   for (size_t i = 0; i < kNumFeatures; i++) {
     for (size_t j = 0; j < k; j++) {
-      feature_GMM_score_values[i][j] = hardcode::eval_weights[c++];
+      if (settings::kClusterModelType == settings::kClusterNFCM) {
+        eval_score_values[i][j] = hardcode::eval_weights[c++];
+      }
+      else {
+        eval_score_values[i][j] = hardcode::eval_weights_gmm[c++];
+      }
     }
   }
 
@@ -1184,300 +696,9 @@ double Sigmoid(T x) {
   return 1 / ( 1 + std::exp(-x) );
 }
 
-void EnforceConstraints(std::vector<double> &variables) {
-  const int k = settings::kGMMk;
-  int idx = 0;
-  for (size_t i = 0; i < kNumFeatures; i++) {
-    if (i == kFeatureInfos[idx + 1].idx) {
-      idx++;
-    }
-    for (size_t j = 0; j < k; j++) {
-      variables.at(i * k + j) = std::max((double) kFeatureInfos[idx].min_value, variables[i * k + j]);
-      variables.at(i * k + j) = std::min((double) kFeatureInfos[idx].max_value, variables[i * k + j]);
-      if (kFeatureInfos[idx].encoded_info == 1 && i < (kFeatureInfos[idx + 1].idx - 1)
-          && variables.at(i * k + j) > variables.at((i + 1) * k + j)) {
-        double dif = variables.at(i * k + j) - variables.at((i + 1) * k + j);
-        variables.at(i * k + j) -= dif / 1000;
-        variables.at((i + 1) * k + j) += dif / 1000;
-      }
-    }
-  }
-
-  for (size_t j = 0; j < k; j++) {
-    //variables[(kKingPSTIndex + 0) * k + j] = 0;
-    variables[(kKnightSquaresIndex + 4) * k + j] = 0;
-    for (int idx = kKnightPSTIndex; idx < kBaseValueIndex; idx++) {
-      variables[(idx) * k + j] += variables[(kBaseValueIndex + kKnight) * k + j];
-    }
-    variables[(kBaseValueIndex + kKnight) * k + j] = 0;
-    for (int idx = kBishopMobility; idx < kRookMobility; idx++) {
-      variables[(idx) * k + j] += variables[(kBaseValueIndex + kBishop) * k + j];
-    }
-    variables[(kBaseValueIndex + kBishop) * k + j] = 0;
-    for (int idx = kRookMobility; idx < kQueenMobility; idx++) {
-      variables[(idx) * k + j] += variables[(kBaseValueIndex + kRook) * k + j];
-    }
-    variables[(kBaseValueIndex + kRook) * k + j] = 0;
-    for (int idx = kQueenMobility; idx < kSafeChecks; idx++) {
-      variables[(idx) * k + j] += variables[(kBaseValueIndex + kQueen) * k + j];
-    }
-    variables[(kBaseValueIndex + kQueen) * k + j] = 0;
-  }
-}
-
-void SGDDrawMarginTrain() {
-  const double scaling = 1024;
-  double draw_margin = 1.0;
-  long completed_iterations = 0;
-  std::vector<Game> games = data::LoadGames();
-
-  double nu = 0.000005;
-  double kMinNu = (1.0 / kMillion);
-
-  std::vector<int8_t> position_tries(games.size(), 0);
-  while (nu > kMinNu) {
-    size_t index = rng() % games.size();
-    if (position_tries[index] == 5) {
-      data::SetGameToRandomQuiescent(games[index]);
-      position_tries[index] = 0;
-    }
-    position_tries[index]++;
-    double target = games[index].result;
-    if (games[index].board.get_turn() == kBlack) {
-      target = 1 - target;
-    }
-    if (target != 0 && target != 0.5 && target != 1) {
-      std::cout << "Target error!" << std::endl;
-    }
-    Score game_score = ScoreBoard(games[index].board);
-    double gradient = 0;//sigmoid - target;
-    if (target == 1) {
-      gradient = Sigmoid<double>(draw_margin - game_score / scaling);
-    }
-    else if (target == 0) {
-      gradient = 1.0 - Sigmoid<double>(-draw_margin - game_score / scaling);
-    }
-    else {
-      gradient = Sigmoid<double>(game_score / scaling - draw_margin)
-                  - Sigmoid<double>(-game_score / scaling - draw_margin)
-                  - (std::cosh(draw_margin) / std::sinh(draw_margin));
-
-    }
-    draw_margin -= nu * gradient;
-    completed_iterations++;
-    if (completed_iterations % 100000 == 0) {
-      std::cout << "completed " << completed_iterations << " iterations! Current margin: "
-          << std::round(draw_margin * scaling) << std::endl;
-    }
-    if (completed_iterations % 200000000 == 0) {
-      nu /= 2;
-      std::cout << "New Nu: " << nu << std::endl;
-    }
-  }
-  std::cout << "Training completed!" << std::endl;
-}
-
 enum LearningStyle {
   kSupervised, kTDL, kMixedLearning
 };
-
-template<LearningStyle learning_style>
-bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
-  if (learning_style == kSupervised) {
-    bool success = data::SetGameToRandomQuiescent(game);
-    if (!success) {
-      return false;
-    }
-    position.SetToSamePosition(game.board);
-    target = game.result;
-    if (position.get_turn() == kBlack) {
-      target = 1 - target;
-    }
-  }
-  else if (learning_style == kMixedLearning) {
-    const double game_res_weight = 0.3;
-    const double td_weight = 1 - game_res_weight;
-    Score score = 0, qscore = -1;
-    //std::cout << "-> " << index << std::flush;
-    int qsearch_attempts = 0;
-    while (score != qscore) {
-      data::SetGameToRandom(game);
-      if (game.board.InCheck() || game.board.IsDraw())
-        continue;
-      qsearch_attempts++;
-      if (qsearch_attempts == 20)
-        break;
-      score = ScoreBoard(game.board);
-      qscore = search::QSearch(game.board);
-    }
-    if (qsearch_attempts == 20)
-      return false;
-    //std::cout << " -> " << games[index].board.get_num_made_moves() << std::flush;
-    search::set_print_info(false);
-    //search::DepthSearch(game.board, 6);
-    search::NodeSearch(game.board, 20000);
-    search::set_print_info(true);
-    //std::cout << "<- " << std::endl;
-    target = search::get_last_search_score() / eval_scaling;
-    double game_res = game.result;
-    if (game.board.get_turn() == kBlack) {
-      game_res = 1 - game_res;
-    }
-    target = td_weight * Sigmoid<double>(target)
-                            + game_res_weight * game_res;
-    position.SetToSamePosition(game.board);
-  }
-  else if (learning_style == kTDL) {
-    //Score score = 0, qscore = -1;
-    //int qsearch_attempts = 0;
-    data::SetGameToRandom(game);
-    position.SetToSamePosition(game.board);
-    search::set_print_info(false);
-    Move move = search::DepthSearch(position, 6);
-    search::set_print_info(true);
-    position.Make(move);
-    if (position.GetMoves<kNonQuiescent>().size() == 0) {
-      return false;
-    }
-    if (ScoreBoard(position) != search::SQSearch(position)) {
-      return false;
-    }
-    search::set_print_info(false);
-    search::DepthSearch(position, 6);
-    search::set_print_info(true);
-    target = Sigmoid<double>(search::get_last_search_score() / eval_scaling);
-  }
-  return true;
-}
-
-template<SGDVariantType sgd_variant, LearningStyle learning_style>
-void SGDTrain(bool from_scratch = false) {
-  const int k = settings::kGMMk;
-  double kMinNu = (1.0 / kMillion);
-  const int max_position_tries = learning_style == kSupervised ? 5 : 2;
-  const long step_size = learning_style == kSupervised ? (200 * kMillion) : (max_position_tries * 1200 * kThousand);
-  const long save_frequency = learning_style == kSupervised ? (1 * kMillion) : (10 * kThousand);
-  const long benchmark_frequency = learning_style == kSupervised ? (500 * kMillion) : (500 * kThousand);
-
-  ml::Optimizer<ml::kSigmoidCrossEntropy>* optimizer;
-  if (sgd_variant == SGDNormal) {
-    optimizer = new ml::SGD<ml::kSigmoidCrossEntropy>();
-    optimizer->nu = 1.0 / eval_scaling;
-  }
-  else if (sgd_variant == SGDAdam) {
-    ml::Adam<ml::kSigmoidCrossEntropy>* opt = new ml::Adam<ml::kSigmoidCrossEntropy>();
-    opt->nu = 0.5 * (1 - opt->beta1) / eval_scaling;
-    kMinNu = (1.0 / kMillion) * (1 - opt->beta2);
-    optimizer = opt;
-  }
-  optimizer->set_num_features(k * kNumFeatures);
-
-  if (!from_scratch) {
-    for (size_t i = 0; i < kNumFeatures; i++) {
-      for (size_t j = 0; j < k; j++) {
-        optimizer->regressor.weights[i * k + j] = feature_GMM_score_values[i][j] / eval_scaling;
-      }
-    }
-  }
-  std::vector<Game> games = data::LoadGames();
-  if (from_scratch && settings::kTrainGMMFromScratch) {
-    GMM<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
-    SaveGMM<k>(gmm, settings::kMixtureFile);
-    gmm_main = gmm;
-  }
-  else {
-    if (from_scratch && !settings::kTrainGMMFromScratch) {
-      LoadMixtures();
-    }
-  }
-
-  std::vector<int8_t> position_tries(games.size(), max_position_tries);
-  std::vector<double> position_targets(games.size(), 0);
-  std::vector<Board> positions(games.size());
-  while (optimizer->nu > kMinNu) {
-    size_t index = rng() % games.size();
-    if (position_tries[index] >= max_position_tries) {
-      bool success = SamplePositionAndTarget<learning_style>(
-          games[index], positions[index], position_targets[index]);
-      if (!success) {
-        continue;
-      }
-      position_tries[index] = 0;
-    }
-    position_tries[index]++;
-    Vec<double, k> probabilities = gmm_main.GetWeightedProbabilities(
-        GetBoardPhaseVec(positions[index]));
-    if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
-      if (optimizer->counter < 50 * kMillion) {
-        for (int i = 0; i < k; i++) {
-          probabilities[i] = 1.0 / k;
-        }
-      }
-      else {
-        double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
-        double sum = 0;
-        for (int i = 0; i < k; i++) {
-          probabilities[i] = std::pow(probabilities[i], p);
-          sum += probabilities[i];
-        }
-        for (int i = 0; i < k; i++) {
-          probabilities[i] /= sum;
-        }
-      }
-    }
-
-    std::vector<double> features =
-        ScoreBoard<std::vector<double> >(positions[index]);
-    std::vector<double> split_features(kNumFeatures * k);
-    for (size_t i = 0; i < kNumFeatures; i++) {
-      for (size_t j = 0; j < k; j++) {
-        split_features[i * k + j] = features[i] * probabilities[j];
-      }
-    }
-
-    double probability_of_position = gmm_main.GetSampleProbability(
-        GetBoardPhaseVec(positions[index]));
-    if (probability_of_position == 0) {
-      std::cout << "Error! Found impossible position!" << std::endl;
-    }
-
-    optimizer->step(split_features, ml::Wrap(position_targets[index]));
-    EnforceConstraints(optimizer->regressor.weights);
-
-    if (optimizer->counter % save_frequency == 0) {
-      std::cout << "completed " << optimizer->counter << " iterations!"
-          << std::endl;
-      for (size_t i = 0; i < kNumFeatures; i++) {
-        for (size_t j = 0; j < k; j++) {
-          feature_GMM_score_values[i][j] = std::round(optimizer->regressor.weights[i * k + j] * eval_scaling);
-        }
-      }
-      SaveGMMVariables();
-      if (optimizer->counter % benchmark_frequency == 0) {
-        benchmark::EntropyLossTimedSuite(Milliseconds(10));
-      }
-    }
-    if (optimizer->counter % step_size == 0) {
-      optimizer->nu /= 2;
-      std::cout << "New Nu: " << optimizer->nu << std::endl;
-    }
-  }
-  std::cout << "Training completed!" << std::endl;
-  delete optimizer;
-}
-
-
-void Train(bool from_scratch) {
-  if (settings::kTrainFromScratch) {
-    SGDTrain<SGDNormal, kSupervised>(from_scratch);
-  }
-  else {
-    //SGDMarginVariantTrain<settings::kGMMk, SGDNormal>(false);
-    SGDTrain<SGDAdam, kMixedLearning>();
-    //SGDVariantTDL<SGDAdam, false>();
-  }
-}
-
 
 void CheckVariableInfluence() {
   std::vector<double> variable_influences(kNumFeatures);
@@ -1497,8 +718,10 @@ void CheckVariableInfluence() {
       games[index].forward();
       std::vector<int> features =
           ScoreBoard<std::vector<int> >(games[index].board);
-      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
-          GetBoardPhaseVec(games[index].board));
+      Vec<double, settings::kGMMk> probabilities =
+          cluster_model->GetWeightedProbabilities(games[index].board);
+//      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
+//          GetBoardPhaseVec(games[index].board));
       double set_influence = 0;
       int idx = 0;
       for (size_t i = 0; i < kNumFeatures; i++) {
@@ -1510,9 +733,9 @@ void CheckVariableInfluence() {
         }
         double variable_influence = 0;
         for (size_t j = 0; j < settings::kGMMk; j++) {
-          variable_influence += feature_GMM_score_values[i][j] * features[i]
+          variable_influence += eval_score_values[i][j] * features[i]
                                 * probabilities[j];
-          set_influence += feature_GMM_score_values[i][j] * features[i]
+          set_influence += eval_score_values[i][j] * features[i]
                                                           * probabilities[j];
         }
         variable_influences[i] += (variable_influence * variable_influence);
@@ -1567,8 +790,9 @@ void CheckFeatureMagnitude() {
       }
       std::vector<int> features =
           ScoreBoard<std::vector<int> >(games[index].board);
-      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
-          GetBoardPhaseVec(games[index].board));
+      Vec<double, settings::kGMMk> probabilities = cluster_model->GetWeightedProbabilities(games[index].board);
+//      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
+//          GetBoardPhaseVec(games[index].board));
       for (size_t i = 0; i < kNumFeatures; i++) {
         feature_magnitudes[i] += probabilities * std::abs(features[i]);
       }
@@ -1745,20 +969,23 @@ Score EvaluateQuietMoveValue() {
 }
 
 Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board) {
-  return gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+  return cluster_model->GetWeightedProbabilities(board);
+//  return gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
 }
 
 Score GetPawnBaseValue(const Board &board) {
-  PScore score = feature_GMM_score_values[kBaseValueIndex + kPawn];
+  PScore score = eval_score_values[kBaseValueIndex + kPawn];
   Vec<double, settings::kGMMk> weights =
-      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+      cluster_model->GetWeightedProbabilities(board);
+//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
   return std::round(weights.dot(score));
 }
 
 Score GetTempoValue(const Board &board) {
-  PScore score = feature_GMM_score_values[kTempoBonusIndex];
+  PScore score = eval_score_values[kTempoBonusIndex];
   Vec<double, settings::kGMMk> weights =
-      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
+      cluster_model->GetWeightedProbabilities(board);
+//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
   return std::round(weights.dot(score));
 }
 
@@ -1767,23 +994,24 @@ int ScoreToCentipawn(const Score score, const Board &board) {
 }
 
 double BoardProbability(const Board &board) {
-  return gmm_main.GetSampleProbability(GetBoardPhaseVec(board));
-}
-
-void PrintEvaluationGMM() {
-  for (int i = 0; i < settings::kGMMk; i++) {
-    gmm_main.mixtures[i].sigma.print();
-    std::cout << std::endl;
-  }
-  for (int i = 0; i < feature_GMM_score_values.size(); i++) {
-    for (int j = 0; j < settings::kGMMk; j++)
-      std::cout << feature_GMM_score_values[i][j] << " ";
-    std::cout << std::endl;
-  }
+  return 0;
+  //return gmm_main.GetSampleProbability(GetBoardPhaseVec(board));
 }
 
 std::vector<PScore> GetEvaluationWeights() {
-  return feature_GMM_score_values;
+  return eval_score_values;
+}
+
+Score GetScore(const size_t feature_idx, const size_t cluster_idx) {
+  return eval_score_values[feature_idx][cluster_idx];
+}
+
+void SetScore(const size_t feature_idx, const size_t cluster_idx, const Score score) {
+  eval_score_values[feature_idx][cluster_idx] = score;
+}
+
+void SetModel(cluster::ClusterModel<settings::kGMMk>* model) {
+  cluster_model->SetModel(model);
 }
 
 }

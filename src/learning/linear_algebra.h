@@ -27,6 +27,7 @@
 #ifndef LEARNING_LINEAR_ALGEBRA_H_
 #define LEARNING_LINEAR_ALGEBRA_H_
 
+#include "../general/types.h"
 #include <cmath>
 #include <iostream>
 
@@ -50,6 +51,22 @@ struct Vec {
       t += values[i];
     }
     return t;
+  }
+
+  type normL1() const {
+    type res = 0;
+    for (size_t i = 0; i < length; i++) {
+      res += std::abs(values[i]);
+    }
+    return res;
+  }
+
+  type normL2() const {
+    type res = 0;
+    for (size_t i = 0; i < length; i++) {
+      res += values[i] * values[i];
+    }
+    return std::sqrt(res);
   }
 
   inline size_t size() const {
@@ -256,8 +273,8 @@ struct SqMatrix {
   }
 
   template<typename t>
-  Vec<type,length> dot(const Vec<t, length> &other) {
-    Vec<type, length> s = 0;
+  Vec<type,length> dot(const Vec<t, length> &other) const {
+    Vec<type, length> s(0);
     for (size_t i = 0; i < length; i++) {
       s[i] = values[i].dot(other);
     }
@@ -288,11 +305,11 @@ struct SqMatrix {
 
 template Vec<double, kPhaseVecLength>
     SqMatrix<double, kPhaseVecLength>::dot<double>(
-        const Vec<double, kPhaseVecLength> &other);
+        const Vec<double, kPhaseVecLength> &other) const;
 
 template Vec<double, kPhaseVecLength>
     SqMatrix<double, kPhaseVecLength>::dot<Score>(
-        const Vec<Score, kPhaseVecLength> &other);
+        const Vec<Score, kPhaseVecLength> &other) const;
 
 template<typename type, size_t length>
 struct DeterminantHelper {

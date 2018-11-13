@@ -34,6 +34,7 @@
 #include "general/types.h"
 #include "general/settings.h"
 #include "board.h"
+#include "learning/cluster.h"
 #include <vector>
 
 typedef Vec<Score,settings::kGMMk> PScore;
@@ -44,27 +45,31 @@ Score ScoreBoard(const Board &board);
 template<typename T>
 T ScoreBoard(const Board &board);
 void PrintFeatureValues(const Board &board);
+//void LoadMixtures();
 void SaveGMMVariables();
-void LoadGMMVariables();
+//void LoadGMMVariables();
+void LoadMixturesHardCoded();
 void LoadGMMVariablesHardCoded();
-void Train(bool from_scratch);
+void LoadVariablesFromFile();
+//void Train(bool from_scratch);
 int ScoreToCentipawn(const Score score, const Board &board);
 Score GetPawnBaseValue(const Board &board);
 Score GetTempoValue(const Board &board);
-void RunEMForGMM();
-void SampledEMForGMM(int iterations = 500);
+//void RunEMForGMM();
 void CheckFeatureMagnitude();
 void CheckVariableInfluence();
 double BoardProbability(const Board &board);
 Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board);
 Score EvaluateQuietMoveValue();
-void SGDDrawMarginTrain();
-void PrintEvaluationGMM();
 
 std::vector<PScore> GetEvaluationWeights();
 
 void SaveGMMVariablesHardCode(std::string filename);
 void SaveGMMHardCode(std::string file_name);
+
+Score GetScore(const size_t feature_idx, const size_t cluster_idx);
+void SetScore(const size_t feature_idx, const size_t cluster_idx, const Score score);
+void SetModel(cluster::ClusterModel<settings::kGMMk>* model);
 
 }
 

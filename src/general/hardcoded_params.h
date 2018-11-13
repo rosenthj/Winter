@@ -13,6 +13,93 @@
 //The arrays in this file are automatically generated!
 namespace hardcode {
 
+//First Centroid set to zero vector normalized.
+//const std::array<double, 8+(4*4)> NFCM_params = {
+//    // Means and Standard Deviations
+//    1.4501, 1.34111,
+//    1.81476, 1.38448,
+//    2.59293, 1.45835,
+//    1.10424, 0.930082,
+//    // Centroids
+//    -1.08127, -1.31079, -1.77798, -1.18725,
+//    -0.54272, -0.524388, -0.355711, -0.904568,
+//    -0.198028, -0.06039, 0.39646, 0.672892,
+//    1.30958, 1.18496, 0.880138, 0.83792
+//};
+
+//// First Centroid set to zero vector normalized. Last centroid set to start pos.
+//// m = 3
+const std::array<double, 8+(4*4)> NFCM_params = {
+    // Means and Standard Deviations
+    1.4501, 1.34111,
+    1.81476, 1.38448,
+    2.59293, 1.45835,
+    1.10424, 0.930082,
+    // Centroids
+    -1.08127, -1.31079, -1.77798, -1.18725,
+    -0.502385, -0.486815, -0.339176, -0.733863,
+    0.00748032, 0.146452, 0.515402, 0.631396,
+    1.90134, 1.57839, 0.964835, 0.963098
+};
+
+// First Centroid set to zero vector normalized. Last centroid set to start pos.
+// m = 3, k = 2
+//const std::array<double, 8+(2*4)> NFCM_params = {
+//    // Means and Standard Deviations
+//    1.4501, 1.34111,
+//    1.81476, 1.38448,
+//    2.59293, 1.45835,
+//    1.10424, 0.930082,
+//    // Centroids
+//    -1.08127, -1.31079, -1.77798, -1.18725,
+//    1.90134, 1.57839, 0.964835, 0.963098
+//};
+
+// First Centroid set to zero vector normalized. Last centroid set to start pos.
+// m = 3, k = 3
+//const std::array<double, 8+(3*4)> NFCM_params = {
+//    // Means and Standard Deviations
+//    1.4501, 1.34111,
+//    1.81476, 1.38448,
+//    2.59293, 1.45835,
+//    1.10424, 0.930082,
+//    // Centroids
+//    -1.08127, -1.31079, -1.77798, -1.18725,
+//    -0.275169, -0.173044, 0.134105, 0.0741034,
+//    1.90134, 1.57839, 0.964835, 0.963098
+//};
+
+// First Centroid set to zero vector normalized. Last centroid set to start pos.
+// 2 norm
+//const std::array<double, 8+(4*4)> NFCM_params = {
+//    // Means and Standard Deviations
+//    1.4501, 1.34111,
+//    1.81476, 1.38448,
+//    2.59293, 1.45835,
+//    1.10424, 0.930082,
+//    // Centroids
+//    -1.08127, -1.31079, -1.77798, -1.18725,
+//    -0.532835, -0.513867, -0.332504, -0.834612,
+//    -0.0106584, 0.15961, 0.552674, 0.716478,
+//    1.90134, 1.57839, 0.964835, 0.963098
+//};
+
+// First Centroid set to zero vector normalized. Last centroid set to start pos.
+// 1 norm
+//const std::array<double, 8+(4*4)> NFCM_params = {
+//    // Means and Standard Deviations
+//    1.4501, 1.34111,
+//    1.81476, 1.38448,
+//    2.59293, 1.45835,
+//    1.10424, 0.930082,
+//    // Centroids
+//    -1.08127, -1.31079, -1.77798, -1.18725,
+//    -0.41084, -0.430795, -0.305968, -0.598237,
+//    -0.0201105, 0.0956384, 0.442632, 0.540985,
+//    1.90134, 1.57839, 0.964835, 0.963098
+//};
+
+
 //Longstanding
 const std::array<double, (4+4*(6+1)*6)> gmm_components = {
     // Component 0 weights
@@ -116,7 +203,7 @@ const std::array<double, (4+4*(6+1)*6)> gmm_components = {
 //};
 
 //Longstanding
-const std::array<int, (174*4)> eval_weights = {
+const std::array<int, (174*4)> eval_weights_gmm = {
     -348,  -313,  -168,  30,    // King Piece Square Table
     -90,   -134,  47,    127,   // King Piece Square Table
     -176,  -99,   -100,  11,    // King Piece Square Table
@@ -293,184 +380,361 @@ const std::array<int, (174*4)> eval_weights = {
     0,     0,     0,     0      // Bishop's Position Relative To King
 };
 
-//SLRL181111
-//const std::array<int, (174*4)> eval_weights = {
-    //128,   -416,  -480,  -302,  // King Piece Square Table
-    //236,   -158,  -103,  -157,  // King Piece Square Table
-    //-6,    -249,  -279,  -100,  // King Piece Square Table
-    //-17,   -296,  -362,  -37,   // King Piece Square Table
-    //304,   -45,   155,   -20,   // King Piece Square Table
-    //-23,   56,    103,   46,    // King Piece Square Table
-    //-199,  72,    -34,   75,    // King Piece Square Table
-    //-120,  250,   248,   119,   // King Piece Square Table
-    //-381,  315,   269,   171,   // King Piece Square Table
-    //78,    472,   483,   206,   // King Piece Square Table
-    //153,   2132,  2160,  2041,  // Knight Piece Square Table
-    //711,   2455,  2743,  2132,  // Knight Piece Square Table
-    //584,   2458,  2690,  2074,  // Knight Piece Square Table
-    //693,   2603,  2765,  2163,  // Knight Piece Square Table
-    //531,   2501,  2679,  2187,  // Knight Piece Square Table
-    //610,   2469,  2668,  2139,  // Knight Piece Square Table
-    //749,   2555,  2811,  2145,  // Knight Piece Square Table
-    //759,   2499,  2760,  2192,  // Knight Piece Square Table
-    //782,   2608,  2825,  2244,  // Knight Piece Square Table
-    //698,   2627,  2764,  2272,  // Knight Piece Square Table
-    //167,   562,   526,   679,   // Piece Base Value
-    //0,     0,     0,     0,     // Piece Base Value
-    //0,     0,     0,     0,     // Piece Base Value
-    //0,     0,     0,     0,     // Piece Base Value
-    //0,     0,     0,     0,     // Piece Base Value
-    //1,     323,   249,   246,   // Bishop Pair
-    //0,     42,    15,    42,    // Piece Activity Bonus
-    //0,     0,     0,     0,     // Piece Activity Bonus
-    //0,     0,     0,     0,     // Piece Activity Bonus
-    //0,     0,     0,     0,     // Piece Activity Bonus
-    //0,     0,     0,     0,     // Piece Activity Bonus
-    //0,     0,     0,     0,     // Abstract Piece Activity Bonus
-    //0,     0,     0,     0,     // Abstract Piece Activity Bonus
-    //31,    65,    76,    54,    // Abstract Piece Activity Bonus
-    //17,    44,    47,    49,    // Abstract Piece Activity Bonus
-    //0,     0,     0,     0,     // Abstract Piece Activity Bonus
-    //0,     0,     0,     0,     // Passed Pawn Bonus
-    //0,     0,     0,     0,     // Passed Pawn Bonus
-    //0,     2,     0,     145,   // Passed Pawn Bonus
-    //79,    219,   200,   280,   // Passed Pawn Bonus
-    //385,   443,   573,   341,   // Passed Pawn Bonus
-    //0,     113,   0,     138,   // Passed Pawn Bonus
-    //0,     0,     0,     0,     // Passed Pawn Bonus
-    //0,     0,     0,     0,     // Passed Pawn Bonus
-    //10,    97,    59,    161,   // Passed Pawn Bonus
-    //118,   438,   352,   483,   // Passed Pawn Bonus
-    //328,   900,   831,   803,   // Passed Pawn Bonus
-    //628,   1538,  1288,  942,   // Passed Pawn Bonus
-    //-53,   -42,   -32,   -113,  // Double Pawn Penalty
-    //60,    89,    80,    34,    // Tempo Bonus
-    //0,     0,     0,     0,     // Direct Pawn Shield Bonus
-    //5,     -20,   -39,   17,    // King Vector Exposure
-    //-10,   -39,   -48,   -4,    // King Vector Exposure
-    //122,   82,    148,   185,   // Knight Outpost
-    //0,     0,     0,     0,     // Castling Right
-    //182,   365,   368,   220,   // Pawn Attack
-    //130,   263,   220,   45,    // Minor Attack
-    //0,     0,     0,     0,     // King Defence Distance
-    //0,     0,     0,     0,     // King Defence Distance
-    //0,     0,     0,     0,     // King Defence Distance
-    //0,     0,     0,     0,     // King Defence Distance
-    //-25,   -37,   -97,   0,     // King Attack Distance
-    //0,     0,     0,     0,     // King Attack Distance
-    //-26,   -71,   -94,   -19,   // King Attack Distance
-    //0,     -73,   -58,   -457,  // King Attack Distance
-    //21,    3,     32,    0,     // King Attack Danger
-    //2,     6,     22,    9,     // King Attack Danger
-    //28,    30,    35,    22,    // King Attack Danger
-    //4,     56,    0,     764,   // King Attack Danger
-    //-322,  -834,  -719,  -1005, // Safe Knight Square Count
-    //-164,  -431,  -353,  -499,  // Safe Knight Square Count
-    //-83,   -232,  -180,  -232,  // Safe Knight Square Count
-    //-43,   -100,  -76,   -77,   // Safe Knight Square Count
-    //0,     0,     0,     0,     // Safe Knight Square Count
-    //16,    77,    77,    18,    // Safe Knight Square Count
-    //17,    138,   141,   18,    // Safe Knight Square Count
-    //45,    156,   150,   18,    // Safe Knight Square Count
-    //46,    156,   150,   18,    // Safe Knight Square Count
-    //414,   1462,  1388,  1351,  // Bishop Mobility
-    //430,   1653,  1565,  1626,  // Bishop Mobility
-    //563,   1844,  1774,  1848,  // Bishop Mobility
-    //601,   1991,  1936,  2015,  // Bishop Mobility
-    //657,   2118,  2081,  2146,  // Bishop Mobility
-    //725,   2228,  2190,  2250,  // Bishop Mobility
-    //754,   2318,  2295,  2313,  // Bishop Mobility
-    //779,   2388,  2383,  2394,  // Bishop Mobility
-    //784,   2458,  2448,  2411,  // Bishop Mobility
-    //801,   2541,  2524,  2444,  // Bishop Mobility
-    //903,   2614,  2619,  2444,  // Bishop Mobility
-    //985,   2687,  2683,  2444,  // Bishop Mobility
-    //992,   2694,  2741,  2444,  // Bishop Mobility
-    //1198,  2783,  2742,  2444,  // Bishop Mobility
-    //-862,  2978,  3157,  2691,  // Rook Mobility
-    //-797,  3061,  3276,  2928,  // Rook Mobility
-    //-787,  3141,  3337,  3053,  // Rook Mobility
-    //-712,  3216,  3405,  3191,  // Rook Mobility
-    //-708,  3310,  3459,  3324,  // Rook Mobility
-    //-638,  3413,  3562,  3426,  // Rook Mobility
-    //-577,  3498,  3650,  3523,  // Rook Mobility
-    //-505,  3610,  3758,  3607,  // Rook Mobility
-    //-452,  3706,  3854,  3715,  // Rook Mobility
-    //-405,  3798,  3951,  3790,  // Rook Mobility
-    //-376,  3889,  4022,  3837,  // Rook Mobility
-    //-297,  3969,  4095,  3883,  // Rook Mobility
-    //-229,  4066,  4194,  3910,  // Rook Mobility
-    //-224,  4107,  4284,  3910,  // Rook Mobility
-    //-221,  4231,  4341,  3910,  // Rook Mobility
-    //5583,  6269,  5363,  6088,  // Queen Mobility
-    //5717,  6410,  5538,  6250,  // Queen Mobility
-    //5731,  6583,  5540,  6250,  // Queen Mobility
-    //5773,  6682,  5584,  6258,  // Queen Mobility
-    //5774,  6746,  5621,  6258,  // Queen Mobility
-    //5836,  6818,  5665,  6363,  // Queen Mobility
-    //5858,  6903,  5723,  6364,  // Queen Mobility
-    //5880,  6963,  5769,  6370,  // Queen Mobility
-    //5902,  7029,  5814,  6415,  // Queen Mobility
-    //5946,  7098,  5845,  6500,  // Queen Mobility
-    //5947,  7131,  5876,  6528,  // Queen Mobility
-    //5947,  7188,  5915,  6569,  // Queen Mobility
-    //5948,  7207,  5939,  6569,  // Queen Mobility
-    //5948,  7207,  5961,  6569,  // Queen Mobility
-    //5948,  7207,  5978,  6569,  // Queen Mobility
-    //5948,  7207,  5992,  6569,  // Queen Mobility
-    //5948,  7207,  5992,  6569,  // Queen Mobility
-    //5948,  7207,  5993,  6569,  // Queen Mobility
-    //5948,  7207,  5994,  6569,  // Queen Mobility
-    //5949,  7207,  5994,  6569,  // Queen Mobility
-    //5949,  7207,  5994,  6569,  // Queen Mobility
-    //5956,  7207,  5994,  6569,  // Queen Mobility
-    //5956,  7207,  5994,  6569,  // Queen Mobility
-    //5977,  7207,  5994,  6569,  // Queen Mobility
-    //5993,  7207,  5994,  6569,  // Queen Mobility
-    //5997,  7207,  5994,  6569,  // Queen Mobility
-    //6009,  7207,  5994,  6574,  // Queen Mobility
-    //6010,  7207,  5994,  6574,  // Queen Mobility
-    //10,    78,    159,   58,    // Safe Checks
-    //29,    47,    70,    76,    // Unsafe Checks
-    //-64,   -71,   -102,  -17,   // Unprotected Pieces
-    //181,   82,    144,   241,   // Bishop's Position Relative To King
-    //27,    167,   154,   -77,   // Bishop's Position Relative To King
-    //85,    60,    75,    85,    // Bishop's Position Relative To King
-    //3,     123,   -22,   59,    // Bishop's Position Relative To King
-    //-90,   125,   5,     126,   // Bishop's Position Relative To King
-    //-50,   34,    -21,   103,   // Bishop's Position Relative To King
-    //-58,   69,    74,    105,   // Bishop's Position Relative To King
-    //-143,  21,    0,     91,    // Bishop's Position Relative To King
-    //104,   255,   71,    123,   // Bishop's Position Relative To King
-    //-3,    131,   -4,    31,    // Bishop's Position Relative To King
-    //110,   115,   25,    53,    // Bishop's Position Relative To King
-    //-139,  7,     -106,  54,    // Bishop's Position Relative To King
-    //-34,   57,    40,    87,    // Bishop's Position Relative To King
-    //-74,   -41,   27,    45,    // Bishop's Position Relative To King
-    //-27,   -6,    94,    51,    // Bishop's Position Relative To King
-    //128,   211,   78,    102,   // Bishop's Position Relative To King
-    //7,     63,    -39,   37,    // Bishop's Position Relative To King
-    //47,    57,    -33,   56,    // Bishop's Position Relative To King
-    //-26,   -46,   -58,   39,    // Bishop's Position Relative To King
-    //-27,   0,     46,    81,    // Bishop's Position Relative To King
-    //-104,  -92,   28,    37,    // Bishop's Position Relative To King
-    //81,    48,    -11,   63,    // Bishop's Position Relative To King
-    //18,    -23,   -37,   21,    // Bishop's Position Relative To King
-    //-25,   -17,   -4,    46,    // Bishop's Position Relative To King
-    //-130,  -117,  -96,   23,    // Bishop's Position Relative To King
-    //26,    78,    92,    80,    // Bishop's Position Relative To King
-    //-18,   98,    100,   56,    // Bishop's Position Relative To King
-    //-121,  -92,   19,    10,    // Bishop's Position Relative To King
-    //41,    45,    57,    30,    // Bishop's Position Relative To King
-    //-88,   -59,   -12,   30,    // Bishop's Position Relative To King
-    //371,   539,   739,   183,   // Bishop's Position Relative To King
-    //249,   32,    289,   12,    // Bishop's Position Relative To King
-    //361,   222,   326,   -2,    // Bishop's Position Relative To King
-    //0,     0,     0,     0,     // Bishop's Position Relative To King
-    //21,    -25,   51,    -44,   // Bishop's Position Relative To King
-    //0,     0,     0,     0      // Bishop's Position Relative To King
+//// NCFM 181125, k=3
+//const std::array<int, (174*3)> eval_weights = {
+//    57,    -589,  -9,    // King Piece Square Table
+//    -155,  -59,   47,    // King Piece Square Table
+//    135,   -279,  -77,   // King Piece Square Table
+//    260,   -384,  -151,  // King Piece Square Table
+//    -49,   90,    140,   // King Piece Square Table
+//    23,    232,   -38,   // King Piece Square Table
+//    42,    332,   -191,  // King Piece Square Table
+//    -23,   408,   367,   // King Piece Square Table
+//    -42,   536,   403,   // King Piece Square Table
+//    -78,   622,   741,   // King Piece Square Table
+//    2572,  1882,  27,    // Knight Piece Square Table
+//    2397,  2172,  671,   // Knight Piece Square Table
+//    2273,  2304,  618,   // Knight Piece Square Table
+//    2189,  2507,  691,   // Knight Piece Square Table
+//    2381,  2354,  536,   // Knight Piece Square Table
+//    2169,  2408,  631,   // Knight Piece Square Table
+//    2067,  2519,  722,   // Knight Piece Square Table
+//    2069,  2488,  743,   // Knight Piece Square Table
+//    2034,  2650,  744,   // Knight Piece Square Table
+//    2058,  2599,  707,   // Knight Piece Square Table
+//    957,   391,   56,    // Piece Base Value
+//    0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     // Piece Base Value
+//    745,   112,   0,     // Bishop Pair
+//    88,    0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     89,    11,    // Abstract Piece Activity Bonus
+//    79,    18,    8,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     // Passed Pawn Bonus
+//    161,   0,     0,     // Passed Pawn Bonus
+//    197,   302,   27,    // Passed Pawn Bonus
+//    62,    647,   211,   // Passed Pawn Bonus
+//    168,   92,    0,     // Passed Pawn Bonus
+//    0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     // Passed Pawn Bonus
+//    200,   17,    5,     // Passed Pawn Bonus
+//    473,   367,   1,     // Passed Pawn Bonus
+//    741,   808,   109,   // Passed Pawn Bonus
+//    1200,  1118,  430,   // Passed Pawn Bonus
+//    -214,  0,     -3,    // Double Pawn Penalty
+//    8,     35,    47,    // Tempo Bonus
+//    0,     0,     0,     // Direct Pawn Shield Bonus
+//    25,    -58,   4,     // King Vector Exposure
+//    78,    -99,   -5,    // King Vector Exposure
+//    78,    116,   56,    // Knight Outpost
+//    0,     0,     0,     // Castling Right
+//    2,     434,   173,   // Pawn Attack
+//    0,     288,   134,   // Minor Attack
+//    0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     // King Defence Distance
+//    0,     -75,   -17,   // King Attack Distance
+//    0,     0,     0,     // King Attack Distance
+//    0,     -72,   -39,   // King Attack Distance
+//    -32,   -64,   0,     // King Attack Distance
+//    0,     19,    12,    // King Attack Danger
+//    0,     10,    0,     // King Attack Danger
+//    0,     30,    8,     // King Attack Danger
+//    63,    4,     0,     // King Attack Danger
+//    -766,  -727,  -178,  // Safe Knight Square Count
+//    -291,  -373,  -92,   // Safe Knight Square Count
+//    -140,  -217,  -45,   // Safe Knight Square Count
+//    -57,   -90,   -13,   // Safe Knight Square Count
+//    0,     0,     0,     // Safe Knight Square Count
+//    5,     112,   0,     // Safe Knight Square Count
+//    6,     174,   2,     // Safe Knight Square Count
+//    6,     174,   4,     // Safe Knight Square Count
+//    6,     174,   4,     // Safe Knight Square Count
+//    1506,  995,   339,   // Bishop Mobility
+//    1742,  1163,  354,   // Bishop Mobility
+//    1872,  1343,  425,   // Bishop Mobility
+//    1942,  1509,  458,   // Bishop Mobility
+//    1967,  1665,  492,   // Bishop Mobility
+//    1998,  1787,  517,   // Bishop Mobility
+//    1998,  1905,  529,   // Bishop Mobility
+//    2006,  2012,  531,   // Bishop Mobility
+//    2006,  2093,  536,   // Bishop Mobility
+//    2006,  2188,  538,   // Bishop Mobility
+//    2006,  2192,  625,   // Bishop Mobility
+//    2006,  2198,  749,   // Bishop Mobility
+//    2006,  2198,  795,   // Bishop Mobility
+//    2006,  2200,  832,   // Bishop Mobility
+//    4133,  2373,  560,   // Rook Mobility
+//    4265,  2467,  598,   // Rook Mobility
+//    4356,  2500,  615,   // Rook Mobility
+//    4526,  2513,  654,   // Rook Mobility
+//    4707,  2527,  655,   // Rook Mobility
+//    4774,  2633,  688,   // Rook Mobility
+//    4848,  2700,  729,   // Rook Mobility
+//    4848,  2803,  769,   // Rook Mobility
+//    4909,  2891,  776,   // Rook Mobility
+//    4982,  2961,  796,   // Rook Mobility
+//    5017,  3019,  823,   // Rook Mobility
+//    5059,  3054,  853,   // Rook Mobility
+//    5088,  3075,  978,   // Rook Mobility
+//    5090,  3092,  1115,  // Rook Mobility
+//    5090,  3108,  1245,  // Rook Mobility
+//    7227,  5207,  3159,  // Queen Mobility
+//    7526,  5402,  3184,  // Queen Mobility
+//    7565,  5416,  3208,  // Queen Mobility
+//    7575,  5433,  3237,  // Queen Mobility
+//    7605,  5487,  3253,  // Queen Mobility
+//    7641,  5525,  3278,  // Queen Mobility
+//    7677,  5564,  3303,  // Queen Mobility
+//    7727,  5600,  3314,  // Queen Mobility
+//    7759,  5646,  3319,  // Queen Mobility
+//    7820,  5673,  3320,  // Queen Mobility
+//    7876,  5692,  3320,  // Queen Mobility
+//    7945,  5700,  3319,  // Queen Mobility
+//    8000,  5706,  3319,  // Queen Mobility
+//    8029,  5714,  3320,  // Queen Mobility
+//    8053,  5722,  3320,  // Queen Mobility
+//    8053,  5731,  3320,  // Queen Mobility
+//    8055,  5732,  3320,  // Queen Mobility
+//    8055,  5738,  3333,  // Queen Mobility
+//    8055,  5738,  3336,  // Queen Mobility
+//    8055,  5738,  3337,  // Queen Mobility
+//    8056,  5738,  3337,  // Queen Mobility
+//    8056,  5738,  3338,  // Queen Mobility
+//    8056,  5738,  3339,  // Queen Mobility
+//    8056,  5739,  3339,  // Queen Mobility
+//    8056,  5739,  3340,  // Queen Mobility
+//    8056,  5742,  3354,  // Queen Mobility
+//    8056,  5746,  3507,  // Queen Mobility
+//    8121,  5878,  3771,  // Queen Mobility
+//    -181,  375,   3,     // Safe Checks
+//    -35,   125,   -14,   // Unsafe Checks
+//    142,   -162,  -35,   // Unprotected Pieces
+//    188,   152,   297,   // Bishop's Position Relative To King
+//    81,    361,   135,   // Bishop's Position Relative To King
+//    262,   194,   186,   // Bishop's Position Relative To King
+//    344,   106,   87,    // Bishop's Position Relative To King
+//    426,   140,   15,    // Bishop's Position Relative To King
+//    357,   145,   34,    // Bishop's Position Relative To King
+//    402,   165,   22,    // Bishop's Position Relative To King
+//    293,   212,   -40,   // Bishop's Position Relative To King
+//    270,   287,   190,   // Bishop's Position Relative To King
+//    251,   221,   80,    // Bishop's Position Relative To King
+//    219,   206,   185,   // Bishop's Position Relative To King
+//    413,   51,    -3,    // Bishop's Position Relative To King
+//    338,   195,   55,    // Bishop's Position Relative To King
+//    237,   182,   29,    // Bishop's Position Relative To King
+//    264,   259,   52,    // Bishop's Position Relative To King
+//    267,   283,   195,   // Bishop's Position Relative To King
+//    248,   205,   69,    // Bishop's Position Relative To King
+//    271,   172,   112,   // Bishop's Position Relative To King
+//    298,   73,    99,    // Bishop's Position Relative To King
+//    243,   243,   56,    // Bishop's Position Relative To King
+//    196,   199,   43,    // Bishop's Position Relative To King
+//    338,   193,   96,    // Bishop's Position Relative To King
+//    171,   227,   49,    // Bishop's Position Relative To King
+//    244,   205,   57,    // Bishop's Position Relative To King
+//    273,   105,   2,     // Bishop's Position Relative To King
+//    199,   292,   87,    // Bishop's Position Relative To King
+//    125,   446,   16,    // Bishop's Position Relative To King
+//    137,   288,   -38,   // Bishop's Position Relative To King
+//    180,   261,   83,    // Bishop's Position Relative To King
+//    209,   193,   17,    // Bishop's Position Relative To King
+//    41,    615,   589,   // Bishop's Position Relative To King
+//    -28,   353,   257,   // Bishop's Position Relative To King
+//    -98,   402,   483,   // Bishop's Position Relative To King
+//    0,     0,     0,     // Bishop's Position Relative To King
+//    138,   217,   -59,   // Bishop's Position Relative To King
+//    0,     0,     0      // Bishop's Position Relative To King
 //};
 
+//NFCM 181123
+const std::array<int, (174*4)> eval_weights = {
+    551,   -935,  -212,  -48,   // King Piece Square Table
+    173,   -442,  159,   17,    // King Piece Square Table
+    65,    -71,   -226,  -71,   // King Piece Square Table
+    -97,   259,   -483,  -145,  // King Piece Square Table
+    49,    -207,  440,   36,    // King Piece Square Table
+    -50,   159,   213,   9,     // King Piece Square Table
+    -150,  453,   -204,  180,   // King Piece Square Table
+    -85,   286,   225,   517,   // King Piece Square Table
+    -161,  446,   83,    778,   // King Piece Square Table
+    -165,  364,   474,   953,   // King Piece Square Table
+    2554,  2596,  1136,  1,     // Knight Piece Square Table
+    2285,  2564,  1805,  557,   // Knight Piece Square Table
+    2182,  2578,  1875,  508,   // Knight Piece Square Table
+    2066,  2734,  2018,  590,   // Knight Piece Square Table
+    2238,  2726,  1869,  425,   // Knight Piece Square Table
+    1978,  2748,  1885,  545,   // Knight Piece Square Table
+    1891,  2732,  2052,  622,   // Knight Piece Square Table
+    1956,  2699,  2004,  653,   // Knight Piece Square Table
+    1908,  2857,  2062,  651,   // Knight Piece Square Table
+    1878,  2902,  1965,  620,   // Knight Piece Square Table
+    857,   827,   138,   61,    // Piece Base Value
+    0,     0,     0,     0,     // Piece Base Value
+    0,     0,     0,     0,     // Piece Base Value
+    0,     0,     0,     0,     // Piece Base Value
+    0,     0,     0,     0,     // Piece Base Value
+    352,   595,   0,     0,     // Bishop Pair
+    106,   11,    0,     0,     // Piece Activity Bonus
+    0,     0,     0,     0,     // Piece Activity Bonus
+    0,     0,     0,     0,     // Piece Activity Bonus
+    0,     0,     0,     0,     // Piece Activity Bonus
+    0,     0,     0,     0,     // Piece Activity Bonus
+    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+    0,     64,    65,    12,    // Abstract Piece Activity Bonus
+    99,    15,    23,    8,     // Abstract Piece Activity Bonus
+    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+    0,     0,     0,     0,     // Passed Pawn Bonus
+    0,     0,     0,     0,     // Passed Pawn Bonus
+    165,   48,    0,     0,     // Passed Pawn Bonus
+    171,   363,   149,   25,    // Passed Pawn Bonus
+    102,   373,   685,   111,   // Passed Pawn Bonus
+    50,    309,   0,     0,     // Passed Pawn Bonus
+    0,     0,     0,     0,     // Passed Pawn Bonus
+    0,     0,     0,     0,     // Passed Pawn Bonus
+    126,   136,   0,     4,     // Passed Pawn Bonus
+    453,   487,   215,   8,     // Passed Pawn Bonus
+    961,   622,   731,   58,    // Passed Pawn Bonus
+    1563,  761,   1242,  338,   // Passed Pawn Bonus
+    -299,  -13,   0,     -5,    // Double Pawn Penalty
+    10,    0,     53,    44,    // Tempo Bonus
+    0,     0,     0,     0,     // Direct Pawn Shield Bonus
+    -3,    15,    -61,   4,     // King Vector Exposure
+    35,    -8,    -89,   -2,    // King Vector Exposure
+    -27,   208,   67,    57,    // Knight Outpost
+    0,     0,     0,     0,     // Castling Right
+    5,     228,   446,   172,   // Pawn Attack
+    1,     27,    392,   129,   // Minor Attack
+    0,     0,     0,     0,     // King Defence Distance
+    0,     0,     0,     0,     // King Defence Distance
+    0,     0,     0,     0,     // King Defence Distance
+    0,     0,     0,     0,     // King Defence Distance
+    0,     0,     -115,  -7,    // King Attack Distance
+    0,     0,     0,     0,     // King Attack Distance
+    0,     0,     -124,  -21,   // King Attack Distance
+    -168,  -1,    -30,   0,     // King Attack Distance
+    0,     0,     27,    10,    // King Attack Danger
+    0,     7,     10,    0,     // King Attack Danger
+    0,     0,     48,    4,     // King Attack Danger
+    7,     61,    0,     0,     // King Attack Danger
+    -801,  -839,  -461,  -187,  // Safe Knight Square Count
+    -202,  -519,  -227,  -97,   // Safe Knight Square Count
+    -154,  -242,  -125,  -48,   // Safe Knight Square Count
+    -81,   -76,   -59,   -16,   // Safe Knight Square Count
+    0,     0,     0,     0,     // Safe Knight Square Count
+    4,     34,    101,   0,     // Safe Knight Square Count
+    4,     34,    179,   0,     // Safe Knight Square Count
+    4,     34,    208,   0,     // Safe Knight Square Count
+    4,     34,    208,   0,     // Safe Knight Square Count
+    1349,  1697,  656,   241,   // Bishop Mobility
+    1612,  1849,  787,   258,   // Bishop Mobility
+    1690,  2017,  938,   336,   // Bishop Mobility
+    1712,  2215,  1041,  371,   // Bishop Mobility
+    1717,  2369,  1147,  410,   // Bishop Mobility
+    1724,  2496,  1222,  434,   // Bishop Mobility
+    1725,  2580,  1310,  447,   // Bishop Mobility
+    1726,  2689,  1362,  456,   // Bishop Mobility
+    1727,  2718,  1444,  456,   // Bishop Mobility
+    1727,  2718,  1563,  458,   // Bishop Mobility
+    1727,  2718,  1663,  476,   // Bishop Mobility
+    1727,  2718,  1731,  606,   // Bishop Mobility
+    1727,  2718,  1739,  665,   // Bishop Mobility
+    1727,  2719,  1747,  777,   // Bishop Mobility
+    3805,  3484,  1850,  218,   // Rook Mobility
+    3963,  3620,  1882,  254,   // Rook Mobility
+    3979,  3741,  1906,  270,   // Rook Mobility
+    4033,  3877,  1928,  307,   // Rook Mobility
+    4093,  4024,  1928,  310,   // Rook Mobility
+    4311,  4033,  2006,  346,   // Rook Mobility
+    4381,  4114,  2056,  384,   // Rook Mobility
+    4382,  4163,  2163,  423,   // Rook Mobility
+    4529,  4193,  2233,  426,   // Rook Mobility
+    4641,  4223,  2295,  454,   // Rook Mobility
+    4709,  4245,  2349,  484,   // Rook Mobility
+    4736,  4255,  2436,  508,   // Rook Mobility
+    4753,  4267,  2469,  670,   // Rook Mobility
+    4753,  4267,  2512,  849,   // Rook Mobility
+    4753,  4270,  2555,  881,   // Rook Mobility
+    7072,  7541,  3577,  2901,  // Queen Mobility
+    7347,  7784,  3725,  2946,  // Queen Mobility
+    7404,  7827,  3741,  2963,  // Queen Mobility
+    7411,  7831,  3746,  2994,  // Queen Mobility
+    7441,  7856,  3782,  3013,  // Queen Mobility
+    7505,  7908,  3799,  3038,  // Queen Mobility
+    7544,  7955,  3827,  3063,  // Queen Mobility
+    7572,  8025,  3844,  3078,  // Queen Mobility
+    7587,  8069,  3872,  3081,  // Queen Mobility
+    7622,  8148,  3888,  3081,  // Queen Mobility
+    7648,  8213,  3891,  3081,  // Queen Mobility
+    7697,  8278,  3894,  3081,  // Queen Mobility
+    7740,  8302,  3897,  3081,  // Queen Mobility
+    7782,  8322,  3898,  3081,  // Queen Mobility
+    7806,  8335,  3899,  3082,  // Queen Mobility
+    7811,  8336,  3906,  3082,  // Queen Mobility
+    7813,  8337,  3906,  3084,  // Queen Mobility
+    7813,  8338,  3910,  3091,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3910,  3092,  // Queen Mobility
+    7813,  8338,  3914,  3101,  // Queen Mobility
+    7814,  8338,  3991,  3285,  // Queen Mobility
+    7877,  8382,  4094,  3388,  // Queen Mobility
+    -274,  200,   359,   3,     // Safe Checks
+    -109,  159,   59,    -6,    // Unsafe Checks
+    26,    49,    -168,  -28,   // Unprotected Pieces
+    253,   239,   172,   304,   // Bishop's Position Relative To King
+    98,    290,   294,   99,    // Bishop's Position Relative To King
+    224,   294,   187,   177,   // Bishop's Position Relative To King
+    176,   237,   171,   73,    // Bishop's Position Relative To King
+    324,   352,   45,    26,    // Bishop's Position Relative To King
+    367,   392,   -39,   29,    // Bishop's Position Relative To King
+    229,   407,   87,    17,    // Bishop's Position Relative To King
+    296,   385,   38,    -22,   // Bishop's Position Relative To King
+    212,   265,   301,   164,   // Bishop's Position Relative To King
+    96,    350,   191,   67,    // Bishop's Position Relative To King
+    206,   281,   193,   169,   // Bishop's Position Relative To King
+    234,   339,   3,     -9,    // Bishop's Position Relative To King
+    276,   295,   159,   50,    // Bishop's Position Relative To King
+    266,   279,   72,    30,    // Bishop's Position Relative To King
+    270,   241,   217,   44,    // Bishop's Position Relative To King
+    273,   318,   273,   174,   // Bishop's Position Relative To King
+    163,   344,   130,   62,    // Bishop's Position Relative To King
+    244,   284,   147,   93,    // Bishop's Position Relative To King
+    202,   301,   33,    85,    // Bishop's Position Relative To King
+    342,   217,   184,   51,    // Bishop's Position Relative To King
+    275,   234,   91,    32,    // Bishop's Position Relative To King
+    257,   348,   135,   85,    // Bishop's Position Relative To King
+    120,   313,   143,   32,    // Bishop's Position Relative To King
+    282,   239,   147,   44,    // Bishop's Position Relative To King
+    222,   290,   2,     -3,    // Bishop's Position Relative To King
+    279,   200,   250,   72,    // Bishop's Position Relative To King
+    173,   330,   331,   26,    // Bishop's Position Relative To King
+    103,   282,   210,   -31,   // Bishop's Position Relative To King
+    265,   145,   303,   30,    // Bishop's Position Relative To King
+    146,   310,   109,   11,    // Bishop's Position Relative To King
+    18,    349,   843,   558,   // Bishop's Position Relative To King
+    -64,   140,   621,   160,   // Bishop's Position Relative To King
+    -15,   22,    817,   236,   // Bishop's Position Relative To King
+    0,     0,     0,     0,     // Bishop's Position Relative To King
+    19,    247,   290,   -166,  // Bishop's Position Relative To King
+    0,     0,     0,     0      // Bishop's Position Relative To King
+};
 
 
 const std::array<int, 114> search_params = {
