@@ -155,10 +155,10 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
 
 std::mt19937_64 rng;
 size_t max_ply = 0, min_ply = 0;
-const long kInfiniteNodes = 1000000000000;
-long max_nodes = kInfiniteNodes;
-long sample_nodes = 0;
-long evaluation_nodes = 0;
+const size_t kInfiniteNodes = 1000000000000;
+size_t max_nodes = kInfiniteNodes;
+size_t sample_nodes = 0;
+size_t evaluation_nodes = 0;
 bool fixed_search_time;
 
 Time end_time = now();
