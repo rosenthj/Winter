@@ -57,15 +57,14 @@ Score tt_score_to_score(Score score, size_t num_made_moves) {
 
 namespace table {
 
+// In addition to the main table, a second, smaller table is used for improved PV entry redundancy.
+// PV entries are stored in both and TT size is sum of size of main table and PV table.
 size_t size = 1600000;
 size_t size_pvt = 10001;
 std::vector<Entry> table(size);
 std::vector<Entry> table_pv(size_pvt);
-//std::vector<PVEntry> table_pv(size_pvt);
 
 void SetTableSize(const size_t MB) {
-//  size = (MB << 20) / 21;
-  //size_pvt = size / 12;
   size = (6 * (MB << 16)) / 7;
   size_pvt = size / 6;
   table.resize(size);
@@ -96,10 +95,6 @@ Entry GetEntry(const HashType hash) {
   return entry_pv;
 }
 
-//PVEntry GetPVEntry(const HashType hash) {
-//  PVEntry entry = table_pv.at(PVHashFunction(hash));
-//  return entry;
-//}
 
 void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
@@ -115,12 +110,6 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
   entry.depth = depth;
   entry.bound = kLowerBound;
   table[index] = entry;
-
-//  table[index].hash = hash ^ best_move_cast;
-//  table[index].best_move = best_move;
-//  table[index].set_score(score, board);
-//  table[index].bound = bound;
-//  table[index].depth = depth;
 }
 
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
@@ -141,32 +130,15 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   table_pv[index_pv] = entry;
 }
 
-//void SavePVEntry(const Board &board, const Move best_move) {
-//  HashType hash = board.get_hash();
-//  int index = PVHashFunction(hash);
-//  assert(index >= 0 && index < table_pv.size());
-//  HashType best_move_cast = best_move;
-//  table_pv[index].hash = hash ^ best_move_cast;
-//  table_pv[index].best_move = best_move;
-//}
-
 bool ValidateHash(const Entry &entry, const HashType hash){
   HashType best_move_cast = entry.get_best_move();
   return entry.hash == (hash ^ best_move_cast);
 }
 
-//bool ValidateHash(const PVEntry &entry, const HashType hash){
-//  HashType best_move_cast = entry.best_move;
-//  return entry.hash == (hash ^ best_move_cast);
-//}
-
-
 void ClearTable() {
   for (unsigned int i = 0; i < table.size(); i++) {
     table[i].hash = 0;
     table[i].set_best_move(kNullMove);
-    //table[i].pv_entry.hash = 0;
-    //table[i].pv_entry.set_best_move(kNullMove);
   }
   for (unsigned int i = 0; i < table_pv.size(); i++) {
     table_pv[i].hash = 0;

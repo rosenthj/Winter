@@ -381,7 +381,7 @@ void GenerateDatasetFromEPD() {
       result = 1 - result;
     }
     std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
-    Vec<double, settings::kGMMk> component_probs = evaluation::BoardMixtureProbability(board);
+    Vec<double, settings::kNumClusters> component_probs = evaluation::BoardMixtureProbability(board);
     if (samples == 0) {
       dfile << "res";
       for (int i = 0; i < component_probs.size(); i++) {

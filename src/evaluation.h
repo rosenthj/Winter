@@ -37,7 +37,7 @@
 #include "learning/cluster.h"
 #include <vector>
 
-typedef Vec<Score,settings::kGMMk> PScore;
+typedef Vec<Score,settings::kNumClusters> PScore;
 
 namespace evaluation {
 
@@ -55,11 +55,9 @@ void LoadVariablesFromFile();
 int ScoreToCentipawn(const Score score, const Board &board);
 Score GetPawnBaseValue(const Board &board);
 Score GetTempoValue(const Board &board);
-//void RunEMForGMM();
 void CheckFeatureMagnitude();
 void CheckVariableInfluence();
-double BoardProbability(const Board &board);
-Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board);
+Vec<double, settings::kNumClusters> BoardMixtureProbability(const Board &board);
 Score EvaluateQuietMoveValue();
 
 std::vector<PScore> GetEvaluationWeights();
@@ -69,7 +67,7 @@ void SaveGMMHardCode(std::string file_name);
 
 Score GetScore(const size_t feature_idx, const size_t cluster_idx);
 void SetScore(const size_t feature_idx, const size_t cluster_idx, const Score score);
-void SetModel(cluster::ClusterModel<settings::kGMMk>* model);
+void SetModel(cluster::ClusterModel<settings::kNumClusters>* model);
 
 }
 

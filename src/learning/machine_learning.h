@@ -40,8 +40,8 @@ enum ActivatedLoss {
 
 template<size_t length>
 struct Normalizer {
-  Vec<double, length> means;
-  Vec<double, length> std_dev;
+  Vec<double, length> means = Vec<double, length>(0);
+  Vec<double, length> std_dev = Vec<double, length>(0);
   Vec<double, length> normalize(const Vec<double, length> &sample) const {
     return (sample - means) / std_dev;
   }

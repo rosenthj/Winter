@@ -118,11 +118,7 @@ const int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
               + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
               + 2 * piece_phases[kQueen];
 
-#ifdef EXPERIMENT
 const size_t kPhaseVecLength = 4;
-#else
-const size_t kPhaseVecLength = 4;
-#endif
 
 const int64_t kThousand = 1000;
 const int64_t kMillion = kThousand * kThousand;

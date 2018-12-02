@@ -40,7 +40,7 @@ double Sigmoid(T x) {
 }
 
 void EnforceConstraints(std::vector<double> &variables) {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   int idx = 0;
   for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
     if (i == positional_features::kFeatureInfos[idx + 1].idx) {
@@ -208,7 +208,7 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Game> &ga
       std::cout << std::endl;
     }
     std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(games.size());
+    std::vector<Vec<double, k> > assignments(games.size(), 0);
     for (size_t i = 0; i < games.size(); i++) {
       if (i < games.size() / 25) {
         assignments[i] = i % k;
@@ -221,8 +221,8 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Game> &ga
       std::cout << "Remaining iterations: " << it << std::endl;
       //Calculate Mu
       std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
+      std::vector<Vec<double,kPhaseVecLength> > sums(k, 0);
+      Vec<double,k> counts(0);
       std::cout << "Counts: ";
       counts.print(); std::cout << std::endl;
       for (size_t i = 0; i < games.size(); i++) {
@@ -310,7 +310,7 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Game> &ga
 
 void SampledEMForGMM(int iterations) {
   search::set_print_info(false);
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   std::vector<Game> games = data::LoadGames();
   data::SetGamesToRandom(games);
   std::shuffle(games.begin(), games.end(), rng);
@@ -352,7 +352,7 @@ void SampledEMForGMM(int iterations) {
       std::cout << std::endl;
     }
     std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(positions.size());
+    std::vector<Vec<double, k> > assignments(positions.size(), 0);
     for (size_t i = 0; i < positions.size(); i++) {
 //      assignments[i] = gmm.GetD2MixtureAssignment(GetBoardPhaseVec(positions[i]));
     }
@@ -360,8 +360,8 @@ void SampledEMForGMM(int iterations) {
       std::cout << "Remaining iterations: " << it << std::endl;
       //Calculate Mu
       std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
+      std::vector<Vec<double,kPhaseVecLength> > sums(k, 0);
+      Vec<double,k> counts(0);
       std::cout << "Counts: ";
       counts.print(); std::cout << std::endl;
       for (size_t i = 0; i < positions.size(); i++) {
@@ -494,7 +494,7 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Board> &p
       std::cout << std::endl;
     }
     std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(positions.size());
+    std::vector<Vec<double, k> > assignments(positions.size(), 0);
     for (size_t i = 0; i < positions.size(); i++) {
       if (i < positions.size() / 25) {
         assignments[i] = i % k;
@@ -507,8 +507,8 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Board> &p
       std::cout << "Remaining iterations: " << it << std::endl;
       //Calculate Mu
       std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
+      std::vector<Vec<double,kPhaseVecLength> > sums(k, 0);
+      Vec<double,k> counts(0);
       std::cout << "Counts: ";
       counts.print(); std::cout << std::endl;
       for (size_t i = 0; i < positions.size(); i++) {
@@ -648,7 +648,7 @@ cluster::NormFuzzyCMeans<k, kPhaseVecLength> EMForNFCM(std::vector<Board> &posit
       std::cout << std::endl;
     }
     std::cout << "initializing centroid assignments" << std::endl;
-    std::vector<Vec<double, k> > assignments(positions.size());
+    std::vector<Vec<double, k> > assignments(positions.size(), 0);
     for (size_t i = 0; i < positions.size(); i++) {
 //        assignments[i] = nfcm.GetWeightedProbabilities(positions[i]);
       for (int j = 0; j < k; j++) {
@@ -660,8 +660,8 @@ cluster::NormFuzzyCMeans<k, kPhaseVecLength> EMForNFCM(std::vector<Board> &posit
       std::cout << "Remaining iterations: " << it << std::endl;
       //Calculate Mu
       std::cout << "Calculating Means" << std::endl;
-      std::vector<Vec<double,kPhaseVecLength> > sums(k);
-      Vec<double,k> counts;
+      std::vector<Vec<double,kPhaseVecLength> > sums(k, 0);
+      Vec<double,k> counts(0);
       std::cout << "Counts: ";
       counts.print(); std::cout << std::endl;
       for (size_t i = 0; i < positions.size(); i++) {
@@ -703,14 +703,14 @@ cluster::NormFuzzyCMeans<k, kPhaseVecLength> EMForNFCM(std::vector<Board> &posit
 }
 
 void RunEMForNFCM() {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   std::vector<Board> positions = data::LoadBoardFens("data/sample_evals.fen");
   cluster::NormFuzzyCMeans<k,kPhaseVecLength> nfcm = EMForNFCM<k>(positions);
   nfcm.SaveHardCode("nfcm.txt");
 }
 
 void RunEMForGMM() {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   //std::vector<Game> games = data::LoadGames(1200000);
   std::vector<Board> positions = data::LoadBoardFens("data/sample_evals.fen");
   cluster::GaussianMixtureModel<k,kPhaseVecLength> gmm = EMForGMM<k>(positions);
@@ -735,7 +735,7 @@ void RunEMForGMM() {
 
 template<SGDVariantType sgd_variant, LearningStyle learning_style>
 void SGDTrain(bool from_scratch = false) {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   double kMinNu = (1.0 / kMillion);
   const int max_position_tries = learning_style == kSupervised ? 5 : 2;
   const long step_size = learning_style == kSupervised ? (200 * kMillion) : (max_position_tries * 1200 * kThousand);
@@ -759,14 +759,12 @@ void SGDTrain(bool from_scratch = false) {
     for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
       for (size_t j = 0; j < k; j++) {
         optimizer->regressor.weights[i * k + j] = evaluation::GetScore(i, j) / eval_scaling;
-//        optimizer->regressor.weights[i * k + j] = feature_GMM_score_values[i][j] / eval_scaling;
       }
     }
   }
   std::vector<Game> games = data::LoadGames();
   if (from_scratch && settings::kTrainGMMFromScratch) {
     cluster::GaussianMixtureModel<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
-//    GMM<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
     SaveGMM<k>(gmm, settings::kMixtureFile);
     evaluation::SetModel(&gmm);
   }

@@ -34,9 +34,10 @@
 template <typename type, size_t length>
 struct Vec {
   Vec() {
-    for (size_t i = 0; i < length; i++) {
-      values[i] = 0;
-    }
+//    std::cout << "Basic initialization detected" << std::endl;
+//    for (size_t i = 0; i < length; i++) {
+//      values[i] = 0;
+//    }
   }
 
   Vec(type val) {
@@ -168,7 +169,7 @@ struct Vec {
   }
 
   inline Vec<type,length> sqrt() {
-    Vec<type,length> res;
+    Vec<type, length> res;
     for (size_t i = 0; i < length; i++) {
       res[i] = std::sqrt(values[i]);
     }
@@ -238,7 +239,7 @@ template <typename type,size_t length>
 struct SqMatrix {
   SqMatrix() {
     for (size_t i = 0; i < length; i++) {
-      values[i] = Vec<type, length>();
+      values[i] = Vec<type, length>(0);
     }
   }
 

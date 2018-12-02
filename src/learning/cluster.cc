@@ -19,7 +19,7 @@
 namespace cluster {
 
 Vec<double, kPhaseVecLength> GetBoardPhaseVec(const Board &board) {
-  Vec<double,kPhaseVecLength> vec;
+  Vec<double,kPhaseVecLength> vec(0);
 //  if (settings::kExperimental) {
   for (PieceType pt = kKnight; pt <= kQueen; pt++) {
     vec[pt - 1] += board.get_piecetype_count(pt);
@@ -201,7 +201,7 @@ void NormFuzzyCMeans<k, length>::SetModel(ClusterModel<k>* other) {
   normalizer = nfcm_p->normalizer;
 }
 
-template struct GaussianMixtureModel<settings::kGMMk, kPhaseVecLength>;
-template struct NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>;
+template struct GaussianMixtureModel<settings::kNumClusters, kPhaseVecLength>;
+template struct NormFuzzyCMeans<settings::kNumClusters, kPhaseVecLength>;
 
 }

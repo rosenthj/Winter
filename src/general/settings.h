@@ -32,35 +32,22 @@
 
 namespace settings {
 
-#ifdef EXPERIMENT
-constexpr bool kExperimental = true;
-#else
-constexpr bool kExperimental = false;
-#endif
-
 const std::string engine_name = "Winter";
-const std::string engine_version =
-                   kExperimental ? "Beta 181110 Experimental"
-                                 : "0.2";
+const std::string engine_version = "Beta 181123 Experimental";
 const std::string engine_author = "Jonathan Rosenthal";
 
-const bool kUseGMM = true;
-const int kGMMk = kExperimental ? 4 : 4;
+const int kNumClusters = 4;
 
 const std::string kParamPath = "params/";
-const std::string kSampledMixtureFile = kParamPath + "v2Smixtures" + std::to_string(kGMMk) + ".txt";
+const std::string kSampledMixtureFile = kParamPath + "v2Smixtures" + std::to_string(kNumClusters) + ".txt";
 
-const std::string kMixtureFile =
-                 kExperimental ? kParamPath + "mixtures_noisy" + std::to_string(kGMMk) + ".txt"
-                               : kParamPath + "mixtures" + std::to_string(kGMMk) + ".txt";
-const std::string kGMMParamsFile =
-                   kExperimental ? kParamPath + "gmm_params_nfcm" + std::to_string(kGMMk) + ".txt"
-                                 : kParamPath + "gmm_params" + std::to_string(kGMMk) + ".txt";
+const std::string kMixtureFile = kParamPath + "mixtures_noisy" + std::to_string(kNumClusters) + ".txt";
+const std::string kGMMParamsFile = kParamPath + "gmm_params_nfcm" + std::to_string(kNumClusters) + ".txt";
 
 const std::string kParamExplanationFile = kGMMParamsFile + ".info";
 
 const std::string kSearchParamPath = "search_params/";
-const std::string kSearchParamVersionExtension = kExperimental ? "181031b" : "";
+const std::string kSearchParamVersionExtension = "181031b";
 
 const std::string kSearchParamFile = kSearchParamPath + "sparams"
     + kSearchParamVersionExtension + ".txt";
@@ -73,8 +60,8 @@ const std::string kSearchParamInCheckExplanationFile = kSearchParamInCheckFile +
 const std::string kCCRLPath = "data/CCRL.ucig";
 const std::string kCEGTPath = "data/CEGT.ucig";
 
-const bool kTrainGMMFromScratch = kExperimental ? false : false;
-const bool kTrainFromScratch = kExperimental ? false : false;
+const bool kTrainGMMFromScratch = false;
+const bool kTrainFromScratch = false;
 
 constexpr bool bookkeeping_active = false;
 

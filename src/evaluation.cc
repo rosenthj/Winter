@@ -68,90 +68,16 @@ struct TrainingPosition{
 
 int kSign[2] = {1,-1};
 
-std::vector<PScore> eval_score_values(kNumFeatures);
+std::vector<PScore> eval_score_values(kNumFeatures, 0);
 
-cluster::ClusterModel<settings::kGMMk>* init_cluster_model() {
+cluster::ClusterModel<settings::kNumClusters>* init_cluster_model() {
   if (settings::kClusterModelType == settings::kClusterNFCM) {
-    return new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();
+    return new cluster::NormFuzzyCMeans<settings::kNumClusters, kPhaseVecLength>();
   }
-  return new cluster::GaussianMixtureModel<settings::kGMMk, kPhaseVecLength>();
+  return new cluster::GaussianMixtureModel<settings::kNumClusters, kPhaseVecLength>();
 }
 
-cluster::ClusterModel<settings::kGMMk>* cluster_model = init_cluster_model();
-
-//GMM<settings::kGMMk, kPhaseVecLength> gmm_main;
-//cluster::GaussianMixtureModel <settings::kGMMk, kPhaseVecLength>* gmm_main =
-//cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>* cluster_model = //settings::kClusterModelType == settings::kClusterNFCM ?
-//    new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();// :
-//cluster::ClusterModel<settings::kGMMk>* cluster_model = //settings::kClusterModelType == settings::kClusterNFCM ?
-//    new cluster::NormFuzzyCMeans<settings::kGMMk, kPhaseVecLength>();// :
-   //new cluster::GaussianMixtureModel<settings::kGMMk, kPhaseVecLength>();
-
-struct EvalStats{
-  std::vector< std::vector<double> > means;
-  std::vector< std::vector<double> > std_dev;
-};
-
-EvalStats GetEvalStats(std::vector<Board> &eval_positions) {
-  EvalStats stats;
-  stats.std_dev = std::vector< std::vector<double> >(kNumFeatures, std::vector<double>(settings::kGMMk));
-  stats.means = std::vector< std::vector<double> >(kNumFeatures, std::vector<double>(settings::kGMMk));
-
-  std::vector< std::vector<double> > sums(kNumFeatures, std::vector<double>(settings::kGMMk));
-  std::vector< std::vector<double> > sums_p2(kNumFeatures, std::vector<double>(settings::kGMMk));
-
-  std::vector< std::vector<double> > mins(kNumFeatures, std::vector<double>(settings::kGMMk));
-  std::vector< std::vector<double> > maxes(kNumFeatures, std::vector<double>(settings::kGMMk));
-
-  if (eval_positions.empty()) {
-    eval_positions = data::LoadBoardFens("data/sample_evals.fen");
-  }
-
-  for (Board board : eval_positions) {
-    std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
-    Vec<double, settings::kGMMk> weights =
-        cluster_model->GetWeightedProbabilities(board);
-//        gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
-    for (int i = 0; i < kNumFeatures; i++) {
-      for (int j = 0; j < settings::kGMMk; j++) {
-        mins[i][j] = std::min(mins[i][j], features[i] * weights[j]);
-        maxes[i][j] = std::max(maxes[i][j], features[i] * weights[j]);
-
-        sums[i][j] += features[i] * weights[j];
-        sums_p2[i][j] += (features[i] * weights[j]) * (features[i] * weights[j]);
-      }
-    }
-  }
-  for (int i = 0; i < kNumFeatures; i++) {
-    for (int j = 0; j < settings::kGMMk; j++) {
-      stats.means[i][j] = sums[i][j] / eval_positions.size();
-      stats.std_dev[i][j] = sums_p2[i][j] / eval_positions.size() - stats.means[i][j] * stats.means[i][j];
-      if (stats.std_dev[i][j] < 0) {
-        std::cout << "Detected abnormally low variance of " << stats.std_dev[i][j]
-                  << " for (i,j)=(" << i << "," << j << ")! There may be an error! ";
-        std::cout << sums[i][j] << ", " << sums_p2[i][j] << ", " << stats.means[i][j] << ", " << stats.std_dev[i][j] << std::endl;
-        stats.std_dev[i][j] = 0;
-      }
-
-      stats.std_dev[i][j] = std::max(std::sqrt(stats.std_dev[i][j]), 0.0001);
-    }
-  }
-  return stats;
-}
-
-EvalStats GetEvalStats() {
-  std::vector<Board> eval_positions;
-  return GetEvalStats(eval_positions);
-}
-
-EvalStats GetEvalStats(std::vector<Game> &games) {
-  std::vector<Board> eval_positions;
-  eval_positions.reserve(games.size());
-  for (Game game : games) {
-    eval_positions.emplace_back(game.board);
-  }
-  return GetEvalStats(eval_positions);
-}
+cluster::ClusterModel<settings::kNumClusters>* cluster_model = init_cluster_model();
 
 const Array2d<BitBoard, 2, 64> get_king_pawn_coverage() {
   const BitBoard second_row = parse::StringToBitBoard("a2") | parse::StringToBitBoard("b2")
@@ -223,7 +149,7 @@ T init() {
   return T(kNumFeatures);
 }
 
-template<> PScore init<PScore>() { return PScore(); }
+template<> PScore init<PScore>() { return PScore(0); }
 
 template<typename T> inline
 void AddFeature(T &s,const Color color, const int index, const int value) {
@@ -235,10 +161,13 @@ template<> inline void AddFeature<PScore>(PScore &s, const Color color, const in
   s.FMA(eval_score_values[index], kSign[color] * value);
 }
 
+// The main evaluation function. Templates are used so we can fill a feature list during training
+// but an incrementally updated score during actual play.
 template<typename T>
 T ScoreBoard(const Board &board) {
   T score = init<T>();
 
+  // Initialize general constants
   const Square king_squares[2] = {
       bitops::NumberOfTrailingZeros(board.get_piece_bitboard(kWhite, kKing)),
       bitops::NumberOfTrailingZeros(board.get_piece_bitboard(kBlack, kKing))
@@ -258,6 +187,9 @@ T ScoreBoard(const Board &board) {
       board.get_piece_bitboard(kWhite, kPawn),
       board.get_piece_bitboard(kBlack, kPawn)
   };
+
+  // Initialize pawn structure based constants.
+  // These are needed later on for piece activity calculations.
   const BitBoard covered_once[2] = {
       bitops::NE(pawn_bb[kWhite]) | bitops::NW(pawn_bb[kWhite]),
       bitops::SE(pawn_bb[kBlack]) | bitops::SW(pawn_bb[kBlack])
@@ -306,7 +238,6 @@ T ScoreBoard(const Board &board) {
 
   BitBoard s_filled = bitops::FillSouth(board.get_piece_bitboard(kBlack, kPawn), ~0);
   BitBoard n_filled = bitops::FillNorth(board.get_piece_bitboard(kWhite, kPawn), ~0);
-
 
   AddFeature<T>(score, kWhite, kDoublePawnPenaltyIndex,
       bitops::PopCount(bitops::N(n_filled) & board.get_piece_bitboard(kWhite, kPawn))
@@ -364,12 +295,15 @@ T ScoreBoard(const Board &board) {
   int unsafe_checks[2] = {0, 0};
   int safe_checks[2] = {0, 0};
 
+  // Piece evaluations
   for (Color color = kWhite; color <= kBlack; color++) {
-    Color not_color = color ^ 0x1;
-    Square enemy_king_square = king_squares[not_color];
-    BitBoard enemy_king_zone = magic::GetKingArea(enemy_king_square);
+    // Init color specific constants
+    const Color not_color = color ^ 0x1;
+    const Square enemy_king_square = king_squares[not_color];
+    const BitBoard enemy_king_zone = magic::GetKingArea(enemy_king_square);
     int king_attack_count = 0;
 
+    // Evaluate passed pawns
     BitBoard covered_passed_pawns = passed[color] & king_pawn_coverage[not_color][enemy_king_square];
     while (covered_passed_pawns) {
       Square pawn_square = bitops::NumberOfTrailingZeros(covered_passed_pawns);
@@ -385,11 +319,13 @@ T ScoreBoard(const Board &board) {
       bitops::PopLSB(uncovered_passed);
     }
 
+    // Pawn attacks
     BitBoard targets = covered_once[color] & (c_pieces[not_color] ^ pawn_bb[not_color]);
     AddFeature<T>(score, color, kPawnAttackIndex, bitops::PopCount(targets));
 
-    Vec<int, kQueen - kPawn> king_zone_attacks;
+    Vec<int, kQueen - kPawn> king_zone_attacks(0);
 
+    // Evaluate Knights
     BitBoard pieces = board.get_piece_bitboard(color, kKnight);
     while (pieces) {
       Square piece_square = bitops::NumberOfTrailingZeros(pieces);
@@ -415,6 +351,7 @@ T ScoreBoard(const Board &board) {
       bitops::PopLSB(pieces);
     }
 
+    // Evaluate Bishops
     pieces = board.get_piece_bitboard(color, kBishop);
     BitBoard bishop_targets = 0;
     BitBoard abstract_targets = 0;
@@ -448,6 +385,7 @@ T ScoreBoard(const Board &board) {
     AddFeature<T>(score, color, kBishop + kAbstractActivityIndex,
         bitops::PopCount(abstract_targets));
 
+    // Evaluate Rooks
     pieces = board.get_piece_bitboard(color, kRook);
     while (pieces) {
       Square piece_square = bitops::NumberOfTrailingZeros(pieces);
@@ -472,6 +410,7 @@ T ScoreBoard(const Board &board) {
       bitops::PopLSB(pieces);
     }
 
+    // Evaluate Queens
     pieces = board.get_piece_bitboard(color, kQueen);
     while (pieces) {
       Square piece_square = bitops::NumberOfTrailingZeros(pieces);
@@ -500,6 +439,7 @@ T ScoreBoard(const Board &board) {
       bitops::PopLSB(pieces);
     }
 
+    // Evaluate King
     Square king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(color,kKing));
     AddFeature<T>(score, color, kKingPSTIndex + kPSTindex[king_square], 1);
 
@@ -550,7 +490,7 @@ T ScoreBoard(const Board &board) {
 
 Score ScoreBoard(const Board &board) {
   PScore score =  ScoreBoard<PScore>(board);
-  Vec<double, settings::kGMMk> weights =
+  Vec<double, settings::kNumClusters> weights =
       cluster_model->GetWeightedProbabilities(board);
 //      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
 
@@ -574,7 +514,6 @@ void PrintFeatureValues(const Board &board) {
 
 template<int k>
 void SaveGMM(cluster::GaussianMixtureModel<k,kPhaseVecLength> &gmm, std::string file_name) {
-//void SaveGMM(GMM<k,kPhaseVecLength> &gmm, std::string file_name) {
   std::ofstream file(file_name);
   for (size_t m = 0; m < k; m++) {
     for (size_t i = 0; i < kPhaseVecLength; i++) {
@@ -604,7 +543,7 @@ void SaveGMMVariables() {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
-    for (int j = 0; j < settings::kGMMk; j++) {
+    for (int j = 0; j < settings::kNumClusters; j++) {
       file << eval_score_values[i][j] << " ";
       description_file  << eval_score_values[i][j] << " ";
     }
@@ -620,7 +559,7 @@ void SaveGMMVariables() {
 void SaveGMMVariablesHardCode(std::string filename) {
   std::ofstream file(filename);
   file << "const std::array<int, (" << kNumFeatures << "*"
-      << settings::kGMMk << ")> eval_weights = {" << std::endl;
+      << settings::kNumClusters << ")> eval_weights = {" << std::endl;
 
   int idx = 0;
   for (int i = 0; i < kNumFeatures; i++) {
@@ -628,9 +567,9 @@ void SaveGMMVariablesHardCode(std::string filename) {
       idx++;
     }
     file << "    ";
-    for (int j = 0; j < settings::kGMMk; j++) {
+    for (int j = 0; j < settings::kNumClusters; j++) {
       file  << eval_score_values[i][j];
-      if (j+1 < settings::kGMMk || i+1 < kNumFeatures) {
+      if (j+1 < settings::kNumClusters || i+1 < kNumFeatures) {
         file << ", ";
       }
       else {
@@ -660,7 +599,7 @@ void LoadMixturesHardCoded() {
 }
 
 void LoadVariablesFromFile() {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   std::ifstream file(settings::kGMMParamsFile);
   for (size_t i = 0; i < kNumFeatures; i++) {
     for (size_t j = 0; j < k; j++) {
@@ -671,7 +610,7 @@ void LoadVariablesFromFile() {
 }
 
 void LoadGMMVariablesHardCoded() {
-  const int k = settings::kGMMk;
+  const int k = settings::kNumClusters;
   int c = 0;
   for (size_t i = 0; i < kNumFeatures; i++) {
     for (size_t j = 0; j < k; j++) {
@@ -704,7 +643,7 @@ void CheckVariableInfluence() {
   std::vector<double> variable_influences(kNumFeatures);
   std::vector<double> set_influence_abs_sum(kFeatureInfos.size());
   std::vector<double> set_influence_squared_sum(kFeatureInfos.size());
-  Vec<double, settings::kGMMk> mixture_proportions;
+  Vec<double, settings::kNumClusters> mixture_proportions(0);
   std::vector<Game> games = data::LoadGames();
   if (games.size() == 0) {
     std::cout << "No games found!" << std::endl;
@@ -718,10 +657,8 @@ void CheckVariableInfluence() {
       games[index].forward();
       std::vector<int> features =
           ScoreBoard<std::vector<int> >(games[index].board);
-      Vec<double, settings::kGMMk> probabilities =
+      Vec<double, settings::kNumClusters> probabilities =
           cluster_model->GetWeightedProbabilities(games[index].board);
-//      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
-//          GetBoardPhaseVec(games[index].board));
       double set_influence = 0;
       int idx = 0;
       for (size_t i = 0; i < kNumFeatures; i++) {
@@ -732,7 +669,7 @@ void CheckVariableInfluence() {
           set_influence = 0;
         }
         double variable_influence = 0;
-        for (size_t j = 0; j < settings::kGMMk; j++) {
+        for (size_t j = 0; j < settings::kNumClusters; j++) {
           variable_influence += eval_score_values[i][j] * features[i]
                                 * probabilities[j];
           set_influence += eval_score_values[i][j] * features[i]
@@ -777,8 +714,8 @@ void CheckVariableInfluence() {
 }
 
 void CheckFeatureMagnitude() {
-  std::vector<Vec<double, settings::kGMMk>> feature_magnitudes(kNumFeatures);
-  Vec<double, settings::kGMMk> mixture_proportions;
+  std::vector<Vec<double, settings::kNumClusters>> feature_magnitudes(kNumFeatures, 0);
+  Vec<double, settings::kNumClusters> mixture_proportions(0);
   std::vector<Game> games = data::LoadGames();
   for (long index = 0; index < games.size(); index++) {
     games[index].set_to_position_after(0);
@@ -790,9 +727,7 @@ void CheckFeatureMagnitude() {
       }
       std::vector<int> features =
           ScoreBoard<std::vector<int> >(games[index].board);
-      Vec<double, settings::kGMMk> probabilities = cluster_model->GetWeightedProbabilities(games[index].board);
-//      Vec<double, settings::kGMMk> probabilities = gmm_main.GetWeightedProbabilities(
-//          GetBoardPhaseVec(games[index].board));
+      Vec<double, settings::kNumClusters> probabilities = cluster_model->GetWeightedProbabilities(games[index].board);
       for (size_t i = 0; i < kNumFeatures; i++) {
         feature_magnitudes[i] += probabilities * std::abs(features[i]);
       }
@@ -808,7 +743,7 @@ void CheckFeatureMagnitude() {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
-    for (int j = 0; j < settings::kGMMk; j++) {
+    for (int j = 0; j < settings::kNumClusters; j++) {
       file  << (feature_magnitudes[i][j] / mixture_proportions[j]) << " ";
     }
     file  << "<-- " << kFeatureInfos[idx].info << std::endl;
@@ -834,8 +769,8 @@ Score EvaluateQuietMoveValue() {
   std::vector<Game> games = data::LoadGames(1200000);
   const int max_depth = 10, n_score_bins = 40, score_bin_size = 200,
             n_dif_bins = 120, dif_bin_size = 40;
-  std::vector<Vec<double, settings::kGMMk> > x(max_depth), x_squared(max_depth), count(max_depth);
-  Vec<double, max_depth> n, xs2, xs;
+  std::vector<Vec<double, settings::kNumClusters> > x(max_depth, 0), x_squared(max_depth, 0), count(max_depth, 0);
+  Vec<double, max_depth> n(0), xs2(0), xs(0);
   std::vector<Array2d<long, n_score_bins, n_dif_bins> > histogram(max_depth);
   for (int i = 0; i < max_depth; i++) {
     for (int j = 0; j < n_score_bins; j++) {
@@ -849,7 +784,7 @@ Score EvaluateQuietMoveValue() {
     game.set_to_position_after(0);
     std::vector<bool> quiet_move(game.moves.size());
     std::vector<bool> in_check(game.moves.size());
-    std::vector<Vec<double, settings::kGMMk> > mixture_probabilities(game.moves.size());
+    std::vector<Vec<double, settings::kNumClusters> > mixture_probabilities(game.moves.size(), 0);
     std::vector<Score> scores(game.moves.size() + 1);
     std::vector<Score> qscores(game.moves.size() + 1);
     while (game.board.get_num_made_moves() < game.moves.size()) {
@@ -902,8 +837,8 @@ Score EvaluateQuietMoveValue() {
   }
   std::cout << "Mixture Based Statistics" << std::endl;
   for (int depth = 0; depth < max_depth; depth++) {
-    Vec<double, settings::kGMMk> x_mean = x[depth] / count[depth];
-    Vec<double, settings::kGMMk> variance =
+    Vec<double, settings::kNumClusters> x_mean = x[depth] / count[depth];
+    Vec<double, settings::kNumClusters> variance =
         (x_squared[depth] - (x_mean * x_mean * count[depth])) / count[depth];
     std::cout << "Depth: " << (depth + 1) << " Means: ";
     x_mean.print();
@@ -968,34 +903,26 @@ Score EvaluateQuietMoveValue() {
   return 0;
 }
 
-Vec<double, settings::kGMMk> BoardMixtureProbability(const Board &board) {
+Vec<double, settings::kNumClusters> BoardMixtureProbability(const Board &board) {
   return cluster_model->GetWeightedProbabilities(board);
-//  return gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
 }
 
 Score GetPawnBaseValue(const Board &board) {
   PScore score = eval_score_values[kBaseValueIndex + kPawn];
-  Vec<double, settings::kGMMk> weights =
+  Vec<double, settings::kNumClusters> weights =
       cluster_model->GetWeightedProbabilities(board);
-//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
   return std::round(weights.dot(score));
 }
 
 Score GetTempoValue(const Board &board) {
   PScore score = eval_score_values[kTempoBonusIndex];
-  Vec<double, settings::kGMMk> weights =
+  Vec<double, settings::kNumClusters> weights =
       cluster_model->GetWeightedProbabilities(board);
-//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
   return std::round(weights.dot(score));
 }
 
 int ScoreToCentipawn(const Score score, const Board &board) {
   return (100 * score) / GetPawnBaseValue(board);
-}
-
-double BoardProbability(const Board &board) {
-  return 0;
-  //return gmm_main.GetSampleProbability(GetBoardPhaseVec(board));
 }
 
 std::vector<PScore> GetEvaluationWeights() {
@@ -1010,7 +937,7 @@ void SetScore(const size_t feature_idx, const size_t cluster_idx, const Score sc
   eval_score_values[feature_idx][cluster_idx] = score;
 }
 
-void SetModel(cluster::ClusterModel<settings::kGMMk>* model) {
+void SetModel(cluster::ClusterModel<settings::kNumClusters>* model) {
   cluster_model->SetModel(model);
 }
 

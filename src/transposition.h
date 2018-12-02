@@ -33,46 +33,32 @@
 namespace table {
 
 struct Entry {
+  // Score getter and setter is necessary for mate score handling
   Score get_score(const Board &board) const;
   void set_score(const Score new_score, const Board &board);
+
   Move get_best_move() const {
     return best_move;
   }
   void set_best_move(const Move move) {
     best_move = move;
   }
-  HashType hash;      // 8
-  //int32_t bound;
-  //Depth depth;
-//  int64_t bound; // Temporary hack to see what happens with possible false sharing.
+  HashType hash;      // 8 bytes
 private:
-  Score score;        // 4
-  uint16_t best_move; // 2
+  Score score;        // 4 bytes
+  uint16_t best_move; // 2 bytes
 public:
-  uint8_t depth;      // 1
-  uint8_t bound;      // 1
+  uint8_t depth;      // 1 byte
+  uint8_t bound;      // 1 byte
+                      // 16 bytes total, 4 entries per cache line.
 };
-
-struct DualEntryHolder {
-  Entry nw_entry;
-  Entry pv_entry;
-};
-
-
-//struct PVEntry {
-//  HashType hash;
-//  int64_t best_move; //Temporary hack to see what happens with possible false sharing.
-//  //Move best_move;
-//};
 
 void SetTableSize(const size_t MB);
 Entry GetEntry(const HashType hash);
 void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
 bool ValidateHash(const Entry &entry, const HashType hash);
-//PVEntry GetPVEntry(const HashType hash);
-//void SavePVEntry(const Board &board, const Move best_move);
-//bool ValidateHash(const PVEntry &entry, const HashType hash);
+
 void ClearTable();
 
 }

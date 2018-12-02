@@ -156,9 +156,6 @@ void Loop() {
     else if (Equals(command, "evaluate")) {
       std::cout << evaluation::ScoreBoard(board) << std::endl;
     }
-    else if (Equals(command, "probability")) {
-      std::cout << "Probability of position: " << evaluation::BoardProbability(board) << std::endl;
-    }
     else if (Equals(command, "uci")) {
       Reply(kEngineNamePrefix + settings::engine_name + " "
           + settings::engine_version);

@@ -23,17 +23,11 @@ template <size_t k>
 struct ClusterModel {
   virtual ~ClusterModel() {};
   virtual Vec<double, k> GetWeightedProbabilities(const Board &board) const {
-    std::cout << "Fatal error, illegal function call!" << std::endl;
+    return Vec<double, k>(1.0 / k);
   }
-  virtual void LoadFromParams(const std::vector<double> &params) {
-    std::cout << "Fatal error, illegal function call!" << std::endl;
-  }
-  virtual void SaveHardCode(std::string file_name) const {
-    std::cout << "Fatal error, illegal function call!" << std::endl;
-  }
-  virtual void SetModel(ClusterModel<k>* other) {
-    std::cout << "Fatal error, illegal function call!" << std::endl;
-  }
+  virtual void LoadFromParams(const std::vector<double> &params) { }
+  virtual void SaveHardCode(std::string file_name) const { }
+  virtual void SetModel(ClusterModel<k>* other) { }
 };
 
 template<size_t length>
@@ -75,7 +69,7 @@ struct GaussianMixtureModel : ClusterModel<k> {
   double GetSampleProbability(const Board &board) const;
 
   std::array<Gaussian<length>, k> components;
-  Vec<double, k> weights;
+  Vec<double, k> weights = Vec<double, k>(0);
 };
 
 // Normalized Fuzzy C-Means
@@ -92,7 +86,7 @@ struct NormFuzzyCMeans : ClusterModel<k> {
 
 // The classic tapered model found in all state of the art non NN based engines.
 struct TaperedModel : ClusterModel<2> {
-
+// TODO implement
 };
 
 }
