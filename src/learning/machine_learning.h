@@ -38,14 +38,14 @@ enum ActivatedLoss {
   kSigmoidCrossEntropy
 };
 
-template<size_t length>
+template<size_t len>
 struct Normalizer {
-  Vec<double, length> means = Vec<double, length>(0);
-  Vec<double, length> std_dev = Vec<double, length>(0);
-  Vec<double, length> normalize(const Vec<double, length> &sample) const {
+  Vec<double, len> means;
+  Vec<double, len> std_dev;
+  Vec<double, len> normalize(const Vec<double, len> &sample) const {
     return (sample - means) / std_dev;
   }
-  Vec<double, length> unnormalize(const Vec<double, length> &sample) const {
+  Vec<double, len> unnormalize(const Vec<double, len> &sample) const {
     return (sample * std_dev) + means;
   }
 };

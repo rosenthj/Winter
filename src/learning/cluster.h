@@ -69,7 +69,7 @@ struct GaussianMixtureModel : ClusterModel<k> {
   double GetSampleProbability(const Board &board) const;
 
   std::array<Gaussian<length>, k> components;
-  Vec<double, k> weights = Vec<double, k>(0);
+  Vec<double, k> weights;
 };
 
 // Normalized Fuzzy C-Means
