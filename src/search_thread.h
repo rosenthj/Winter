@@ -65,6 +65,7 @@ struct Thread {
   Array3d<Move, 2, 6, 64> counter_moves;
   Depth depth;
   std::atomic<size_t> nodes;
+  std::atomic<size_t> max_depth;
 };
 
 struct ThreadPool {
@@ -86,6 +87,16 @@ struct ThreadPool {
       sum += helper->nodes;
     }
     return sum;
+  }
+
+  size_t max_depth() {
+    size_t max_d = main_thread->max_depth;
+    for (Thread* helper : helpers) {
+      if (helper->max_depth > max_d) {
+        max_d = helper->max_depth;
+      }
+    }
+    return max_d;
   }
 
   void reset_node_count() {

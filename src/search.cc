@@ -596,25 +596,27 @@ Score SQSearch(Board &board) {
 
 
 template<int Mode>
-Score QuiescentSearch(Board &board, Score alpha, Score beta) {
-  // TODO readd selective depth in SMP friendly way.
+Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
+  t.nodes++;
   //Update max ply reached in search
-  //max_ply = std::max(board.get_num_made_moves(), max_ply);
+  if (t.max_depth < t.board.get_num_made_moves()) {
+    t.max_depth = t.board.get_num_made_moves();
+  }
 
   //End search immediately if trivial draw is reached
-  if (board.IsTriviallyDrawnEnding()) {
+  if (t.board.IsTriviallyDrawnEnding()) {
     return 0;
   }
 
   //TT probe
-  table::Entry entry = table::GetEntry(board.get_hash());
-  bool valid_hash = table::ValidateHash(entry,board.get_hash());
-  if (valid_hash && sufficient_bounds(board, entry, alpha, beta, 0)) {
-    return entry.get_score(board);
+  table::Entry entry = table::GetEntry(t.board.get_hash());
+  bool valid_hash = table::ValidateHash(entry,t.board.get_hash());
+  if (valid_hash && sufficient_bounds(t.board, entry, alpha, beta, 0)) {
+    return entry.get_score(t.board);
   }
 
   //Static evaluation
-  bool in_check = board.InCheck();
+  bool in_check = t.board.InCheck();
   Score static_eval = kMinScore;
   if (!in_check) {
 //    if (Mode == kSamplingEvalMode) {
@@ -625,9 +627,9 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
 //      }
 //    }
 
-    static_eval = evaluation::ScoreBoard(board);
-    if (valid_hash && entry.bound == kLowerBound && static_eval < entry.get_score(board)) {
-      static_eval = entry.get_score(board);
+    static_eval = evaluation::ScoreBoard(t.board);
+    if (valid_hash && entry.bound == kLowerBound && static_eval < entry.get_score(t.board)) {
+      static_eval = entry.get_score(t.board);
     }
 
     //Stand pat
@@ -642,23 +644,23 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   }
 
   //Get moves
-  std::vector<Move> moves = board.GetMoves<kQuiescent>();
+  std::vector<Move> moves = t.board.GetMoves<kQuiescent>();
 
   if (moves.size() == 0) {
     if (in_check) {
       //In check all moves are generated, so if we have no moves in check it is mate.
-      return kMinScore+board.get_num_made_moves();
+      return kMinScore+t.board.get_num_made_moves();
     }
     return alpha;
   }
 
   //Sort move list
-  if (table::ValidateHash(entry,board.get_hash())) {
-    SortMoves<kQuiescent>(moves, board, entry.get_best_move());
+  if (table::ValidateHash(entry,t.board.get_hash())) {
+    SortMoves<kQuiescent>(moves, t.board, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
   else {
-    SortMoves<kQuiescent>(moves, board, 0);
+    SortMoves<kQuiescent>(moves, t.board, 0);
     //SortMovesML(moves, board, 0);
   }
 
@@ -666,14 +668,14 @@ Score QuiescentSearch(Board &board, Score alpha, Score beta) {
   for (Move move : moves) {
     //SEE pruning
     //Exception for checking moves: -16.03 +/- 10.81
-    if (!in_check && GetMoveType(move) != kEnPassant && !board.NonNegativeSEE(move)) {
+    if (!in_check && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
         continue;
     }
 
     //Make move, search and unmake
-    board.Make(move);
-    Score score = -QuiescentSearch<Mode>(board, -beta, -alpha);
-    board.UnMake();
+    t.board.Make(move);
+    Score score = -QuiescentSearch<Mode>(t, -beta, -alpha);
+    t.board.UnMake();
 
     //Return beta if we fail high
     if (score >= beta) {
@@ -739,7 +741,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     if (!settings::kUseQS) {
       return evaluation::ScoreBoard(t.board);
     }
-    return QuiescentSearch<Mode>(t.board, alpha, beta);
+    return QuiescentSearch<Mode>(t, alpha, beta);
   }
 
   //Transposition Table Probe
@@ -992,10 +994,20 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
   return alpha;
 }
 
+// Estimates the standard deviation of an assumed distribution of scores.
+// The true mean is assumed to be the previous search score.
 inline Score estimate_Delta(const std::vector<Score> &previous_scores) {
   double weight = 1, discount = 0.9, weighted_sum = 0, sum_weights = 0;
-  Score belief = previous_scores.back();
+  const Score belief = previous_scores.back();
+  if (is_mate_score(belief)) {
+    // If we believe we have mate, then +-10 should suffice.
+    return 10;
+  }
   for (int i = previous_scores.size() - 2; i >= 0; i--) {
+    if (is_mate_score(previous_scores[i])) {
+      // Minor hack to deal with overflow/underflow issues.
+      return 250;
+    }
     Score diff = belief - previous_scores[i];
     weighted_sum += diff * diff * weight;
     sum_weights += weight;
@@ -1070,6 +1082,7 @@ void Thread::search() {
       while(rng() % 2) {
         t->perturb_root_moves();
       }
+      t->max_depth = t->board.get_num_made_moves();
       t->current_depth = 1;
     }
     for (Thread* t : Threads.helpers) {
@@ -1136,7 +1149,7 @@ void Thread::search() {
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (print_info) {
         std::cout << "info "  << " depth " << current_depth
-            << " seldepth " << current_depth // (max_ply - board.get_num_made_moves())
+            << " seldepth " << (Threads.max_depth() - board.get_num_made_moves())
             << " time " << time_used.count()
             << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
         if (!is_mate_score(score)) {
@@ -1709,7 +1722,7 @@ void CreateSearchParamDataset() {
 }
 
 Score QSearch(Board &board) {
-  return QuiescentSearch<kNormalSearchMode>(board, kMinScore, kMaxScore);
+  return QuiescentSearch<kNormalSearchMode>((*Threads.main_thread), kMinScore, kMaxScore);
 }
 
 Board SampleEval(Board board) {
