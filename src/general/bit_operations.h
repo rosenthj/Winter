@@ -21,7 +21,7 @@
  * bit_operations.h
  *
  *  Created on: Nov 4, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef GENERAL_BIT_OPERATIONS_H_

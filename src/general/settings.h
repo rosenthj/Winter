@@ -21,7 +21,7 @@
  * settings.h
  *
  *  Created on: Nov 4, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef GENERAL_SETTINGS_H_

@@ -21,7 +21,7 @@
  * parse.cc
  *
  *  Created on: Nov 2, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "parse.h"

@@ -24,7 +24,7 @@
  * GUI's and tools utilizing the UCI protocol.
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef UCI_H_

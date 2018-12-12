@@ -21,7 +21,7 @@
  * transposition.cc
  *
  *  Created on: Dec 10, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "transposition.h"

@@ -21,7 +21,7 @@
  * board.h
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef BOARD_H_

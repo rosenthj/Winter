@@ -21,7 +21,7 @@
  * bookkeeping.cc
  *
  *  Created on: May 23, 2017
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "bookkeeping.h"

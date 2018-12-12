@@ -21,7 +21,7 @@
  * uci.cc
  *
  *  Created on: Nov 4, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "benchmark.h"

@@ -25,7 +25,7 @@
  * limited alpha-beta search algorithms.
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef SEARCH_H_

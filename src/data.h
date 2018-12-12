@@ -21,7 +21,7 @@
  * data.h
  *
  *  Created on: Feb 12, 2017
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef DATA_H_

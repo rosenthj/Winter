@@ -21,7 +21,7 @@
  * test.cc
  *
  *  Created on: Dec 25, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "board.h"

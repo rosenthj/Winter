@@ -25,7 +25,7 @@
  * search.cc
  *
  *  Created on: Nov 6, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "search.h"
@@ -727,22 +727,27 @@ template<int NodeType, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_node = 1) {
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
-  t.nodes++;
 
   const Score original_alpha = alpha;
 
   //Immediately return 0 if we detect a draw.
   if (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2)) {
+    t.nodes++;
     return 0;
   }
 
   //We drop to QSearch if we run out of depth.
   if (depth <= 0) {
     if (!settings::kUseQS) {
+      t.nodes++;
       return evaluation::ScoreBoard(t.board);
     }
     return QuiescentSearch<Mode>(t, alpha, beta);
   }
+
+  // To avoid counting nodes twice if all we do is fall through to QSearch,
+  // we wait until here to count this node.
+  t.nodes++;
 
   //Transposition Table Probe
   table::Entry entry = table::GetEntry(t.board.get_hash());

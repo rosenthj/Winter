@@ -21,7 +21,7 @@
  * parse.h
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef GENERAL_PARSE_H_

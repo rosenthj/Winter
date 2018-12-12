@@ -21,7 +21,7 @@
  * debug.cc
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "debug.h"

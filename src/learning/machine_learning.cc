@@ -21,7 +21,7 @@
  * machine_learning.cc
  *
  *  Created on: Mar 8, 2018
- *      Author: jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include <cmath>

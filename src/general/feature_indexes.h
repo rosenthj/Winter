@@ -21,7 +21,7 @@
  * feature_indexes.h
  *
  *  Created on: May 16, 2017
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef SRC_GENERAL_FEATURE_INDEXES_H_

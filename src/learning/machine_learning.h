@@ -21,7 +21,7 @@
  * machine_learning.h
  *
  *  Created on: Mar 8, 2018
- *      Author: jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef SRC_LEARNING_MACHINE_LEARNING_H_

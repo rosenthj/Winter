@@ -25,7 +25,7 @@
  * good different positions are
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef EVALUATION_H_

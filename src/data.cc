@@ -21,7 +21,7 @@
  * data.cc
  *
  *  Created on: Feb 13, 2017
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "data.h"

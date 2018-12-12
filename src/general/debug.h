@@ -21,7 +21,7 @@
  * debug.h
  *
  *  Created on: Nov 1, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef GENERAL_DEBUG_H_

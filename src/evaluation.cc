@@ -21,7 +21,7 @@
  * evaluation.cc
  *
  *  Created on: Nov 6, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #include "evaluation.h"

@@ -21,7 +21,7 @@
  * magic.h
  *
  *  Created on: Dec 16, 2016
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef GENERAL_MAGIC_H_

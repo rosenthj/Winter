@@ -21,7 +21,7 @@
  * linear_algebra.h
  *
  *  Created on: Mar 17, 2017
- *      Author: Jonathan
+ *      Author: Jonathan Rosenthal
  */
 
 #ifndef LEARNING_LINEAR_ALGEBRA_H_
