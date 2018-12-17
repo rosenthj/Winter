@@ -759,6 +759,8 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
   const bool in_check = t.board.InCheck();
   Score static_eval = alpha;
+  //t.set_static_score(kNoScore);
+  //bool improving = false;
 
   //Speculative pruning methods
   if (NodeType == kNW && beta > kMinScore + 2000 && alpha < kMaxScore - 2000 && !in_check) {
@@ -778,6 +780,8 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     else {
       static_eval = evaluation::ScoreBoard(t.board);
     }
+    //t.set_static_score(static_eval);
+    //improving = t.improving();
 
     //Static Null Move Pruning
     if (NodeType == kNW && depth <= 5) {
@@ -864,9 +868,12 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
       //Late Move Reduction factor
       reduction = get_lmr_reduction<NodeType>(depth, i);
-      if (GetMoveType(move) > kDoublePawnMove && reduction > 0) {
+      if (GetMoveType(move) > kDoublePawnMove) {
         reduction = (2 * reduction) / 3;
       }
+//      if (improving) {
+//        reduction = (4 * reduction) / 5;
+//      }
       assert(reduction < depth);
 
       //Futility Pruning
@@ -916,9 +923,10 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       }
 
       //Update Counter Move
-      if (t.board.get_num_made_moves() > 0) {
+      if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
         const Square last_destination = GetMoveDestination(t.board.get_last_move());
         PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+        assert(last_moved_piece != kNoPiece);
         t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination] = move;
       }
       return beta;
@@ -1078,6 +1086,7 @@ void Thread::search() {
   const Time begin = now();
   double time_factor = 1.0;
   current_depth = 1;
+//  root_height = board.get_num_made_moves();
   if (id == 0) {
     end_time = begin+rsearch_duration;
     for (Thread* t : Threads.helpers) {
@@ -1095,7 +1104,8 @@ void Thread::search() {
     }
   }
 
-  Score score;
+  Score score = evaluation::ScoreBoard(board);
+  //set_static_score(score);
   Move last_best = kNullMove;
   std::vector<Score> previous_scores;
 
