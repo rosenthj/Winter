@@ -97,8 +97,8 @@ bool Thread::improving() const {
   // kNoScore is defined as smaller than min score, so the second condition also implies
   // that we have a score at current height.
   assert(height >= 0);
-  return height >= 2 && static_scores[height] > static_scores[height-2]
-                     && static_scores[height-2] != kNoScore;
+  return height >= 2 && static_scores[height] > static_scores[height-2];
+//                     && static_scores[height-2] != kNoScore;
 }
 
 

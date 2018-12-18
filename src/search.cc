@@ -871,7 +871,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       if (GetMoveType(move) > kDoublePawnMove) {
         reduction = (2 * reduction) / 3;
       }
-      if (improving) {
+      if (improving && reduction > 2) {
         reduction = (4 * reduction) / 5;
       }
       assert(reduction < depth);
