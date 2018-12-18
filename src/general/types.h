@@ -105,6 +105,7 @@ const CastlingRights kBLCastle = kWSCastle << 3;
 
 const Score kMaxScore = 100000;
 const Score kMinScore = -kMaxScore;
+const Score kNoScore = kMinScore-1;
 
 const int kLowerBound = 1;
 const int kUpperBound = 2;

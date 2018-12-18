@@ -92,6 +92,15 @@ void Thread::idle_loop() {
   condition_variable.notify_one();
 }
 
+bool Thread::improving() const {
+  Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+  // kNoScore is defined as smaller than min score, so the second condition also implies
+  // that we have a score at current height.
+  assert(height >= 0);
+  return height >= 2 && static_scores[height] > static_scores[height-2]
+                     && static_scores[height-2] != kNoScore;
+}
+
 
 ThreadPool::ThreadPool() {
   main_thread = new Thread();

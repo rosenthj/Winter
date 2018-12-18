@@ -30,6 +30,8 @@
 
 #include "board.h"
 #include "general/types.h"
+#include "general/settings.h"
+#include <array>
 #include <thread>
 #include <vector>
 #include <atomic>
@@ -43,6 +45,7 @@ struct Thread {
   ~Thread();
 
   void clear_killers_and_counter_moves() {
+    static_scores.fill(kNoScore);
     for (size_t i = 0; i < killers.size(); i++) {
       killers[i][0] = 0;
       killers[i][1] = 0;
@@ -66,6 +69,15 @@ struct Thread {
   void end_execution() {
     exit_flag = true;
   }
+  bool improving() const;
+  void set_static_score(const Score score) {
+    Depth d = board.get_num_made_moves();
+    assert(root_height >= 0 && d >= 0);
+    assert(d >= root_height);
+    assert(score == kNoScore || (score >= kMinScore && score <= kMaxScore));
+    Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+    static_scores[height] = score;
+  }
 
   //Multithreading objects
   std::thread stl_thread;//The actual thread the search function is called on.
@@ -83,7 +95,8 @@ struct Thread {
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
-  Depth depth;
+  Depth root_height;
+  std::array<Score, settings::kMaxDepth> static_scores;
   std::atomic<size_t> nodes;
   std::atomic<size_t> max_depth;
 };
