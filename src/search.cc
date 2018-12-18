@@ -693,8 +693,8 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
   return alpha;
 }
 
-inline Score get_futility_margin(Depth depth, Score score) {
-  return kFutileMargin[depth];
+inline Score get_futility_margin(Depth depth, Score score, bool improving) {
+  return kFutileMargin[depth] - 100 * depth * improving;
 }
 
 Score sample_node_and_return_alpha(const Board &board, const Depth depth,
@@ -871,14 +871,15 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       if (GetMoveType(move) > kDoublePawnMove) {
         reduction = (2 * reduction) / 3;
       }
-      if (NodeType == kNW && !strict_worsening && reduction > 2) {
-        reduction = (4 * reduction) / 5;
-      }
+//      if (NodeType == kNW && !strict_worsening && reduction > 2) {
+//        reduction = (4 * reduction) / 5;
+//      }
       assert(reduction < depth);
 
       //Futility Pruning
       if (NodeType == kNW && settings::kUseScoreBasedPruning
-          && depth - reduction <= 3 && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval))
+          && depth - reduction <= 3
+          && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
