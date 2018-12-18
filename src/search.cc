@@ -760,7 +760,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   const bool in_check = t.board.InCheck();
   Score static_eval = alpha;
   t.set_static_score(kNoScore);
-  bool improving = false;
+  bool strict_worsening = false;
 
   //Speculative pruning methods
   if (NodeType == kNW && beta > kMinScore + 2000 && alpha < kMaxScore - 2000 && !in_check) {
@@ -781,7 +781,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       static_eval = evaluation::ScoreBoard(t.board);
     }
     t.set_static_score(static_eval);
-    improving = t.strict_improving();
+    strict_worsening = t.strict_worsening();
 
     //Static Null Move Pruning
     if (NodeType == kNW && depth <= 5) {
@@ -871,7 +871,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       if (GetMoveType(move) > kDoublePawnMove) {
         reduction = (2 * reduction) / 3;
       }
-      if (improving && reduction > 2) {
+      if (!strict_worsening && reduction > 2) {
         reduction = (4 * reduction) / 5;
       }
       assert(reduction < depth);

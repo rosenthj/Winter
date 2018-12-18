@@ -69,11 +69,13 @@ struct Thread {
   void end_execution() {
     exit_flag = true;
   }
-  // Improving returns whether the score is improving and assumes no score is -infinity
+  // The following functions return the trend of the score. Regular and strict effect the handling of
+  // kNoMove scores from the previous position.
   bool improving() const;
-  // Improving returns whether the score is improving and assumes no score is undefined
-  // and thus the score is not improving if that was the previous score.
   bool strict_improving() const;
+  bool worsening() const;
+  bool strict_worsening() const;
+
   void set_static_score(const Score score) {
     assert(board.get_num_made_moves() >= root_height);
     assert(score == kNoScore || (score >= kMinScore && score <= kMaxScore));
