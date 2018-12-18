@@ -781,7 +781,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       static_eval = evaluation::ScoreBoard(t.board);
     }
     t.set_static_score(static_eval);
-    improving = t.improving();
+    improving = t.strict_improving();
 
     //Static Null Move Pruning
     if (NodeType == kNW && depth <= 5) {

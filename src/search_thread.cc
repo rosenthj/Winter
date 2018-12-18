@@ -98,7 +98,15 @@ bool Thread::improving() const {
   // that we have a score at current height.
   assert(height >= 0);
   return height >= 2 && static_scores[height] > static_scores[height-2];
-//                     && static_scores[height-2] != kNoScore;
+}
+
+bool Thread::strict_improving() const {
+  Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+  // kNoScore is defined as smaller than min score, so the second condition also implies
+  // that we have a score at current height.
+  assert(height >= 0);
+  return height >= 2 && static_scores[height] > static_scores[height-2]
+                     && static_scores[height-2] != kNoScore;
 }
 
 
