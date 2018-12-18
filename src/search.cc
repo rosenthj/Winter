@@ -334,7 +334,7 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
     AddFeature<T, in_check>(move_weight, kPWIKiller + 1);
     //return move_weight;
   }
-  if (t.board.get_num_made_moves() > 0) {
+  if (t.board.get_num_made_moves() > 0 && t.board.get_last_move()) {
     const Square last_destination = GetMoveDestination(t.board.get_last_move());
     PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
