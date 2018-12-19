@@ -120,9 +120,9 @@ const Vec<Score, 4> init_futility_margins() {
   }
   else {
     kFutilityMargins[0] = 0;
-    kFutilityMargins[1] = 500;
-    kFutilityMargins[2] = 1000;
-    kFutilityMargins[3] = 1500;
+    kFutilityMargins[1] = 550;
+    kFutilityMargins[2] = 1100;
+    kFutilityMargins[3] = 1650;
   }
   return kFutilityMargins;
 }
