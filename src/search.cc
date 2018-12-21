@@ -120,9 +120,9 @@ const Vec<Score, 4> init_futility_margins() {
   }
   else {
     kFutilityMargins[0] = 0;
-    kFutilityMargins[1] = 600;
-    kFutilityMargins[2] = 1200;
-    kFutilityMargins[3] = 1800;
+    kFutilityMargins[1] = 550;
+    kFutilityMargins[2] = 1100;
+    kFutilityMargins[3] = 1650;
   }
   return kFutilityMargins;
 }
@@ -694,7 +694,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
 }
 
 inline Score get_futility_margin(Depth depth, Score score, bool improving) {
-  return kFutileMargin[depth] - 150 * depth * improving;
+  return kFutileMargin[depth] - 100 * depth * improving;
 }
 
 Score sample_node_and_return_alpha(const Board &board, const Depth depth,
@@ -785,7 +785,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
     //Static Null Move Pruning
     if (NodeType == kNW && depth <= 5) {
-      Score margin = 330 * depth;
+      Score margin = (360 - 60 * !strict_worsening) * depth;
       if (settings::kUseScoreBasedPruning && static_eval > beta + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
