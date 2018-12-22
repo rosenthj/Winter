@@ -120,9 +120,9 @@ const Vec<Score, 4> init_futility_margins() {
   }
   else {
     kFutilityMargins[0] = 0;
-    kFutilityMargins[1] = 550;
-    kFutilityMargins[2] = 1100;
-    kFutilityMargins[3] = 1650;
+    kFutilityMargins[1] = 450;
+    kFutilityMargins[2] = 900;
+    kFutilityMargins[3] = 1350;
   }
   return kFutilityMargins;
 }
@@ -694,7 +694,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
 }
 
 inline Score get_futility_margin(Depth depth, Score score, bool improving) {
-  return kFutileMargin[depth] - 100 * depth * improving;
+  return kFutileMargin[depth] + 100 * depth * improving;
 }
 
 Score sample_node_and_return_alpha(const Board &board, const Depth depth,
