@@ -1030,42 +1030,43 @@ const std::array<int, (174*4)> eval_weights_gmm = {
 //    227,   252,   258,   257    // Uncovered Passed Pawns
 //};
 
+// 181225 Experimental
 const std::array<int, (270*4)> eval_weights = {
-    510,   -911,  -217,  -88,   // King Piece Square Table
-    137,   -440,  168,   4,     // King Piece Square Table
-    42,    -45,   -268,  -52,   // King Piece Square Table
-    -108,  263,   -514,  -129,  // King Piece Square Table
-    21,    -213,  446,   74,    // King Piece Square Table
-    -63,   144,   230,   -8,    // King Piece Square Table
-    -163,  420,   -193,  244,   // King Piece Square Table
-    -86,   270,   241,   472,   // King Piece Square Table
-    -153,  425,   119,   694,   // King Piece Square Table
-    -148,  358,   463,   843,   // King Piece Square Table
-    2354,  2448,  1273,  190,   // Knight Piece Square Table
-    2364,  2429,  1815,  634,   // Knight Piece Square Table
-    2181,  2464,  1904,  651,   // Knight Piece Square Table
-    2105,  2602,  2039,  714,   // Knight Piece Square Table
-    2234,  2657,  1843,  587,   // Knight Piece Square Table
-    2003,  2664,  1910,  688,   // Knight Piece Square Table
-    1946,  2656,  2044,  734,   // Knight Piece Square Table
-    2006,  2624,  2028,  719,   // Knight Piece Square Table
-    1937,  2759,  2107,  770,   // Knight Piece Square Table
-    1915,  2818,  2009,  716,   // Knight Piece Square Table
-    717,   707,   178,   78,    // Piece Base Value
+    -420,  -608,  -83,   48,    // King Piece Square Table
+    -234,  -344,  178,   309,   // King Piece Square Table
+    -62,   -43,   -271,  -33,   // King Piece Square Table
+    -52,   98,    -574,  -73,   // King Piece Square Table
+    -32,   -115,  446,   -41,   // King Piece Square Table
+    112,   143,   230,   -183,  // King Piece Square Table
+    102,   361,   -211,  -334,  // King Piece Square Table
+    168,   219,   278,   -6,    // King Piece Square Table
+    195,   278,   144,   -115,  // King Piece Square Table
+    264,   223,   53,    136,   // King Piece Square Table
+    2205,  2318,  1764,  3452,  // Knight Piece Square Table
+    2220,  2432,  2274,  3673,  // Knight Piece Square Table
+    2263,  2549,  2263,  3660,  // Knight Piece Square Table
+    2178,  2608,  2524,  3750,  // Knight Piece Square Table
+    2325,  2612,  2224,  3531,  // Knight Piece Square Table
+    2172,  2648,  2476,  3830,  // Knight Piece Square Table
+    2277,  2618,  2532,  3880,  // Knight Piece Square Table
+    2262,  2701,  2593,  3919,  // Knight Piece Square Table
+    2224,  2837,  2674,  3894,  // Knight Piece Square Table
+    2231,  2865,  2605,  3885,  // Knight Piece Square Table
+    1022,  621,   213,   515,   // Piece Base Value
     0,     0,     0,     0,     // Piece Base Value
     0,     0,     0,     0,     // Piece Base Value
     0,     0,     0,     0,     // Piece Base Value
     0,     0,     0,     0,     // Piece Base Value
-    409,   616,   0,     0,     // Bishop Pair
-    95,    35,    0,     9,     // Piece Activity Bonus
+    450,   208,   188,   966,   // Bishop Pair
+    145,   3,     3,     26,    // Piece Activity Bonus
     0,     0,     0,     0,     // Piece Activity Bonus
     0,     0,     0,     0,     // Piece Activity Bonus
     0,     0,     0,     0,     // Piece Activity Bonus
     0,     0,     0,     0,     // Piece Activity Bonus
     0,     0,     0,     0,     // Abstract Piece Activity Bonus
     0,     0,     0,     0,     // Abstract Piece Activity Bonus
-    0,     58,    68,    11,    // Abstract Piece Activity Bonus
-    99,    8,     21,    6,     // Abstract Piece Activity Bonus
+    6,     70,    70,    40,    // Abstract Piece Activity Bonus
+    68,    34,    18,    13,    // Abstract Piece Activity Bonus
     0,     0,     0,     0,     // Abstract Piece Activity Bonus
     0,     0,     0,     0,     // Passed Pawn Bonus
     0,     0,     0,     0,     // Passed Pawn Bonus
@@ -1079,229 +1080,504 @@ const std::array<int, (270*4)> eval_weights = {
     0,     0,     0,     0,     // Passed Pawn Bonus
     0,     0,     0,     0,     // Passed Pawn Bonus
     0,     0,     0,     0,     // Passed Pawn Bonus
-    -221,  -1,    0,     -87,   // Double Pawn Penalty
-    21,    0,     75,    55,    // Tempo Bonus
+    -51,   -1,    -2,    -1,    // Double Pawn Penalty
+    287,   54,    530,   248,   // Tempo Bonus
     0,     0,     0,     0,     // Direct Pawn Shield Bonus
-    4,     13,    -67,   -16,   // King Vector Exposure
-    28,    -2,    -91,   -10,   // King Vector Exposure
-    -33,   193,   78,    97,    // Knight Outpost
+    25,    32,    -118,  -36,   // King Vector Exposure
+    -102,  72,    -99,   -24,   // King Vector Exposure
+    -13,   273,   42,    184,   // Knight Outpost
     0,     0,     0,     0,     // Castling Right
-    5,     208,   427,   145,   // Pawn Attack
-    0,     33,    410,   140,   // Minor Attack
+    8,     137,   938,   570,   // Pawn Attack
+    9,     22,    853,   444,   // Minor Attack
     0,     0,     0,     0,     // King Defence Distance
     0,     0,     0,     0,     // King Defence Distance
     0,     0,     0,     0,     // King Defence Distance
     0,     0,     0,     0,     // King Defence Distance
-    0,     0,     -115,  -9,    // King Attack Distance
+    -2,    -3,    -41,   -3,    // King Attack Distance
     0,     0,     0,     0,     // King Attack Distance
-    0,     0,     -122,  -26,   // King Attack Distance
-    -127,  -1,    -45,   0,     // King Attack Distance
-    0,     0,     32,    10,    // King Attack Danger
-    0,     6,     13,    1,     // King Attack Danger
-    0,     0,     46,    8,     // King Attack Danger
-    2,     66,    0,     0,     // King Attack Danger
-    -636,  -664,  -489,  -108,  // Safe Knight Square Count
-    -198,  -435,  -204,  -58,   // Safe Knight Square Count
-    -100,  -215,  -125,  -37,   // Safe Knight Square Count
-    -66,   -74,   -50,   -23,   // Safe Knight Square Count
+    -1,    -3,    -72,   -2,    // King Attack Distance
+    -90,   -69,   -97,   -3,    // King Attack Distance
+    0,     1,     10,    14,    // King Attack Danger
+    3,     3,     21,    9,     // King Attack Danger
+    0,     0,     63,    49,    // King Attack Danger
+    21,    154,   42,    12,    // King Attack Danger
+    -471,  -440,  -440,  -329,  // Safe Knight Square Count
+    -85,   -114,  -416,  -172,  // Safe Knight Square Count
+    -22,   -70,   -203,  -94,   // Safe Knight Square Count
+    -5,    -20,   -117,  -59,   // Safe Knight Square Count
     0,     0,     0,     0,     // Safe Knight Square Count
-    3,     18,    103,   6,     // Safe Knight Square Count
-    3,     18,    182,   6,     // Safe Knight Square Count
-    3,     18,    200,   7,     // Safe Knight Square Count
-    3,     18,    200,   7,     // Safe Knight Square Count
-    1358,  1727,  714,   366,   // Bishop Mobility
-    1568,  1838,  859,   388,   // Bishop Mobility
-    1716,  1947,  1003,  426,   // Bishop Mobility
-    1741,  2133,  1091,  454,   // Bishop Mobility
-    1746,  2279,  1197,  469,   // Bishop Mobility
-    1750,  2408,  1270,  486,   // Bishop Mobility
-    1751,  2501,  1353,  491,   // Bishop Mobility
-    1751,  2603,  1423,  494,   // Bishop Mobility
-    1751,  2626,  1507,  498,   // Bishop Mobility
-    1751,  2626,  1636,  499,   // Bishop Mobility
-    1751,  2626,  1729,  523,   // Bishop Mobility
-    1751,  2627,  1773,  634,   // Bishop Mobility
-    1751,  2627,  1773,  777,   // Bishop Mobility
-    1752,  2627,  1774,  782,   // Bishop Mobility
-    3738,  3450,  2012,  552,   // Rook Mobility
-    3895,  3594,  2024,  564,   // Rook Mobility
-    3919,  3690,  2071,  571,   // Rook Mobility
-    4000,  3828,  2075,  589,   // Rook Mobility
-    4043,  3945,  2075,  589,   // Rook Mobility
-    4272,  3970,  2120,  608,   // Rook Mobility
-    4321,  4051,  2164,  629,   // Rook Mobility
-    4326,  4098,  2255,  659,   // Rook Mobility
-    4477,  4132,  2312,  680,   // Rook Mobility
-    4560,  4150,  2381,  701,   // Rook Mobility
-    4647,  4169,  2418,  733,   // Rook Mobility
-    4668,  4175,  2476,  803,   // Rook Mobility
-    4670,  4176,  2536,  961,   // Rook Mobility
-    4670,  4178,  2554,  1145,  // Rook Mobility
-    4670,  4178,  2594,  1197,  // Rook Mobility
-    6824,  7427,  3994,  3313,  // Queen Mobility
-    7042,  7606,  4055,  3386,  // Queen Mobility
-    7075,  7636,  4082,  3387,  // Queen Mobility
-    7077,  7638,  4084,  3387,  // Queen Mobility
-    7107,  7672,  4097,  3387,  // Queen Mobility
-    7149,  7708,  4115,  3387,  // Queen Mobility
-    7188,  7751,  4130,  3389,  // Queen Mobility
-    7218,  7810,  4135,  3389,  // Queen Mobility
-    7249,  7866,  4143,  3389,  // Queen Mobility
-    7269,  7913,  4144,  3389,  // Queen Mobility
-    7299,  7957,  4149,  3389,  // Queen Mobility
-    7336,  8001,  4148,  3389,  // Queen Mobility
-    7365,  8023,  4149,  3389,  // Queen Mobility
-    7403,  8045,  4149,  3389,  // Queen Mobility
-    7422,  8063,  4149,  3389,  // Queen Mobility
-    7428,  8067,  4153,  3389,  // Queen Mobility
-    7430,  8069,  4164,  3390,  // Queen Mobility
-    7430,  8069,  4169,  3412,  // Queen Mobility
-    7430,  8069,  4171,  3417,  // Queen Mobility
-    7430,  8069,  4172,  3418,  // Queen Mobility
-    7430,  8069,  4172,  3418,  // Queen Mobility
-    7430,  8069,  4172,  3418,  // Queen Mobility
-    7430,  8069,  4173,  3419,  // Queen Mobility
-    7430,  8069,  4173,  3419,  // Queen Mobility
-    7431,  8069,  4174,  3421,  // Queen Mobility
-    7432,  8069,  4181,  3431,  // Queen Mobility
-    7432,  8070,  4307,  3669,  // Queen Mobility
-    7472,  8092,  4377,  3777,  // Queen Mobility
-    -266,  200,   359,   -1,    // Safe Checks
-    -109,  157,   65,    12,    // Unsafe Checks
-    44,    34,    -160,  -30,   // Unprotected Pieces
-    236,   239,   213,   322,   // Bishop's Position Relative To King
-    50,    276,   298,   137,   // Bishop's Position Relative To King
-    183,   258,   193,   169,   // Bishop's Position Relative To King
-    242,   274,   132,   5,     // Bishop's Position Relative To King
-    305,   386,   70,    9,     // Bishop's Position Relative To King
-    348,   415,   -58,   6,     // Bishop's Position Relative To King
-    224,   415,   75,    -3,    // Bishop's Position Relative To King
-    274,   387,   -20,   -80,   // Bishop's Position Relative To King
-    209,   222,   304,   231,   // Bishop's Position Relative To King
-    160,   325,   170,   64,    // Bishop's Position Relative To King
-    178,   276,   184,   210,   // Bishop's Position Relative To King
-    226,   345,   6,     1,     // Bishop's Position Relative To King
-    283,   278,   166,   63,    // Bishop's Position Relative To King
-    233,   284,   66,    37,    // Bishop's Position Relative To King
-    171,   270,   228,   72,    // Bishop's Position Relative To King
-    242,   299,   275,   197,   // Bishop's Position Relative To King
-    175,   330,   97,    60,    // Bishop's Position Relative To King
-    267,   260,   137,   111,   // Bishop's Position Relative To King
-    216,   301,   19,    72,    // Bishop's Position Relative To King
-    312,   231,   186,   44,    // Bishop's Position Relative To King
-    256,   211,   119,   55,    // Bishop's Position Relative To King
-    263,   343,   117,   103,   // Bishop's Position Relative To King
-    138,   299,   140,   65,    // Bishop's Position Relative To King
-    277,   222,   162,   45,    // Bishop's Position Relative To King
-    222,   270,   16,    35,    // Bishop's Position Relative To King
-    253,   207,   251,   129,   // Bishop's Position Relative To King
-    188,   336,   314,   44,    // Bishop's Position Relative To King
-    136,   225,   242,   0,     // Bishop's Position Relative To King
-    276,   104,   284,   125,   // Bishop's Position Relative To King
-    162,   298,   105,   30,    // Bishop's Position Relative To King
-    83,    298,   827,   542,   // Bishop's Position Relative To King
-    -27,   102,   618,   203,   // Bishop's Position Relative To King
-    34,    -30,   793,   286,   // Bishop's Position Relative To King
+    8,     6,     108,   37,    // Safe Knight Square Count
+    10,    7,     160,   80,    // Safe Knight Square Count
+    10,    7,     160,   81,    // Safe Knight Square Count
+    9,     6,     160,   88,    // Safe Knight Square Count
+    1513,  1849,  1450,  2048,  // Bishop Mobility
+    1824,  1967,  1748,  2201,  // Bishop Mobility
+    2020,  2073,  2016,  2300,  // Bishop Mobility
+    2033,  2126,  2155,  2398,  // Bishop Mobility
+    2123,  2216,  2237,  2470,  // Bishop Mobility
+    2135,  2286,  2341,  2513,  // Bishop Mobility
+    2146,  2385,  2410,  2569,  // Bishop Mobility
+    2157,  2456,  2432,  2601,  // Bishop Mobility
+    2189,  2523,  2540,  2612,  // Bishop Mobility
+    2198,  2540,  2617,  2677,  // Bishop Mobility
+    2202,  2545,  2619,  2755,  // Bishop Mobility
+    2231,  2588,  2694,  2894,  // Bishop Mobility
+    2316,  2607,  2705,  2911,  // Bishop Mobility
+    2359,  2616,  2718,  2922,  // Bishop Mobility
+    3941,  3984,  2816,  3965,  // Rook Mobility
+    4141,  4170,  2941,  4064,  // Rook Mobility
+    4297,  4382,  2974,  4101,  // Rook Mobility
+    4499,  4472,  2996,  4155,  // Rook Mobility
+    4615,  4549,  3013,  4176,  // Rook Mobility
+    4723,  4554,  3116,  4226,  // Rook Mobility
+    4794,  4617,  3192,  4290,  // Rook Mobility
+    4827,  4640,  3329,  4362,  // Rook Mobility
+    4837,  4663,  3459,  4424,  // Rook Mobility
+    4888,  4687,  3529,  4443,  // Rook Mobility
+    4914,  4729,  3568,  4619,  // Rook Mobility
+    4980,  4730,  3611,  4620,  // Rook Mobility
+    5110,  4745,  3643,  4634,  // Rook Mobility
+    5116,  4754,  3670,  4724,  // Rook Mobility
+    5126,  4808,  3690,  4737,  // Rook Mobility
+    8421,  8319,  7450,  6610,  // Queen Mobility
+    8635,  8539,  7545,  6689,  // Queen Mobility
+    8692,  8597,  7593,  6767,  // Queen Mobility
+    8702,  8607,  7605,  6777,  // Queen Mobility
+    8788,  8693,  7635,  6834,  // Queen Mobility
+    8820,  8767,  7666,  6847,  // Queen Mobility
+    8867,  8823,  7666,  6848,  // Queen Mobility
+    8894,  8850,  7677,  6848,  // Queen Mobility
+    8961,  8912,  7683,  6852,  // Queen Mobility
+    9006,  8966,  7683,  6852,  // Queen Mobility
+    9021,  8968,  7683,  6852,  // Queen Mobility
+    9056,  8973,  7686,  6851,  // Queen Mobility
+    9058,  8974,  7685,  6850,  // Queen Mobility
+    9136,  9064,  7698,  6854,  // Queen Mobility
+    9139,  9066,  7700,  6856,  // Queen Mobility
+    9150,  9080,  7709,  6863,  // Queen Mobility
+    9176,  9108,  7716,  6862,  // Queen Mobility
+    9176,  9109,  7722,  6875,  // Queen Mobility
+    9181,  9114,  7748,  6970,  // Queen Mobility
+    9183,  9118,  7750,  6985,  // Queen Mobility
+    9185,  9119,  7755,  6993,  // Queen Mobility
+    9200,  9138,  7790,  7049,  // Queen Mobility
+    9200,  9138,  7790,  7050,  // Queen Mobility
+    9199,  9138,  7789,  7049,  // Queen Mobility
+    9200,  9138,  7790,  7049,  // Queen Mobility
+    9201,  9139,  7791,  7051,  // Queen Mobility
+    9221,  9155,  7838,  7121,  // Queen Mobility
+    9222,  9156,  7839,  7122,  // Queen Mobility
+    -309,  322,   622,   69,    // Safe Checks
+    -148,  43,    247,   6,     // Unsafe Checks
+    214,   -17,   -307,  -63,   // Unprotected Pieces
+    284,   284,   245,   252,   // Bishop's Position Relative To King
+    342,   307,   187,   222,   // Bishop's Position Relative To King
+    333,   455,   278,   77,    // Bishop's Position Relative To King
+    275,   324,   235,   178,   // Bishop's Position Relative To King
+    522,   350,   146,   252,   // Bishop's Position Relative To King
+    423,   355,   92,    130,   // Bishop's Position Relative To King
+    688,   541,   -55,   69,    // Bishop's Position Relative To King
+    448,   384,   55,    5,     // Bishop's Position Relative To King
+    445,   469,   396,   311,   // Bishop's Position Relative To King
+    447,   263,   234,   251,   // Bishop's Position Relative To King
+    445,   279,   267,   270,   // Bishop's Position Relative To King
+    489,   314,   66,    171,   // Bishop's Position Relative To King
+    522,   348,   217,   261,   // Bishop's Position Relative To King
+    424,   282,   202,   197,   // Bishop's Position Relative To King
+    409,   350,   365,   262,   // Bishop's Position Relative To King
+    544,   545,   342,   390,   // Bishop's Position Relative To King
+    351,   324,   228,   216,   // Bishop's Position Relative To King
+    418,   433,   226,   187,   // Bishop's Position Relative To King
+    501,   243,   107,   173,   // Bishop's Position Relative To King
+    497,   317,   410,   139,   // Bishop's Position Relative To King
+    434,   145,   390,   131,   // Bishop's Position Relative To King
+    609,   527,   363,   162,   // Bishop's Position Relative To King
+    256,   333,   246,   106,   // Bishop's Position Relative To King
+    462,   331,   298,   106,   // Bishop's Position Relative To King
+    409,   301,   128,   58,    // Bishop's Position Relative To King
+    383,   452,   266,   143,   // Bishop's Position Relative To King
+    506,   705,   310,   144,   // Bishop's Position Relative To King
+    193,   347,   321,   60,    // Bishop's Position Relative To King
+    427,   275,   374,   61,    // Bishop's Position Relative To King
+    184,   270,   298,   147,   // Bishop's Position Relative To King
+    383,   615,   912,   419,   // Bishop's Position Relative To King
+    -26,   249,   606,   224,   // Bishop's Position Relative To King
+    248,   314,   383,   216,   // Bishop's Position Relative To King
+    720,   694,   850,   816,   // Bishop's Position Relative To King
+    -92,   235,   329,   -251,  // Bishop's Position Relative To King
     0,     0,     0,     0,     // Bishop's Position Relative To King
-    61,    234,   246,   -114,  // Bishop's Position Relative To King
-    0,     0,     0,     0,     // Bishop's Position Relative To King
-    94,    67,    53,    -23,   // Opposed Pawns
-    86,    36,    -36,   -47,   // Opposed Pawns
-    74,    21,    52,    106,   // Opposed Pawns
-    60,    98,    151,   234,   // Opposed Pawns
-    -38,   304,   466,   200,   // Opposed Pawns
+    -103,  14,    126,   -20,   // Opposed Pawns
+    -56,   -51,   4,     -84,   // Opposed Pawns
+    -66,   -23,   56,    1,     // Opposed Pawns
+    -27,   112,   9,     86,    // Opposed Pawns
+    -228,  321,   395,   293,   // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
-    49,    145,   147,   36,    // Opposed Pawns
-    44,    161,   117,   104,   // Opposed Pawns
-    65,    134,   256,   320,   // Opposed Pawns
-    -18,   577,   684,   373,   // Opposed Pawns
+    19,    96,    169,   101,   // Opposed Pawns
+    -38,   120,   122,   141,   // Opposed Pawns
+    116,   176,   61,    280,   // Opposed Pawns
+    339,   718,   437,   217,   // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
-    103,   78,    46,    -25,   // Opposed Pawns
-    64,    64,    35,    49,    // Opposed Pawns
-    72,    58,    232,   160,   // Opposed Pawns
-    100,   100,   477,   276,   // Opposed Pawns
-    647,   653,   652,   642,   // Opposed Pawns
+    -89,   -72,   197,   45,    // Opposed Pawns
+    -90,   -31,   25,    32,    // Opposed Pawns
+    -13,   18,    84,    157,   // Opposed Pawns
+    105,   54,    246,   162,   // Opposed Pawns
+    513,   561,   543,   537,   // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
-    156,   207,   182,   48,    // Opposed Pawns
-    82,    177,   253,   170,   // Opposed Pawns
-    86,    285,   656,   458,   // Opposed Pawns
-    647,   653,   652,   642,   // Opposed Pawns
+    92,    192,   190,   134,   // Opposed Pawns
+    -95,   140,   317,   282,   // Opposed Pawns
+    249,   253,   431,   295,   // Opposed Pawns
+    349,   349,   346,   345,   // Opposed Pawns
     0,     0,     0,     0,     // Opposed Pawns
-    60,    29,    -114,  -103,  // Unopposed Pawns
-    42,    1,     -351,  -102,  // Unopposed Pawns
-    -15,   -42,   -60,   115,   // Unopposed Pawns
-    -53,   76,    304,   164,   // Unopposed Pawns
-    56,    332,   811,   354,   // Unopposed Pawns
+    -186,  -30,   100,   37,    // Unopposed Pawns
+    -180,  15,    -63,   -79,   // Unopposed Pawns
+    -183,  10,    5,     230,   // Unopposed Pawns
+    -102,  98,    310,   210,   // Unopposed Pawns
+    415,   486,   697,   509,   // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
-    75,    145,   37,    -18,   // Unopposed Pawns
-    90,    151,   108,   121,   // Unopposed Pawns
-    95,    270,   620,   309,   // Unopposed Pawns
-    844,   853,   993,   874,   // Unopposed Pawns
+    -123,  205,   191,   247,   // Unopposed Pawns
+    21,    171,   224,   512,   // Unopposed Pawns
+    259,   384,   331,   514,   // Unopposed Pawns
+    1060,  911,   849,   853,   // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
-    197,   -25,   -9,    -66,   // Unopposed Pawns
-    151,   115,   -131,  -14,   // Unopposed Pawns
-    216,   122,   190,   195,   // Unopposed Pawns
-    280,   408,   750,   243,   // Unopposed Pawns
-    633,   638,   662,   676,   // Unopposed Pawns
+    -146,  -2,    189,   165,   // Unopposed Pawns
+    -5,    81,    -30,   169,   // Unopposed Pawns
+    145,   103,   115,   413,   // Unopposed Pawns
+    541,   385,   589,   461,   // Unopposed Pawns
+    652,   754,   738,   727,   // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
-    176,   297,   55,    -103,  // Unopposed Pawns
-    201,   268,   322,   155,   // Unopposed Pawns
-    360,   542,   1046,  844,   // Unopposed Pawns
-    633,   638,   662,   676,   // Unopposed Pawns
+    56,    251,   244,   278,   // Unopposed Pawns
+    330,   451,   253,   495,   // Unopposed Pawns
+    761,   550,   578,   582,   // Unopposed Pawns
+    136,   136,   136,   136,   // Unopposed Pawns
     0,     0,     0,     0,     // Unopposed Pawns
-    290,   -17,   -59,   -182,  // Covered Passed Pawns
-    279,   100,   -454,  -127,  // Covered Passed Pawns
-    310,   263,   -300,  -85,   // Covered Passed Pawns
-    246,   312,   148,   133,   // Covered Passed Pawns
-    133,   380,   627,   250,   // Covered Passed Pawns
-    -31,   562,   -146,  -91,   // Covered Passed Pawns
+    -138,  89,    218,   24,    // Covered Passed Pawns
+    -122,  159,   -24,   79,    // Covered Passed Pawns
+    84,    300,   -97,   124,   // Covered Passed Pawns
+    90,    487,   191,   321,   // Covered Passed Pawns
+    -121,  732,   1141,  396,   // Covered Passed Pawns
+    -375,  353,   1245,  1295,  // Covered Passed Pawns
     0,     0,     0,     0,     // Covered Passed Pawns
-    289,   69,    -48,   -147,  // Covered Passed Pawns
-    375,   342,   -103,  -115,  // Covered Passed Pawns
-    429,   459,   293,   319,   // Covered Passed Pawns
-    347,   532,   1092,  728,   // Covered Passed Pawns
-    688,   392,   321,   258,   // Covered Passed Pawns
-    203,   -87,   31,    -152,  // Covered Passed Pawns
-    314,   126,   -268,  -178,  // Covered Passed Pawns
-    403,   448,   -80,   -44,   // Covered Passed Pawns
-    326,   610,   613,   466,   // Covered Passed Pawns
-    759,   838,   903,   879,   // Covered Passed Pawns
-    78,    77,    76,    76,    // Covered Passed Pawns
-    203,   0,     31,    0,     // Covered Passed Pawns
-    314,   126,   -48,   -147,  // Covered Passed Pawns
-    403,   448,   -80,   -44,   // Covered Passed Pawns
-    429,   610,   613,   466,   // Covered Passed Pawns
-    759,   838,   1092,  879,   // Covered Passed Pawns
-    759,   838,   1092,  879,   // Covered Passed Pawns
-    -149,  41,    -258,  -130,  // Uncovered Passed Pawns
-    43,    -36,   -213,  -174,  // Uncovered Passed Pawns
-    262,   207,   -24,   108,   // Uncovered Passed Pawns
-    615,   466,   249,   91,    // Uncovered Passed Pawns
-    1083,  644,   691,   175,   // Uncovered Passed Pawns
-    1608,  823,   1215,  628,   // Uncovered Passed Pawns
+    -119,  232,   433,   199,   // Covered Passed Pawns
+    173,   553,   29,    364,   // Covered Passed Pawns
+    413,   893,   302,   411,   // Covered Passed Pawns
+    721,   1203,  1139,  1057,  // Covered Passed Pawns
+    766,   794,   736,   726,   // Covered Passed Pawns
+    -199,  56,    292,   114,   // Covered Passed Pawns
+    35,    128,   110,   176,   // Covered Passed Pawns
+    258,   561,   92,    230,   // Covered Passed Pawns
+    481,   875,   465,   535,   // Covered Passed Pawns
+    1128,  1170,  1106,  1110,  // Covered Passed Pawns
+    54,    54,    54,    54,    // Covered Passed Pawns
+    0,     56,    292,   114,   // Covered Passed Pawns
+    35,    232,   433,   199,   // Covered Passed Pawns
+    258,   561,   92,    364,   // Covered Passed Pawns
+    481,   893,   465,   535,   // Covered Passed Pawns
+    1128,  1203,  1139,  1110,  // Covered Passed Pawns
+    766,   794,   736,   726,   // Covered Passed Pawns
+    121,   49,    -236,  -187,  // Uncovered Passed Pawns
+    250,   9,     -80,   -113,  // Uncovered Passed Pawns
+    926,   176,   -285,  18,    // Uncovered Passed Pawns
+    1777,  436,   -226,  47,    // Uncovered Passed Pawns
+    3160,  706,   -4,    123,   // Uncovered Passed Pawns
+    3610,  1502,  419,   716,   // Uncovered Passed Pawns
     0,     0,     0,     0,     // Uncovered Passed Pawns
-    -75,   46,    -126,  -152,  // Uncovered Passed Pawns
-    80,    273,   181,   267,   // Uncovered Passed Pawns
-    289,   763,   381,   303,   // Uncovered Passed Pawns
-    338,   1109,  1178,  956,   // Uncovered Passed Pawns
-    1160,  1301,  1715,  1574,  // Uncovered Passed Pawns
-    -7,    -75,   -544,  -72,   // Uncovered Passed Pawns
-    -186,  -145,  -179,  -86,   // Uncovered Passed Pawns
-    230,   410,   72,    159,   // Uncovered Passed Pawns
-    539,   715,   629,   631,   // Uncovered Passed Pawns
-    1145,  1185,  1202,  1214,  // Uncovered Passed Pawns
-    1750,  1627,  1617,  1621,  // Uncovered Passed Pawns
-    0,     0,     0,     0,     // Uncovered Passed Pawns
-    -75,   46,    -126,  -86,   // Uncovered Passed Pawns
-    230,   410,   181,   267,   // Uncovered Passed Pawns
-    539,   763,   629,   631,   // Uncovered Passed Pawns
-    1145,  1185,  1202,  1214,  // Uncovered Passed Pawns
-    1750,  1627,  1715,  1621   // Uncovered Passed Pawns
+    75,    258,   47,    -13,   // Uncovered Passed Pawns
+    723,   365,   46,    266,   // Uncovered Passed Pawns
+    1465,  869,   112,   122,   // Uncovered Passed Pawns
+    2158,  1527,  822,   937,   // Uncovered Passed Pawns
+    2080,  2257,  2145,  2130,  // Uncovered Passed Pawns
+    100,   2,     -139,  -201,  // Uncovered Passed Pawns
+    -68,   31,    34,    49,    // Uncovered Passed Pawns
+    678,   398,   153,   283,   // Uncovered Passed Pawns
+    1131,  916,   717,   827,   // Uncovered Passed Pawns
+    1927,  1752,  1630,  1664,  // Uncovered Passed Pawns
+    2031,  1972,  1973,  1970,  // Uncovered Passed Pawns
+    100,   2,     0,     0,     // Uncovered Passed Pawns
+    75,    258,   47,    49,    // Uncovered Passed Pawns
+    723,   398,   153,   283,   // Uncovered Passed Pawns
+    1465,  916,   717,   827,   // Uncovered Passed Pawns
+    2158,  1752,  1630,  1664,  // Uncovered Passed Pawns
+    2080,  2257,  2145,  2130   // Uncovered Passed Pawns
 };
+
+
+// Mixed 181225
+//const std::array<int, (270*4)> eval_weights = {
+//    510,   -911,  -217,  -88,   // King Piece Square Table
+//    137,   -440,  168,   4,     // King Piece Square Table
+//    42,    -45,   -268,  -52,   // King Piece Square Table
+//    -108,  263,   -514,  -129,  // King Piece Square Table
+//    21,    -213,  446,   74,    // King Piece Square Table
+//    -63,   144,   230,   -8,    // King Piece Square Table
+//    -163,  420,   -193,  244,   // King Piece Square Table
+//    -86,   270,   241,   472,   // King Piece Square Table
+//    -153,  425,   119,   694,   // King Piece Square Table
+//    -148,  358,   463,   843,   // King Piece Square Table
+//    2354,  2448,  1273,  190,   // Knight Piece Square Table
+//    2364,  2429,  1815,  634,   // Knight Piece Square Table
+//    2181,  2464,  1904,  651,   // Knight Piece Square Table
+//    2105,  2602,  2039,  714,   // Knight Piece Square Table
+//    2234,  2657,  1843,  587,   // Knight Piece Square Table
+//    2003,  2664,  1910,  688,   // Knight Piece Square Table
+//    1946,  2656,  2044,  734,   // Knight Piece Square Table
+//    2006,  2624,  2028,  719,   // Knight Piece Square Table
+//    1937,  2759,  2107,  770,   // Knight Piece Square Table
+//    1915,  2818,  2009,  716,   // Knight Piece Square Table
+//    717,   707,   178,   78,    // Piece Base Value
+//    0,     0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     0,     // Piece Base Value
+//    0,     0,     0,     0,     // Piece Base Value
+//    409,   616,   0,     0,     // Bishop Pair
+//    95,    35,    0,     9,     // Piece Activity Bonus
+//    0,     0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     0,     // Piece Activity Bonus
+//    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     58,    68,    11,    // Abstract Piece Activity Bonus
+//    99,    8,     21,    6,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     0,     // Abstract Piece Activity Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    0,     0,     0,     0,     // Passed Pawn Bonus
+//    -221,  -1,    0,     -87,   // Double Pawn Penalty
+//    21,    0,     75,    55,    // Tempo Bonus
+//    0,     0,     0,     0,     // Direct Pawn Shield Bonus
+//    4,     13,    -67,   -16,   // King Vector Exposure
+//    28,    -2,    -91,   -10,   // King Vector Exposure
+//    -33,   193,   78,    97,    // Knight Outpost
+//    0,     0,     0,     0,     // Castling Right
+//    5,     208,   427,   145,   // Pawn Attack
+//    0,     33,    410,   140,   // Minor Attack
+//    0,     0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     0,     // King Defence Distance
+//    0,     0,     0,     0,     // King Defence Distance
+//    0,     0,     -115,  -9,    // King Attack Distance
+//    0,     0,     0,     0,     // King Attack Distance
+//    0,     0,     -122,  -26,   // King Attack Distance
+//    -127,  -1,    -45,   0,     // King Attack Distance
+//    0,     0,     32,    10,    // King Attack Danger
+//    0,     6,     13,    1,     // King Attack Danger
+//    0,     0,     46,    8,     // King Attack Danger
+//    2,     66,    0,     0,     // King Attack Danger
+//    -636,  -664,  -489,  -108,  // Safe Knight Square Count
+//    -198,  -435,  -204,  -58,   // Safe Knight Square Count
+//    -100,  -215,  -125,  -37,   // Safe Knight Square Count
+//    -66,   -74,   -50,   -23,   // Safe Knight Square Count
+//    0,     0,     0,     0,     // Safe Knight Square Count
+//    3,     18,    103,   6,     // Safe Knight Square Count
+//    3,     18,    182,   6,     // Safe Knight Square Count
+//    3,     18,    200,   7,     // Safe Knight Square Count
+//    3,     18,    200,   7,     // Safe Knight Square Count
+//    1358,  1727,  714,   366,   // Bishop Mobility
+//    1568,  1838,  859,   388,   // Bishop Mobility
+//    1716,  1947,  1003,  426,   // Bishop Mobility
+//    1741,  2133,  1091,  454,   // Bishop Mobility
+//    1746,  2279,  1197,  469,   // Bishop Mobility
+//    1750,  2408,  1270,  486,   // Bishop Mobility
+//    1751,  2501,  1353,  491,   // Bishop Mobility
+//    1751,  2603,  1423,  494,   // Bishop Mobility
+//    1751,  2626,  1507,  498,   // Bishop Mobility
+//    1751,  2626,  1636,  499,   // Bishop Mobility
+//    1751,  2626,  1729,  523,   // Bishop Mobility
+//    1751,  2627,  1773,  634,   // Bishop Mobility
+//    1751,  2627,  1773,  777,   // Bishop Mobility
+//    1752,  2627,  1774,  782,   // Bishop Mobility
+//    3738,  3450,  2012,  552,   // Rook Mobility
+//    3895,  3594,  2024,  564,   // Rook Mobility
+//    3919,  3690,  2071,  571,   // Rook Mobility
+//    4000,  3828,  2075,  589,   // Rook Mobility
+//    4043,  3945,  2075,  589,   // Rook Mobility
+//    4272,  3970,  2120,  608,   // Rook Mobility
+//    4321,  4051,  2164,  629,   // Rook Mobility
+//    4326,  4098,  2255,  659,   // Rook Mobility
+//    4477,  4132,  2312,  680,   // Rook Mobility
+//    4560,  4150,  2381,  701,   // Rook Mobility
+//    4647,  4169,  2418,  733,   // Rook Mobility
+//    4668,  4175,  2476,  803,   // Rook Mobility
+//    4670,  4176,  2536,  961,   // Rook Mobility
+//    4670,  4178,  2554,  1145,  // Rook Mobility
+//    4670,  4178,  2594,  1197,  // Rook Mobility
+//    6824,  7427,  3994,  3313,  // Queen Mobility
+//    7042,  7606,  4055,  3386,  // Queen Mobility
+//    7075,  7636,  4082,  3387,  // Queen Mobility
+//    7077,  7638,  4084,  3387,  // Queen Mobility
+//    7107,  7672,  4097,  3387,  // Queen Mobility
+//    7149,  7708,  4115,  3387,  // Queen Mobility
+//    7188,  7751,  4130,  3389,  // Queen Mobility
+//    7218,  7810,  4135,  3389,  // Queen Mobility
+//    7249,  7866,  4143,  3389,  // Queen Mobility
+//    7269,  7913,  4144,  3389,  // Queen Mobility
+//    7299,  7957,  4149,  3389,  // Queen Mobility
+//    7336,  8001,  4148,  3389,  // Queen Mobility
+//    7365,  8023,  4149,  3389,  // Queen Mobility
+//    7403,  8045,  4149,  3389,  // Queen Mobility
+//    7422,  8063,  4149,  3389,  // Queen Mobility
+//    7428,  8067,  4153,  3389,  // Queen Mobility
+//    7430,  8069,  4164,  3390,  // Queen Mobility
+//    7430,  8069,  4169,  3412,  // Queen Mobility
+//    7430,  8069,  4171,  3417,  // Queen Mobility
+//    7430,  8069,  4172,  3418,  // Queen Mobility
+//    7430,  8069,  4172,  3418,  // Queen Mobility
+//    7430,  8069,  4172,  3418,  // Queen Mobility
+//    7430,  8069,  4173,  3419,  // Queen Mobility
+//    7430,  8069,  4173,  3419,  // Queen Mobility
+//    7431,  8069,  4174,  3421,  // Queen Mobility
+//    7432,  8069,  4181,  3431,  // Queen Mobility
+//    7432,  8070,  4307,  3669,  // Queen Mobility
+//    7472,  8092,  4377,  3777,  // Queen Mobility
+//    -266,  200,   359,   -1,    // Safe Checks
+//    -109,  157,   65,    12,    // Unsafe Checks
+//    44,    34,    -160,  -30,   // Unprotected Pieces
+//    236,   239,   213,   322,   // Bishop's Position Relative To King
+//    50,    276,   298,   137,   // Bishop's Position Relative To King
+//    183,   258,   193,   169,   // Bishop's Position Relative To King
+//    242,   274,   132,   5,     // Bishop's Position Relative To King
+//    305,   386,   70,    9,     // Bishop's Position Relative To King
+//    348,   415,   -58,   6,     // Bishop's Position Relative To King
+//    224,   415,   75,    -3,    // Bishop's Position Relative To King
+//    274,   387,   -20,   -80,   // Bishop's Position Relative To King
+//    209,   222,   304,   231,   // Bishop's Position Relative To King
+//    160,   325,   170,   64,    // Bishop's Position Relative To King
+//    178,   276,   184,   210,   // Bishop's Position Relative To King
+//    226,   345,   6,     1,     // Bishop's Position Relative To King
+//    283,   278,   166,   63,    // Bishop's Position Relative To King
+//    233,   284,   66,    37,    // Bishop's Position Relative To King
+//    171,   270,   228,   72,    // Bishop's Position Relative To King
+//    242,   299,   275,   197,   // Bishop's Position Relative To King
+//    175,   330,   97,    60,    // Bishop's Position Relative To King
+//    267,   260,   137,   111,   // Bishop's Position Relative To King
+//    216,   301,   19,    72,    // Bishop's Position Relative To King
+//    312,   231,   186,   44,    // Bishop's Position Relative To King
+//    256,   211,   119,   55,    // Bishop's Position Relative To King
+//    263,   343,   117,   103,   // Bishop's Position Relative To King
+//    138,   299,   140,   65,    // Bishop's Position Relative To King
+//    277,   222,   162,   45,    // Bishop's Position Relative To King
+//    222,   270,   16,    35,    // Bishop's Position Relative To King
+//    253,   207,   251,   129,   // Bishop's Position Relative To King
+//    188,   336,   314,   44,    // Bishop's Position Relative To King
+//    136,   225,   242,   0,     // Bishop's Position Relative To King
+//    276,   104,   284,   125,   // Bishop's Position Relative To King
+//    162,   298,   105,   30,    // Bishop's Position Relative To King
+//    83,    298,   827,   542,   // Bishop's Position Relative To King
+//    -27,   102,   618,   203,   // Bishop's Position Relative To King
+//    34,    -30,   793,   286,   // Bishop's Position Relative To King
+//    0,     0,     0,     0,     // Bishop's Position Relative To King
+//    61,    234,   246,   -114,  // Bishop's Position Relative To King
+//    0,     0,     0,     0,     // Bishop's Position Relative To King
+//    94,    67,    53,    -23,   // Opposed Pawns
+//    86,    36,    -36,   -47,   // Opposed Pawns
+//    74,    21,    52,    106,   // Opposed Pawns
+//    60,    98,    151,   234,   // Opposed Pawns
+//    -38,   304,   466,   200,   // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    49,    145,   147,   36,    // Opposed Pawns
+//    44,    161,   117,   104,   // Opposed Pawns
+//    65,    134,   256,   320,   // Opposed Pawns
+//    -18,   577,   684,   373,   // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    103,   78,    46,    -25,   // Opposed Pawns
+//    64,    64,    35,    49,    // Opposed Pawns
+//    72,    58,    232,   160,   // Opposed Pawns
+//    100,   100,   477,   276,   // Opposed Pawns
+//    647,   653,   652,   642,   // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    156,   207,   182,   48,    // Opposed Pawns
+//    82,    177,   253,   170,   // Opposed Pawns
+//    86,    285,   656,   458,   // Opposed Pawns
+//    647,   653,   652,   642,   // Opposed Pawns
+//    0,     0,     0,     0,     // Opposed Pawns
+//    60,    29,    -114,  -103,  // Unopposed Pawns
+//    42,    1,     -351,  -102,  // Unopposed Pawns
+//    -15,   -42,   -60,   115,   // Unopposed Pawns
+//    -53,   76,    304,   164,   // Unopposed Pawns
+//    56,    332,   811,   354,   // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    75,    145,   37,    -18,   // Unopposed Pawns
+//    90,    151,   108,   121,   // Unopposed Pawns
+//    95,    270,   620,   309,   // Unopposed Pawns
+//    844,   853,   993,   874,   // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    197,   -25,   -9,    -66,   // Unopposed Pawns
+//    151,   115,   -131,  -14,   // Unopposed Pawns
+//    216,   122,   190,   195,   // Unopposed Pawns
+//    280,   408,   750,   243,   // Unopposed Pawns
+//    633,   638,   662,   676,   // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    176,   297,   55,    -103,  // Unopposed Pawns
+//    201,   268,   322,   155,   // Unopposed Pawns
+//    360,   542,   1046,  844,   // Unopposed Pawns
+//    633,   638,   662,   676,   // Unopposed Pawns
+//    0,     0,     0,     0,     // Unopposed Pawns
+//    290,   -17,   -59,   -182,  // Covered Passed Pawns
+//    279,   100,   -454,  -127,  // Covered Passed Pawns
+//    310,   263,   -300,  -85,   // Covered Passed Pawns
+//    246,   312,   148,   133,   // Covered Passed Pawns
+//    133,   380,   627,   250,   // Covered Passed Pawns
+//    -31,   562,   -146,  -91,   // Covered Passed Pawns
+//    0,     0,     0,     0,     // Covered Passed Pawns
+//    289,   69,    -48,   -147,  // Covered Passed Pawns
+//    375,   342,   -103,  -115,  // Covered Passed Pawns
+//    429,   459,   293,   319,   // Covered Passed Pawns
+//    347,   532,   1092,  728,   // Covered Passed Pawns
+//    688,   392,   321,   258,   // Covered Passed Pawns
+//    203,   -87,   31,    -152,  // Covered Passed Pawns
+//    314,   126,   -268,  -178,  // Covered Passed Pawns
+//    403,   448,   -80,   -44,   // Covered Passed Pawns
+//    326,   610,   613,   466,   // Covered Passed Pawns
+//    759,   838,   903,   879,   // Covered Passed Pawns
+//    78,    77,    76,    76,    // Covered Passed Pawns
+//    203,   0,     31,    0,     // Covered Passed Pawns
+//    314,   126,   -48,   -147,  // Covered Passed Pawns
+//    403,   448,   -80,   -44,   // Covered Passed Pawns
+//    429,   610,   613,   466,   // Covered Passed Pawns
+//    759,   838,   1092,  879,   // Covered Passed Pawns
+//    759,   838,   1092,  879,   // Covered Passed Pawns
+//    -149,  41,    -258,  -130,  // Uncovered Passed Pawns
+//    43,    -36,   -213,  -174,  // Uncovered Passed Pawns
+//    262,   207,   -24,   108,   // Uncovered Passed Pawns
+//    615,   466,   249,   91,    // Uncovered Passed Pawns
+//    1083,  644,   691,   175,   // Uncovered Passed Pawns
+//    1608,  823,   1215,  628,   // Uncovered Passed Pawns
+//    0,     0,     0,     0,     // Uncovered Passed Pawns
+//    -75,   46,    -126,  -152,  // Uncovered Passed Pawns
+//    80,    273,   181,   267,   // Uncovered Passed Pawns
+//    289,   763,   381,   303,   // Uncovered Passed Pawns
+//    338,   1109,  1178,  956,   // Uncovered Passed Pawns
+//    1160,  1301,  1715,  1574,  // Uncovered Passed Pawns
+//    -7,    -75,   -544,  -72,   // Uncovered Passed Pawns
+//    -186,  -145,  -179,  -86,   // Uncovered Passed Pawns
+//    230,   410,   72,    159,   // Uncovered Passed Pawns
+//    539,   715,   629,   631,   // Uncovered Passed Pawns
+//    1145,  1185,  1202,  1214,  // Uncovered Passed Pawns
+//    1750,  1627,  1617,  1621,  // Uncovered Passed Pawns
+//    0,     0,     0,     0,     // Uncovered Passed Pawns
+//    -75,   46,    -126,  -86,   // Uncovered Passed Pawns
+//    230,   410,   181,   267,   // Uncovered Passed Pawns
+//    539,   763,   629,   631,   // Uncovered Passed Pawns
+//    1145,  1185,  1202,  1214,  // Uncovered Passed Pawns
+//    1750,  1627,  1715,  1621   // Uncovered Passed Pawns
+//};
 
 
 //SL
