@@ -1738,6 +1738,7 @@ void CreateSearchParamDataset() {
 }
 
 Score QSearch(Board &board) {
+  Threads.main_thread->board.SetToSamePosition(board);
   return QuiescentSearch<kNormalSearchMode>((*Threads.main_thread), kMinScore, kMaxScore);
 }
 
