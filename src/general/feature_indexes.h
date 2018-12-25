@@ -89,10 +89,16 @@ const int kSafeChecks = kQueenMobility + 28;
 const int kUnSafeChecks = kSafeChecks + 1;
 const int kUnprotectedPieces = kUnSafeChecks + 1;
 const int kBishopVsKingPosition = kUnprotectedPieces + 1;
-const int kNumFeatures = kBishopVsKingPosition + 36;
+const int kOpposedPawn = kBishopVsKingPosition + 36;
+const int kUnopposedPawn = kOpposedPawn + (2 * 2 * 6);
+const int kCoveredPassedPawn = kUnopposedPawn + (2 * 2 * 6);
+const int kUncoveredPassedPawn = kCoveredPassedPawn + (2 * 2 * 6);
+const int kPawnEvalIndex = kOpposedPawn;
+const int kNumFeatures = kUncoveredPassedPawn + (2 * 2 * 6);
 
 
-const std::array<FeatureInfo, 27> kFeatureInfos = {{
+
+const std::array<FeatureInfo, 31> kFeatureInfos = {{
     FeatureInfo("King Piece Square Table", kKingPSTIndex),
     FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxScore),
     FeatureInfo("Piece Base Value", kBaseValueIndex, kMinScore, kMaxScore),
@@ -121,6 +127,10 @@ const std::array<FeatureInfo, 27> kFeatureInfos = {{
     FeatureInfo("Unsafe Checks", kUnSafeChecks),
     FeatureInfo("Unprotected Pieces", kUnprotectedPieces),
     FeatureInfo("Bishop's Position Relative To King", kBishopVsKingPosition),
+    FeatureInfo("Opposed Pawns", kOpposedPawn),
+    FeatureInfo("Unopposed Pawns", kUnopposedPawn),
+    FeatureInfo("Covered Passed Pawns", kCoveredPassedPawn),
+    FeatureInfo("Uncovered Passed Pawns", kUncoveredPassedPawn),
     FeatureInfo("Num Features Placeholder", kNumFeatures)
 }};
 

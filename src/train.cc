@@ -98,6 +98,15 @@ void EnforceConstraints(std::vector<double> &variables) {
     }
     variables[(positional_features::kBaseValueIndex + kQueen) * k + j] = 0;
   }
+  for (size_t cat = 2; cat < 4; cat++) {
+    for (size_t rank = 0; rank < 6; rank++) {
+      for (size_t j = 0; j < k; j++) {
+        variables[(positional_features::kPawnEvalIndex + cat * 24 + 18 + rank) * k + j] =
+            std::max(variables[(positional_features::kPawnEvalIndex + cat * 24 + 6 + rank) * k + j],
+                     variables[(positional_features::kPawnEvalIndex + cat * 24 + 12 + rank) * k + j]);
+      }
+    }
+  }
 }
 
 enum LearningStyle {
@@ -120,7 +129,7 @@ bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
   else if (learning_style == kMixedLearning) {
     const double game_res_weight = 0.3;
     const double td_weight = 1 - game_res_weight;
-    Score score = 0, qscore = -1;
+    Score score = 0, qscore = 100;
     //std::cout << "-> " << index << std::flush;
     int qsearch_attempts = 0;
     while (score != qscore) {
@@ -133,6 +142,7 @@ bool SamplePositionAndTarget(Game &game, Board &position, double &target) {
       score = evaluation::ScoreBoard(game.board);
       qscore = search::QSearch(game.board);
     }
+//    std::cout << "Qsearch attempts: " << qsearch_attempts << std::endl;
     if (qsearch_attempts == 20)
       return false;
     //std::cout << " -> " << games[index].board.get_num_made_moves() << std::flush;
@@ -797,14 +807,20 @@ void SGDTrain(bool from_scratch = false) {
   std::vector<int8_t> position_tries(games.size(), max_position_tries);
   std::vector<double> position_targets(games.size(), 0);
   std::vector<Board> positions(games.size());
+  std::cout << "Starting training loop" << std::endl;
+  size_t milestone = 1;
+//  size_t successive_failures = 0;
   while (optimizer->nu > kMinNu) {
     size_t index = rng() % games.size();
     if (position_tries[index] >= max_position_tries) {
       bool success = SamplePositionAndTarget<learning_style>(
           games[index], positions[index], position_targets[index]);
       if (!success) {
+//        successive_failures++;
         continue;
       }
+//      std::cout << "Successive failures: " << successive_failures << std::endl;
+//      successive_failures = 0;
       position_tries[index] = 0;
     }
     position_tries[index]++;
@@ -868,6 +884,10 @@ void SGDTrain(bool from_scratch = false) {
     if (optimizer->counter % step_size == 0) {
       optimizer->nu /= 2;
       std::cout << "New Nu: " << optimizer->nu << std::endl;
+    }
+    if (optimizer->counter > milestone) {
+      std::cout << "Milestone " << milestone << " reached" << std::endl;
+      milestone *= 10;
     }
   }
   std::cout << "Training completed!" << std::endl;

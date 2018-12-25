@@ -239,6 +239,12 @@ T ScoreBoard(const Board &board) {
   BitBoard s_filled = bitops::FillSouth(board.get_piece_bitboard(kBlack, kPawn), ~0);
   BitBoard n_filled = bitops::FillNorth(board.get_piece_bitboard(kWhite, kPawn), ~0);
 
+  const BitBoard opposed_pawns = (s_filled & pawn_bb[kWhite])|(n_filled & pawn_bb[kBlack]);
+  const BitBoard neighbored_pawns[2] = {
+      (bitops::E(pawn_bb[kWhite]) | bitops::W(pawn_bb[kWhite])) & pawn_bb[kWhite],
+      (bitops::E(pawn_bb[kBlack]) | bitops::W(pawn_bb[kBlack])) & pawn_bb[kBlack]
+  };
+
   AddFeature<T>(score, kWhite, kDoublePawnPenaltyIndex,
       bitops::PopCount(bitops::N(n_filled) & board.get_piece_bitboard(kWhite, kPawn))
     - bitops::PopCount(bitops::S(s_filled) & board.get_piece_bitboard(kBlack, kPawn)));
@@ -303,20 +309,40 @@ T ScoreBoard(const Board &board) {
     const BitBoard enemy_king_zone = magic::GetKingArea(enemy_king_square);
     int king_attack_count = 0;
 
-    // Evaluate passed pawns
-    BitBoard covered_passed_pawns = passed[color] & king_pawn_coverage[not_color][enemy_king_square];
-    while (covered_passed_pawns) {
-      Square pawn_square = bitops::NumberOfTrailingZeros(covered_passed_pawns);
-      int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
-      AddFeature<T>(score, color, kPassedPawnBonusIndex + pawn_rank, 1);
-      bitops::PopLSB(covered_passed_pawns);
-    }
-    BitBoard uncovered_passed = passed[color] & ~king_pawn_coverage[not_color][enemy_king_square];
-    while (uncovered_passed) {
-      Square pawn_square = bitops::NumberOfTrailingZeros(uncovered_passed);
-      int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
-      AddFeature<T>(score, color, kPassedPawnBonusIndex + 6 + pawn_rank, 1);
-      bitops::PopLSB(uncovered_passed);
+//    // Evaluate passed pawns
+//    BitBoard covered_passed_pawns = passed[color] & king_pawn_coverage[not_color][enemy_king_square];
+//    while (covered_passed_pawns) {
+//      Square pawn_square = bitops::NumberOfTrailingZeros(covered_passed_pawns);
+//      int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
+//      AddFeature<T>(score, color, kPassedPawnBonusIndex + pawn_rank, 1);
+//      bitops::PopLSB(covered_passed_pawns);
+//    }
+//    BitBoard uncovered_passed = passed[color] & ~king_pawn_coverage[not_color][enemy_king_square];
+//    while (uncovered_passed) {
+//      Square pawn_square = bitops::NumberOfTrailingZeros(uncovered_passed);
+//      int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
+//      AddFeature<T>(score, color, kPassedPawnBonusIndex + 6 + pawn_rank, 1);
+//      bitops::PopLSB(uncovered_passed);
+//    }
+
+    BitBoard categorized_pawns[4];
+    categorized_pawns[0] = pawn_bb[color] & opposed_pawns;
+    categorized_pawns[1] = pawn_bb[color] & ~(opposed_pawns | passed[color]);
+    categorized_pawns[2] = passed[color] & king_pawn_coverage[not_color][enemy_king_square];
+    categorized_pawns[3] = passed[color] & ~king_pawn_coverage[not_color][enemy_king_square];
+    for (int cat = 0; cat < 4; cat++) {
+      BitBoard cat_pawns = categorized_pawns[cat];
+      int cat_offset = 24 * cat;
+      while (cat_pawns) {
+        Square pawn_square = bitops::NumberOfTrailingZeros(cat_pawns);
+        BitBoard pawn = bitops::GetLSB(cat_pawns);
+        bool is_neighbored = pawn & neighbored_pawns[color];
+        bool is_protected = pawn & covered_once[color];
+        int pawn_rank = color * 7 + kSign[color] * GetSquareY(pawn_square) - 1;
+        AddFeature<T>(score, color, kPawnEvalIndex + cat_offset + 12 * is_neighbored
+                                                   + 6 * is_protected + pawn_rank, 1);
+        bitops::PopLSB(cat_pawns);
+      }
     }
 
     // Pawn attacks
