@@ -71,7 +71,8 @@ const int kPassedPawnBonusIndex = kAbstractActivityIndex + 5;//No king
 //const int kPassedPawnUnblocked = kPassedPawnBonusIndex + 6;
 //const int kPassedPawnPushBonusIndex = kPassedPawnBonusIndex + 6;
 const int kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 12;//kRookBehindPasser + 1;
-const int kTempoBonusIndex = kDoublePawnPenaltyIndex + 1;
+const int kIsolatedPawnIndex = kDoublePawnPenaltyIndex + 1;
+const int kTempoBonusIndex = kIsolatedPawnIndex + 1;
 const int kDirectPawnShieldBonus = kTempoBonusIndex + 1;
 const int kKingVectorExposure = kDirectPawnShieldBonus + 1;
 const int kKnightOutpost = kKingVectorExposure + 2;
@@ -84,7 +85,8 @@ const int kKingAttack = kKingAttackDistance + 4; // No pawns, no king
 const int kKnightSquaresIndex = kKingAttack + kQueen - kPawn;
 const int kBishopMobility = kKnightSquaresIndex + 9;
 const int kRookMobility = kBishopMobility + 14;
-const int kQueenMobility = kRookMobility + 15;
+const int kRookOpenFile = kRookMobility + 15;
+const int kQueenMobility = kRookOpenFile + 1;
 const int kSafeChecks = kQueenMobility + 28;
 const int kUnSafeChecks = kSafeChecks + 1;
 const int kUnprotectedPieces = kUnSafeChecks + 1;
@@ -98,7 +100,7 @@ const int kNumFeatures = kUncoveredPassedPawn + (2 * 2 * 6);
 
 
 
-const std::array<FeatureInfo, 31> kFeatureInfos = {{
+const std::array<FeatureInfo, 33> kFeatureInfos = {{
     FeatureInfo("King Piece Square Table", kKingPSTIndex),
     FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxScore),
     FeatureInfo("Piece Base Value", kBaseValueIndex, kMinScore, kMaxScore),
@@ -109,6 +111,7 @@ const std::array<FeatureInfo, 31> kFeatureInfos = {{
     //FeatureInfo("Passed Pawn Unblocked", kPassedPawnUnblocked),
     //FeatureInfo("Rook Behind Passed Pawn Bonus", kRookBehindPasser, -5, kMaxScore),
     FeatureInfo("Double Pawn Penalty", kDoublePawnPenaltyIndex, kMinScore, 0),
+    FeatureInfo("Isolated Pawn", kIsolatedPawnIndex),
     FeatureInfo("Tempo Bonus", kTempoBonusIndex, 0, kMaxScore),
     FeatureInfo("Direct Pawn Shield Bonus", kDirectPawnShieldBonus),
     FeatureInfo("King Vector Exposure", kKingVectorExposure),
@@ -121,7 +124,8 @@ const std::array<FeatureInfo, 31> kFeatureInfos = {{
     FeatureInfo("King Attack Danger", kKingAttack, 0, kMaxScore),
     FeatureInfo("Safe Knight Square Count", kKnightSquaresIndex, kMinScore, kMaxScore, 1),
     FeatureInfo("Bishop Mobility", kBishopMobility, kMinScore, kMaxScore, 1),
-    FeatureInfo("Rook Mobility", kRookMobility, kMinScore, kMaxScore, 1),
+    FeatureInfo("Rook Mobility", kRookMobility, kMinScore, kMaxScore),
+    FeatureInfo("Rook on Open File", kRookOpenFile, kMinScore, kMaxScore),
     FeatureInfo("Queen Mobility", kQueenMobility, kMinScore, kMaxScore, 1),
     FeatureInfo("Safe Checks", kSafeChecks),
     FeatureInfo("Unsafe Checks", kUnSafeChecks),

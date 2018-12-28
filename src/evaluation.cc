@@ -187,6 +187,7 @@ T ScoreBoard(const Board &board) {
       board.get_piece_bitboard(kWhite, kPawn),
       board.get_piece_bitboard(kBlack, kPawn)
   };
+  const BitBoard all_pawns_bb = pawn_bb[kWhite] | pawn_bb[kBlack];
 
   // Initialize pawn structure based constants.
   // These are needed later on for piece activity calculations.
@@ -325,6 +326,11 @@ T ScoreBoard(const Board &board) {
 //      bitops::PopLSB(uncovered_passed);
 //    }
 
+    BitBoard not_isolated = bitops::E(pawn_bb[color]) | bitops::W(pawn_bb[color]);
+    not_isolated = bitops::FillNorth(not_isolated, ~0);
+    not_isolated = bitops::FillSouth(not_isolated, ~0);
+    AddFeature<T>(score, color, kIsolatedPawnIndex, bitops::PopCount(pawn_bb[color] & ~not_isolated));
+
     BitBoard categorized_pawns[4];
     categorized_pawns[0] = pawn_bb[color] & opposed_pawns;
     categorized_pawns[1] = pawn_bb[color] & ~(opposed_pawns | passed[color]);
@@ -415,6 +421,12 @@ T ScoreBoard(const Board &board) {
     pieces = board.get_piece_bitboard(color, kRook);
     while (pieces) {
       Square piece_square = bitops::NumberOfTrailingZeros(pieces);
+
+      BitBoard file = magic::GetSquareFile(piece_square);
+      if (!(file & all_pawns_bb)) {
+        AddFeature<T>(score, color, kRookOpenFile, 1);
+      }
+
       AddFeature<T>(score, color, kKingAttackDistance + kRook - 1,
           magic::GetSquareDistance(piece_square, king_squares[not_color]));
       BitBoard attack_map = ~c_pieces[color]

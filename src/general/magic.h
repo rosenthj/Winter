@@ -37,6 +37,7 @@ BitBoard GetAttackVectors(BitBoard src, BitBoard des);
 BitBoard GetAttackMap(PieceType piece_type, Square square, BitBoard all_pieces);
 int GetSquareDistance(const Square a, const Square b);
 BitBoard GetKingArea(const Square square);
+BitBoard GetSquareFile(const Square square);
 
 }
 

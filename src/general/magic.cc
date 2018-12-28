@@ -259,30 +259,41 @@ const std::array<std::array<BitBoard, (1L << 12)>, 64> generateRookAttackMaps() 
 
 const std::array<BitBoard, 64> initKingSafetyMap() {
   std::array<BitBoard, 64> king_map;
-    for (Square a = 0; a < 64; a++) {
-      Square pos = a;
-      if (GetSquareX(a) == 0) {
-        assert(pos <= 56);
-        pos++;
-      }
-      else if (GetSquareX(a) == 7) {
-        assert(pos >= 7);
-        pos--;
-      }
-      if (GetSquareY(a) == 0) {
-        assert(pos < 8);
-        pos += 8;
-      }
-      else if (GetSquareY(a) == 7) {
-        assert(pos >= 56);
-        pos -= 8;
-      }
-      king_map[a] = kingAttackMap[pos] | GetSquareBitBoard(pos);
+  for (Square a = 0; a < 64; a++) {
+    Square pos = a;
+    if (GetSquareX(a) == 0) {
+      assert(pos <= 56);
+      pos++;
     }
-    return king_map;
+    else if (GetSquareX(a) == 7) {
+      assert(pos >= 7);
+      pos--;
+    }
+    if (GetSquareY(a) == 0) {
+      assert(pos < 8);
+      pos += 8;
+    }
+    else if (GetSquareY(a) == 7) {
+      assert(pos >= 56);
+      pos -= 8;
+    }
+    king_map[a] = kingAttackMap[pos] | GetSquareBitBoard(pos);
+  }
+  return king_map;
 }
 
+const std::array<BitBoard, 64> initFileMap() {
+  std::array<BitBoard, 64> file_map;
+  for (Square a = 0; a < 64; a++) {
+    BitBoard bb = GetSquareBitBoard(a);
+    bb = bitops::FillNorth(bb, ~0);
+    bb = bitops::FillSouth(bb, ~0);
+    file_map[a] = bb;
+  }
+  return file_map;
+}
 
+const std::array<BitBoard, 64> file_map = initFileMap();
 const std::array<std::array<int, 64>, 64> distance_map = initDistMap();
 const std::array<BitBoard, 64> kingSafetyMap = initKingSafetyMap();
 const std::array<std::array<BitBoard, 64>, 64> attackVectorMap = generateAttackVectorMaps();
@@ -349,6 +360,10 @@ int GetSquareDistance(const Square a, const Square b) {
 
 BitBoard GetKingArea(const Square square) {
   return kingSafetyMap[square];
+}
+
+BitBoard GetSquareFile(const Square square) {
+  return file_map[square];
 }
 
 }
