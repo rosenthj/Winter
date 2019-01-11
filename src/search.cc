@@ -1090,19 +1090,6 @@ void Thread::search() {
   root_height = board.get_num_made_moves();
   if (id == 0) {
     end_time = begin+rsearch_duration;
-    for (Thread* t : Threads.helpers) {
-      t->board.SetToSamePosition(board);
-      t->moves = moves;
-      t->perturb_root_moves();
-      while(rng() % 2) {
-        t->perturb_root_moves();
-      }
-      t->max_depth = t->board.get_num_made_moves();
-      t->current_depth = 1;
-    }
-    for (Thread* t : Threads.helpers) {
-      t->start_searching();
-    }
   }
 
   Score score = evaluation::ScoreBoard(board);
@@ -1208,8 +1195,6 @@ void Thread::search() {
 
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)){
-  // Measure complete search time
-
   max_ply = board.get_num_made_moves();
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
@@ -1226,11 +1211,24 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
-  Threads.main_thread->start_searching();
-  Threads.main_thread->wait_actions_over();
-  Threads.end_search = true;
   for (Thread* t : Threads.helpers) {
-    t->wait_actions_over();
+    t->board.SetToSamePosition(Threads.main_thread->board);
+    t->moves = Threads.main_thread->moves;
+    t->perturb_root_moves();
+    while(rng() % 2) {
+      t->perturb_root_moves();
+    }
+    t->max_depth = t->board.get_num_made_moves();
+    t->current_depth = 1;
+  }
+  std::vector<std::thread> helpers;
+  for (size_t helper_idx; helper_idx < Threads.helpers.size(); helper_idx++) {
+    helpers.emplace_back(std::thread(&Thread::search, Threads.helpers[helper_idx]));
+  }
+  Threads.main_thread->search();
+  Threads.end_search = true;
+  for (size_t helper_idx; helper_idx < Threads.helpers.size(); helper_idx++) {
+    helpers[helper_idx].join();
   }
   return Threads.main_thread->moves[0];
 }

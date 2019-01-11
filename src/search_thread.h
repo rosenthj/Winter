@@ -42,7 +42,6 @@ namespace search {
 
 struct Thread {
   Thread();
-  ~Thread();
 
   void clear_killers_and_counter_moves() {
     static_scores.fill(kNoScore);
@@ -60,15 +59,10 @@ struct Thread {
     }
   }
 
-  void idle_loop();
   void search();
-  void start_searching();
-  void wait_actions_over();
   //It may make sense to perturb move ordering slightly for LazySMP helper threads.
   void perturb_root_moves();
-  void end_execution() {
-    exit_flag = true;
-  }
+
   // The following functions return the trend of the score. Regular and strict effect the handling of
   // kNoMove scores from the previous position.
   bool improving() const;
@@ -84,14 +78,8 @@ struct Thread {
   }
 
   //Multithreading objects
-  std::thread stl_thread;//The actual thread the search function is called on.
   std::mutex mutex;
-  std::condition_variable condition_variable;
   int id;
-
-  //Signal flags
-  bool search_flag = false;
-  bool exit_flag = false;//This is the only place this flag may be set to false
 
   //Data for search local to the thread
   Board board;
