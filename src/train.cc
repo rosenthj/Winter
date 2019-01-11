@@ -763,6 +763,352 @@ void RunEMForGMM() {
   file.close();
 }
 
+struct PositionAndTarget {
+  Board board;
+  double player_to_move_result;
+};
+
+std::vector<PositionAndTarget> get_MLDataset() {
+  std::string line;
+  std::ifstream file("dataset10kf.epd");
+  size_t samples = 0;
+  std::vector<PositionAndTarget> dataset;
+  while(std::getline(file, line)) {
+    std::vector<std::string> tokens = parse::split(line, ',');
+    std::string fen = tokens[0];
+    PositionAndTarget sample;
+    sample.board.SetBoard(parse::split(fen, ' '));
+    sample.player_to_move_result = 0.5 * std::stod(tokens[2].c_str()) + 0.5 * std::stod(tokens[1].c_str());
+    dataset.emplace_back(sample);
+    samples++;
+    if (samples % 10000 == 0) {
+      std::cout << "Processed " << samples << " samples!" << std::endl;
+    }
+  }
+  file.close();
+  return dataset;
+}
+
+template<SGDVariantType sgd_variant, LearningStyle learning_style>
+void SGDTrainMLSet(bool from_scratch = false) {
+  const int k = settings::kNumClusters;
+  double kMinNu = (1.0 / kMillion);
+  const int max_position_tries = learning_style == kSupervised ? 5 : 2;
+  const long step_size = learning_style == kSupervised ? (200 * kMillion) : (max_position_tries * 1200 * kThousand);
+  const long save_frequency = learning_style == kSupervised ? (1 * kMillion) : (100 * kThousand);
+  const long benchmark_frequency = learning_style == kSupervised ? (500 * kMillion) : (5000 * kThousand);
+
+  ml::Optimizer<ml::kSigmoidCrossEntropy>* optimizer;
+  if (sgd_variant == SGDNormal) {
+    optimizer = new ml::SGD<ml::kSigmoidCrossEntropy>();
+    optimizer->nu = 1.0 / eval_scaling;
+  }
+  else if (sgd_variant == SGDAdam) {
+    ml::Adam<ml::kSigmoidCrossEntropy>* opt = new ml::Adam<ml::kSigmoidCrossEntropy>();
+    opt->nu = 2.0 * (1 - opt->beta1) / eval_scaling;
+    kMinNu = (1.0 / kMillion) * (1 - opt->beta2);
+    optimizer = opt;
+  }
+  optimizer->set_num_features(k * positional_features::kNumFeatures);
+
+  if (!from_scratch) {
+    for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+      for (size_t j = 0; j < k; j++) {
+        optimizer->regressor.weights[i * k + j] = evaluation::GetScore(i, j) / eval_scaling;
+      }
+    }
+  }
+  std::vector<PositionAndTarget> dataset = get_MLDataset();
+  if (from_scratch && settings::kTrainGMMFromScratch) {
+    std::vector<Game> games = data::LoadGames();
+    cluster::GaussianMixtureModel<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
+    SaveGMM<k>(gmm, settings::kMixtureFile);
+    evaluation::SetModel(&gmm);
+  }
+  else {
+    if (from_scratch && !settings::kTrainGMMFromScratch) {
+      evaluation::LoadMixturesHardCoded();
+    }
+  }
+
+  std::vector<int8_t> position_tries(dataset.size(), max_position_tries);
+  std::vector<double> position_targets(dataset.size(), 0);
+  std::cout << "Starting training loop" << std::endl;
+  size_t milestone = 1;
+//  size_t successive_failures = 0;
+  while (optimizer->nu > kMinNu) {
+    size_t index = rng() % dataset.size();
+    if (position_tries[index] >= max_position_tries) {
+      if (learning_style == kSupervised) {
+        position_targets[index] = dataset[index].player_to_move_result;
+      }
+      else if (learning_style == kMixedLearning) {
+        const double game_res_weight = 1;//0.5;
+        const double td_weight = 1 - game_res_weight;
+//        search::set_print_info(false);
+//        search::DepthSearch(dataset[index].board, 4);
+//        search::set_print_info(true);
+        double search_target = 0.0;//search::get_last_search_score() / eval_scaling;
+        double game_res = dataset[index].player_to_move_result;
+        position_targets[index] = td_weight * Sigmoid<double>(search_target)
+                                + game_res_weight * game_res;
+      }
+      position_tries[index] = 0;
+    }
+    position_tries[index]++;
+    Vec<double, k> probabilities = evaluation::BoardMixtureProbability(dataset[index].board);
+//    Vec<double, k> probabilities = evaluation::gmm_main->GetWeightedProbabilities(positions[index]);
+//    Vec<double, k> probabilities = gmm_main.GetWeightedProbabilities(
+//        GetBoardPhaseVec(positions[index]));
+    if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
+      if (optimizer->counter < 50 * kMillion) {
+        for (int i = 0; i < k; i++) {
+          probabilities[i] = 1.0 / k;
+        }
+      }
+      else {
+        double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
+        double sum = 0;
+        for (int i = 0; i < k; i++) {
+          probabilities[i] = std::pow(probabilities[i], p);
+          sum += probabilities[i];
+        }
+        for (int i = 0; i < k; i++) {
+          probabilities[i] /= sum;
+        }
+      }
+    }
+
+    std::vector<double> features =
+        evaluation::ScoreBoard<std::vector<double> >(dataset[index].board);
+    std::vector<double> split_features(positional_features::kNumFeatures * k);
+    for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+      for (size_t j = 0; j < k; j++) {
+        split_features[i * k + j] = features[i] * probabilities[j];
+      }
+    }
+
+//    double probability_of_position = 0;//gmm_main.GetSampleProbability(
+//        //GetBoardPhaseVec(positions[index]));
+//    if (probability_of_position == 0) {
+//      std::cout << "Error! Found impossible position!" << std::endl;
+//    }
+
+    optimizer->step(split_features, ml::Wrap(position_targets[index]));
+    EnforceConstraints(optimizer->regressor.weights);
+    for (size_t widx = 0; widx < settings::kNumClusters; widx++) {
+      optimizer->regressor.weights[positional_features::kTempoBonusIndex * settings::kNumClusters + widx] = 100 / eval_scaling;
+    }
+
+    if (optimizer->counter % save_frequency == 0) {
+      std::cout << "completed " << optimizer->counter << " iterations!"
+          << std::endl;
+      for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+        for (size_t j = 0; j < k; j++) {
+          evaluation::SetScore(i, j, std::round(optimizer->regressor.weights[i * k + j] * eval_scaling));
+//          feature_GMM_score_values[i][j] = std::round(optimizer->regressor.weights[i * k + j] * eval_scaling);
+        }
+      }
+      evaluation::SaveGMMVariables();
+      evaluation::SaveGMMVariablesHardCode("eval_weights.txt");
+      if (optimizer->counter % benchmark_frequency == 0) {
+        benchmark::EntropyLossNodeSuite(5000);
+//        benchmark::EntropyLossTimedSuite(Milliseconds(10));
+      }
+    }
+    if (optimizer->counter % step_size == 0) {
+      optimizer->nu /= 2;
+      std::cout << "New Nu: " << optimizer->nu << std::endl;
+    }
+    if (optimizer->counter > milestone) {
+      std::cout << "Milestone " << milestone << " reached" << std::endl;
+      milestone *= 10;
+    }
+  }
+  std::cout << "Training completed!" << std::endl;
+  delete optimizer;
+}
+
+std::vector<PositionAndTarget> get_ZCDataset() {
+  std::string line;
+  std::ifstream file("quiet-labeled.epd");
+  size_t samples = 0;
+  std::vector<PositionAndTarget> dataset;
+  while(std::getline(file, line)) {
+    std::vector<std::string> tokens = parse::split(line, ' ');
+    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+    PositionAndTarget sample;
+    sample.board.SetBoard(parse::split(fen, ' '));
+    double result = -1;
+    if (tokens[5].compare("\"1-0\";") == 0) {
+      result = 1;
+    }
+    else if (tokens[5].compare("\"0-1\";") == 0) {
+      result = 0;
+    }
+    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
+      result = 0.5;
+    }
+    else {
+      std::cout << "Error detected! Line:" << std::endl;
+      std::cout << line << std::endl;
+      file.close();
+      return dataset;
+    }
+    if (sample.board.get_turn() == kBlack) {
+      result = 1 - result;
+    }
+    sample.player_to_move_result = result;
+    dataset.emplace_back(sample);
+    samples++;
+    if (samples % 10000 == 0) {
+      std::cout << "Processed " << samples << " samples!" << std::endl;
+    }
+  }
+  file.close();
+  return dataset;
+}
+
+template<SGDVariantType sgd_variant, LearningStyle learning_style>
+void SGDTrainZCSet(bool from_scratch = false) {
+  const int k = settings::kNumClusters;
+  double kMinNu = (1.0 / kMillion);
+  const int max_position_tries = learning_style == kSupervised ? 5 : 2;
+  const long step_size = learning_style == kSupervised ? (200 * kMillion) : (max_position_tries * 1200 * kThousand);
+  const long save_frequency = learning_style == kSupervised ? (1 * kMillion) : (10 * kThousand);
+  const long benchmark_frequency = learning_style == kSupervised ? (500 * kMillion) : (500 * kThousand);
+
+  ml::Optimizer<ml::kSigmoidCrossEntropy>* optimizer;
+  if (sgd_variant == SGDNormal) {
+    optimizer = new ml::SGD<ml::kSigmoidCrossEntropy>();
+    optimizer->nu = 1.0 / eval_scaling;
+  }
+  else if (sgd_variant == SGDAdam) {
+    ml::Adam<ml::kSigmoidCrossEntropy>* opt = new ml::Adam<ml::kSigmoidCrossEntropy>();
+    opt->nu = 4.0 * (1 - opt->beta1) / eval_scaling;
+    kMinNu = (1.0 / kMillion) * (1 - opt->beta2);
+    optimizer = opt;
+  }
+  optimizer->set_num_features(k * positional_features::kNumFeatures);
+
+  if (!from_scratch) {
+    for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+      for (size_t j = 0; j < k; j++) {
+        optimizer->regressor.weights[i * k + j] = evaluation::GetScore(i, j) / eval_scaling;
+      }
+    }
+  }
+  std::vector<PositionAndTarget> dataset = get_ZCDataset();
+  if (from_scratch && settings::kTrainGMMFromScratch) {
+    std::vector<Game> games = data::LoadGames();
+    cluster::GaussianMixtureModel<k, kPhaseVecLength> gmm = EMForGMM<k>(games);
+    SaveGMM<k>(gmm, settings::kMixtureFile);
+    evaluation::SetModel(&gmm);
+  }
+  else {
+    if (from_scratch && !settings::kTrainGMMFromScratch) {
+      evaluation::LoadMixturesHardCoded();
+    }
+  }
+
+  std::vector<int8_t> position_tries(dataset.size(), max_position_tries);
+  std::vector<double> position_targets(dataset.size(), 0);
+  std::cout << "Starting training loop" << std::endl;
+  size_t milestone = 1;
+//  size_t successive_failures = 0;
+  while (optimizer->nu > kMinNu) {
+    size_t index = rng() % dataset.size();
+    if (position_tries[index] >= max_position_tries) {
+      if (learning_style == kSupervised) {
+        position_targets[index] = dataset[index].player_to_move_result;
+      }
+      else if (learning_style == kMixedLearning) {
+        const double game_res_weight = 0.5;
+        const double td_weight = 1 - game_res_weight;
+        search::set_print_info(false);
+        search::DepthSearch(dataset[index].board, 4);
+        search::set_print_info(true);
+        double search_target = search::get_last_search_score() / eval_scaling;
+        double game_res = dataset[index].player_to_move_result;
+        position_targets[index] = td_weight * Sigmoid<double>(search_target)
+                                + game_res_weight * game_res;
+      }
+      position_tries[index] = 0;
+    }
+    position_tries[index]++;
+    Vec<double, k> probabilities = evaluation::BoardMixtureProbability(dataset[index].board);
+//    Vec<double, k> probabilities = evaluation::gmm_main->GetWeightedProbabilities(positions[index]);
+//    Vec<double, k> probabilities = gmm_main.GetWeightedProbabilities(
+//        GetBoardPhaseVec(positions[index]));
+    if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
+      if (optimizer->counter < 50 * kMillion) {
+        for (int i = 0; i < k; i++) {
+          probabilities[i] = 1.0 / k;
+        }
+      }
+      else {
+        double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
+        double sum = 0;
+        for (int i = 0; i < k; i++) {
+          probabilities[i] = std::pow(probabilities[i], p);
+          sum += probabilities[i];
+        }
+        for (int i = 0; i < k; i++) {
+          probabilities[i] /= sum;
+        }
+      }
+    }
+
+    std::vector<double> features =
+        evaluation::ScoreBoard<std::vector<double> >(dataset[index].board);
+    std::vector<double> split_features(positional_features::kNumFeatures * k);
+    for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+      for (size_t j = 0; j < k; j++) {
+        split_features[i * k + j] = features[i] * probabilities[j];
+      }
+    }
+
+//    double probability_of_position = 0;//gmm_main.GetSampleProbability(
+//        //GetBoardPhaseVec(positions[index]));
+//    if (probability_of_position == 0) {
+//      std::cout << "Error! Found impossible position!" << std::endl;
+//    }
+
+    optimizer->step(split_features, ml::Wrap(position_targets[index]));
+    EnforceConstraints(optimizer->regressor.weights);
+    for (size_t widx = 0; widx < settings::kNumClusters; widx++) {
+      optimizer->regressor.weights[positional_features::kTempoBonusIndex * settings::kNumClusters + widx] = 100 / eval_scaling;
+    }
+
+    if (optimizer->counter % save_frequency == 0) {
+      std::cout << "completed " << optimizer->counter << " iterations!"
+          << std::endl;
+      for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
+        for (size_t j = 0; j < k; j++) {
+          evaluation::SetScore(i, j, std::round(optimizer->regressor.weights[i * k + j] * eval_scaling));
+//          feature_GMM_score_values[i][j] = std::round(optimizer->regressor.weights[i * k + j] * eval_scaling);
+        }
+      }
+      evaluation::SaveGMMVariables();
+      evaluation::SaveGMMVariablesHardCode("eval_weights.txt");
+      if (optimizer->counter % benchmark_frequency == 0) {
+        benchmark::EntropyLossNodeSuite(5000);
+//        benchmark::EntropyLossTimedSuite(Milliseconds(10));
+      }
+    }
+    if (optimizer->counter % step_size == 0) {
+      optimizer->nu /= 2;
+      std::cout << "New Nu: " << optimizer->nu << std::endl;
+    }
+    if (optimizer->counter > milestone) {
+      std::cout << "Milestone " << milestone << " reached" << std::endl;
+      milestone *= 10;
+    }
+  }
+  std::cout << "Training completed!" << std::endl;
+  delete optimizer;
+}
+
 template<SGDVariantType sgd_variant, LearningStyle learning_style>
 void SGDTrain(bool from_scratch = false) {
   const int k = settings::kNumClusters;
@@ -896,12 +1242,18 @@ void SGDTrain(bool from_scratch = false) {
 
 void Train(bool from_scratch) {
   if (settings::kTrainFromScratch) {
-    SGDTrain<SGDAdam, kMixedLearning>(from_scratch);
+    SGDTrainMLSet<SGDAdam, kMixedLearning>(from_scratch);
+//    SGDTrainZCSet<SGDAdam, kMixedLearning>(from_scratch);
+
+//    SGDTrain<SGDAdam, kMixedLearning>(from_scratch);
 //    SGDTrain<SGDNormal, kSupervised>(from_scratch);
   }
   else {
+    SGDTrainMLSet<SGDAdam, kMixedLearning>();
+//    SGDTrainZCSet<SGDAdam, kMixedLearning>();
+
     //SGDMarginVariantTrain<settings::kGMMk, SGDNormal>(false);
-    SGDTrain<SGDAdam, kMixedLearning>();
+//    SGDTrain<SGDAdam, kMixedLearning>();
     //SGDVariantTDL<SGDAdam, false>();
   }
 }
