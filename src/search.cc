@@ -1222,12 +1222,12 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     t->current_depth = 1;
   }
   std::vector<std::thread> helpers;
-  for (size_t helper_idx; helper_idx < Threads.helpers.size(); helper_idx++) {
+  for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); helper_idx++) {
     helpers.emplace_back(std::thread(&Thread::search, Threads.helpers[helper_idx]));
   }
   Threads.main_thread->search();
   Threads.end_search = true;
-  for (size_t helper_idx; helper_idx < Threads.helpers.size(); helper_idx++) {
+  for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); helper_idx++) {
     helpers[helper_idx].join();
   }
   return Threads.main_thread->moves[0];
