@@ -78,7 +78,6 @@ struct Thread {
   }
 
   //Multithreading objects
-  std::mutex mutex;
   int id;
 
   //Data for search local to the thread

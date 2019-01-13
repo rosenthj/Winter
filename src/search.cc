@@ -1211,19 +1211,17 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
+  std::vector<std::thread> helpers;
   for (Thread* t : Threads.helpers) {
-    t->board.SetToSamePosition(Threads.main_thread->board);
-    t->moves = Threads.main_thread->moves;
+    t->board.SetToSamePosition(board);
+    t->moves = moves;
     t->perturb_root_moves();
     while(rng() % 2) {
       t->perturb_root_moves();
     }
     t->max_depth = t->board.get_num_made_moves();
     t->current_depth = 1;
-  }
-  std::vector<std::thread> helpers;
-  for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); helper_idx++) {
-    helpers.emplace_back(std::thread(&Thread::search, Threads.helpers[helper_idx]));
+    helpers.emplace_back(std::thread(&Thread::search, t));
   }
   Threads.main_thread->search();
   Threads.end_search = true;
