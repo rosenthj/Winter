@@ -38,6 +38,7 @@ void Train(bool from_scratch);
 void RunEMForGMM();
 void SampledEMForGMM(int iterations = 500);
 void RunEMForNFCM();
+void TrainCSV(std::string filename);
 
 }
 

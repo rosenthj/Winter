@@ -144,6 +144,12 @@ void Loop() {
     else if (Equals(command, "print")) {
       board.Print();
     }
+    else if (Equals(command, "train_csv")) {
+      if (tokens.size() != 2) {
+        std::cout << "invalid number of arguments, expected 1 got " << tokens.size() << std::endl;
+      }
+      train::TrainCSV(tokens[index++]);
+    }
     else if (Equals(command, "print_bitboards")) {
       board.PrintBitBoards();
     }
