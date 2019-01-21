@@ -154,7 +154,7 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
 }
 
 std::mt19937_64 rng;
-size_t max_ply = 0, min_ply = 0;
+size_t min_ply = 0;
 const size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
 size_t sample_nodes = 0;
@@ -1195,7 +1195,6 @@ void Thread::search() {
 
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)){
-  max_ply = board.get_num_made_moves();
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   rsearch_depth = std::min(depth, settings::kMaxDepth);
@@ -1208,6 +1207,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     tt_move = entry.get_best_move();
   }
   Threads.main_thread->board.SetToSamePosition(board);
+  Threads.main_thread->max_depth = board.get_num_made_moves();
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
