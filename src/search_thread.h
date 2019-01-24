@@ -130,6 +130,7 @@ struct ThreadPool {
     }
   }
 
+  bool ignorance_smp;
   std::atomic_bool end_search;
   std::vector<Thread*> helpers;
   Thread* main_thread;
