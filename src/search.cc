@@ -723,6 +723,8 @@ inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
   }
 }
 
+bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry);
+
 template<int NodeType, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_node = 1) {
   assert(beta > alpha);
@@ -855,6 +857,18 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       moves_sorted = true;
     }
     const Move move = moves[i];
+
+    Depth e = 0;// Extensions
+    if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
+        && entry.depth >= depth - 3 && !(NodeType == kPV && moves.size() == 1)
+        && !is_mate_score(entry.get_score(t.board))) {
+      SortMovesML(moves, t, tt_entry);
+      moves_sorted = true;
+      if (move_is_singular(t, depth, moves, entry)) {
+        e = 1;
+      }
+    }
+
     Depth reduction = 0;
 
     if (!in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
@@ -890,14 +904,14 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     Score score;
     if (i == 0) {
       //First move gets searched at full depth and window
-      score = -AlphaBeta<NodeType, Mode>(t, -beta, -alpha, depth - 1, expected_node ^ 0x1);
+      score = -AlphaBeta<NodeType, Mode>(t, -beta, -alpha, depth - 1 + e, expected_node ^ 0x1);
     }
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
-      score = -AlphaBeta<kNW, Mode>(t, -(alpha+1), -alpha, depth - 1 - reduction, 1);
+      score = -AlphaBeta<kNW, Mode>(t, -(alpha+1), -alpha, depth - 1 + e - reduction, 1);
       //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (NodeType == kPV || reduction > 0)) {
-        score = -AlphaBeta<NodeType, Mode>(t, -beta, -alpha, depth - 1, 0);
+        score = -AlphaBeta<NodeType, Mode>(t, -beta, -alpha, depth - 1 + e, 0);
       }
     }
     assert(score >= kMinScore && score <= kMaxScore);
@@ -946,6 +960,25 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     //table::SavePVEntry(t.board, best_local_move);
   }
   return alpha;
+}
+
+bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry) {
+  const Score rBeta = entry.get_score(t.board) - 4 * depth;
+  const Score rAlpha = rBeta - 1;
+  const Depth rDepth = (depth + 1) / 3;
+  assert(!is_mate_score(rAlpha));
+  assert(entry.get_best_move() == moves[0]);
+  assert(entry.bound != kUpperBound);
+
+  for(size_t i = 1; i < moves.size(); i++) {
+    t.board.Make(moves[i]);
+    Score score = -AlphaBeta<kNW, kNormalSearchMode>(t, -rBeta, -rAlpha, rDepth);
+    t.board.UnMake();
+    if (score >= rBeta) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template<int Mode>

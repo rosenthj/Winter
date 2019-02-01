@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "0.4.1";
+const std::string engine_version = "0.4.2";
 const std::string engine_author = "Jonathan Rosenthal";
 
 const int kNumClusters = 4;
@@ -70,6 +70,7 @@ const bool kUseScoreBasedPruning = true;
 const bool kUseNullMoves = true && kUseExtensions;
 const Depth kRepsForDraw = 2;
 const Depth kMaxDepth = 128;
+const Depth kSingularExtensionDepth = 9;
 
 const bool kUseQS = true;
 
