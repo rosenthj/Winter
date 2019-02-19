@@ -237,6 +237,19 @@ template<> inline void AddFeature<int, true>(int &s,  const int index) {
   s += search_weights_in_check[index];
 }
 
+template<typename T, bool in_check> inline
+void AddFeature(T &s, const int index, int val) {
+  s[index] = val;
+}
+
+template<> inline void AddFeature<int, false>(int &s,  const int index, int val) {
+  s += search_weights[index] * val;
+}
+
+template<> inline void AddFeature<int, true>(int &s,  const int index, int val) {
+  s += search_weights_in_check[index] * val;
+}
+
 inline Move get_last_move(const Board &board) {
   if (board.get_num_made_moves() > 0) {
     return board.get_last_move();
@@ -339,6 +352,13 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
     PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
       AddFeature<T, in_check>(move_weight, kPWICounterMove);
+    }
+    if (GetMoveType(move) < kCapture) {
+      const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+      const Square destination = GetMoveDestination(move);
+      const int  score = t.get_cmh_score(last_moved_piece, last_destination,
+                                         moving_piece, destination);
+      AddFeature<T, in_check>(move_weight, kPWICMH, score / 100);
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
@@ -725,6 +745,27 @@ inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
 
 bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry);
 
+void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+  if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
+    return;
+  }
+  const Move move = t.board.get_last_move();
+  Square opp_des = GetMoveDestination(move);
+  PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
+  // TODO deal with promotion situations
+  int32_t score = std::min(depth * depth, 200);
+
+  for (int i = 0; i < quiets.size() - 1; ++i) {
+    Square des = GetMoveDestination(quiets[i]);
+    PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
+    t.update_cmh_scores(opp_piecetype, opp_des, piecetype, des, -score);
+  }
+  int i = quiets.size() - 1;
+  Square des = GetMoveDestination(quiets[i]);
+  PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
+  t.update_cmh_scores(opp_piecetype, opp_des, piecetype, des, score);
+}
+
 template<int NodeType, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_node = 1) {
   assert(beta > alpha);
@@ -756,6 +797,9 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   bool valid_entry = table::ValidateHash(entry,t.board.get_hash());
   if (NodeType != kPV && valid_entry
       && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
+//    if (entry.get_best_move() != kNullMove && GetMoveType(entry.get_best_move()) < kCapture) {
+//      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
+//    }
     return entry.get_score(t.board);
   }
 
@@ -850,6 +894,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   //Ie no checks from special moves or discovered checks.
   Vec<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
+  std::vector<Move> quiets;
   //Move loop
   for (unsigned int i = 0; i < moves.size(); i++) {
     if (i == 1 && !moves_sorted) {
@@ -899,6 +944,10 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       }
     }
 
+    if (GetMoveType(move) < kCapture) {
+      quiets.emplace_back(move);
+    }
+
     //Make moves, search and unmake
     t.board.Make(move);
     Score score;
@@ -925,6 +974,9 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
     //Check if search failed high
     if (score >= beta) {
+      if (GetMoveType(move) < kCapture) {
+        update_counter_move_history(t, quiets, depth);
+      }
       //Save TT entry
       table::SaveEntry(t.board, move, score, depth);
 
@@ -949,6 +1001,9 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
     //In PV nodes we might be improving Alpha without breaking Beta
     if (score > alpha) {
+      if (GetMoveType(move) < kCapture) {
+        update_counter_move_history(t, quiets, depth);
+      }
       //Update score and expected best move
       alpha = score;
       best_local_move = move;

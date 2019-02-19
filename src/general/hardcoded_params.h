@@ -566,7 +566,7 @@ const std::array<int, (174*4)> eval_weights_gmm = {
 // ------------------------------------------------------------------------------------------------
 
 // Search parameters used for move ordering when not in check
-const std::array<int, 114> search_params = {
+const std::array<int, 115> search_params = {
     2000, // Hash Move
     142,  // Killer Move
     112,  // Killer Move
@@ -680,11 +680,12 @@ const std::array<int, 114> search_params = {
     0,    // Rank of passed pawn destination
     128,  // Pawn move attacks a piece
     131,  // Piece under attack
-    206   // Piece under attack
+    206,   // Piece under attack
+    1
 };
 
 // Search parameters used for move ordering when in check
-const std::array<int, 114> search_params_in_check = {
+const std::array<int, 115> search_params_in_check = {
     2000, // Hash Move
     123,  // Killer Move
     116,  // Killer Move
@@ -798,7 +799,8 @@ const std::array<int, 114> search_params_in_check = {
     0,    // Rank of passed pawn destination
     -15,  // Pawn move attacks a piece
     75,   // Piece under attack
-    11    // Piece under attack
+    11,   // Piece under attack
+    1
 };
 
 }

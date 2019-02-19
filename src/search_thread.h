@@ -57,6 +57,17 @@ struct Thread {
         }
       }
     }
+
+    for (PieceType pt = kPawn; pt <= kKing; pt++) {
+      for (Square sq = 0; sq < 64; sq++) {
+        for (PieceType pt_i = kPawn; pt_i <= kKing; pt_i++) {
+          for (Square sq_i = 0; sq_i < 64; sq_i++) {
+            counter_move_history[pt][sq][pt_i][sq_i] = 0;
+          }
+        }
+      }
+    }
+
   }
 
   void search();
@@ -77,6 +88,19 @@ struct Thread {
     static_scores[height] = score;
   }
 
+  int32_t get_cmh_score(const PieceType opp_piecetype, const Square opp_des,
+                        const PieceType piecetype, const Square des) const {
+    return counter_move_history[opp_piecetype][opp_des][piecetype][des];
+  }
+
+  void update_cmh_scores(const PieceType opp_piecetype, const Square opp_des,
+                         const PieceType piecetype, const Square des, const int32_t score) {
+
+    counter_move_history[opp_piecetype][opp_des][piecetype][des] += 32 * score
+        - counter_move_history[opp_piecetype][opp_des][piecetype][des]
+                      * std::abs(score) / 512;
+  }
+
   //Multithreading objects
   int id;
 
@@ -86,6 +110,7 @@ struct Thread {
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
+  Array2d<Array2d<int32_t, 6, 64>, 6, 64> counter_move_history;
   Depth root_height;
   std::array<Score, settings::kMaxDepth> static_scores;
   std::atomic<size_t> nodes;
