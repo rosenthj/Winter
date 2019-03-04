@@ -90,6 +90,7 @@ public:
   //Print unicode chess board.
   bool IsMoveLegal(const Move move) const;
   bool IsTriviallyDrawnEnding() const;
+  bool IsFiftyMoveDraw() const { return fifty_move_count >= 100; }
   bool IsDraw() const;
   std::vector<std::string> GetFen() const;
   void Print() const;

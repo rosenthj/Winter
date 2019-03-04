@@ -226,6 +226,7 @@ template<> int init<int>() { return 0; }
 
 template<typename T, bool in_check> inline
 void AddFeature(T &s, const int index) {
+  assert(index < kNumMoveProbabilityFeatures);
   s[index] = 1;
 }
 
@@ -776,6 +777,9 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   //Immediately return 0 if we detect a draw.
   if (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2)) {
     t.nodes++;
+    if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kQuiescent>().empty()) {
+      return kMinScore;
+    }
     return 0;
   }
 
@@ -1289,6 +1293,10 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_duration = duration;
   rsearch_mode = Mode;
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
+  assert(moves.size() != 0);
+  if (moves.size() == 1) {
+    return moves[0];
+  }
   table::Entry entry = table::GetEntry(board.get_hash());
   Move tt_move = kNullMove;
   if (table::ValidateHash(entry,board.get_hash())) {
