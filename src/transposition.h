@@ -55,7 +55,8 @@ public:
 
 void SetTableSize(const size_t MB);
 Entry GetEntry(const HashType hash);
-void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
+void SaveEntry(const Board &board, const Move best_move, const Score score,
+               const Depth depth, const uint8_t bound = kLowerBound);
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth);
 bool ValidateHash(const Entry &entry, const HashType hash);
 

@@ -637,8 +637,10 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
     if (sufficient_bounds(t.board, entry, alpha, beta, 0)) {
       return entry.get_score(t.board);
     }
-    assert(entry.bound == kLowerBound || entry.bound == kExactBound);
-    lower_bound_score = entry.get_score(t.board);
+    // assert(entry.bound == kLowerBound || entry.bound == kExactBound);
+    if (entry.bound != kUpperBound) {
+      lower_bound_score = entry.get_score(t.board);
+    }
   }
 
   //Static evaluation
@@ -781,6 +783,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
+  const Score original_alpha = alpha;
   Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
 
   //Immediately return 0 if we detect a draw.
@@ -831,7 +834,8 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       }
       else {
         static_eval = evaluation::ScoreBoard(t.board);
-        if (entry.bound == kLowerBound && static_eval < entry.get_score(t.board)) {
+        if ( (entry.bound == kLowerBound && static_eval < entry.get_score(t.board))
+            || (entry.bound == kUpperBound && static_eval > entry.get_score(t.board)) ) {
           static_eval = entry.get_score(t.board);
         }
       }
@@ -897,7 +901,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     moves_sorted = true;
   }
 
-  Move best_local_move = moves[0];
+  Move best_local_move = tt_entry;
   if (NodeType == kPV && moves.size() == 1) {
     depth++;
   }
@@ -919,7 +923,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     Depth e = 0;// Extensions
     if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
         && entry.depth >= depth - 3 && !(NodeType == kPV && moves.size() == 1)
-        && !is_mate_score(entry.get_score(t.board))) {
+        && entry.bound != kUpperBound && !is_mate_score(entry.get_score(t.board))) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
       if (move_is_singular(t, depth, moves, entry)) {
@@ -1024,14 +1028,17 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     }
     if (score > lower_bound_score) {
       lower_bound_score = score;
-      best_local_move = move;
     }
   }
-  if (NodeType != kNW) {
+  if (NodeType != kNW && alpha > original_alpha) {
+    assert(best_local_move != kNullMove);
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
-    //table::SavePVEntry(t.board, best_local_move);
   }
+  else {
+    table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
+  }
+
   return lower_bound_score;
 }
 

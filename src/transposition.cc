@@ -96,7 +96,8 @@ Entry GetEntry(const HashType hash) {
 }
 
 
-void SaveEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
+void SaveEntry(const Board &board, const Move best_move, const Score score,
+               const Depth depth, const uint8_t bound) {
   HashType hash = board.get_hash();
   int index = HashFunction(hash);
 
@@ -108,7 +109,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score, cons
   entry.set_score(score, board);
   entry.set_best_move(best_move);
   entry.depth = depth;
-  entry.bound = kLowerBound;
+  entry.bound = bound;
   table[index] = entry;
 }
 
