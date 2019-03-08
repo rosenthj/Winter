@@ -619,6 +619,7 @@ Score SQSearch(Board &board) {
 template<int Mode>
 Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
   t.nodes++;
+  Score lower_bound_score = kMinScore + t.board.get_num_made_moves();
   //Update max ply reached in search
   if (t.max_depth < t.board.get_num_made_moves()) {
     t.max_depth = t.board.get_num_made_moves();
@@ -630,10 +631,14 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
   }
 
   //TT probe
-  table::Entry entry = table::GetEntry(t.board.get_hash());
-  bool valid_hash = table::ValidateHash(entry,t.board.get_hash());
-  if (valid_hash && sufficient_bounds(t.board, entry, alpha, beta, 0)) {
-    return entry.get_score(t.board);
+  const table::Entry entry = table::GetEntry(t.board.get_hash());
+  const bool valid_hash = table::ValidateHash(entry,t.board.get_hash());
+  if (valid_hash) {
+    if (sufficient_bounds(t.board, entry, alpha, beta, 0)) {
+      return entry.get_score(t.board);
+    }
+    assert(entry.bound == kLowerBound || entry.bound == kExactBound);
+    lower_bound_score = entry.get_score(t.board);
   }
 
   //Static evaluation
@@ -662,6 +667,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
     if (static_eval > alpha) {
       alpha = static_eval;
     }
+    lower_bound_score = std::max(static_eval, lower_bound_score);
   }
 
   //Get moves
@@ -672,11 +678,11 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
       //In check all moves are generated, so if we have no moves in check it is mate.
       return kMinScore+t.board.get_num_made_moves();
     }
-    return alpha;
+    return lower_bound_score;
   }
 
   //Sort move list
-  if (table::ValidateHash(entry,t.board.get_hash())) {
+  if (valid_hash) {
     SortMoves<kQuiescent>(moves, t.board, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
@@ -698,20 +704,23 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
     Score score = -QuiescentSearch<Mode>(t, -beta, -alpha);
     t.board.UnMake();
 
-    //Return beta if we fail high
-    if (score >= beta) {
-      //table::SaveEntry(board, move, score, 0);
-      return beta;
-    }
+    if (score > lower_bound_score) {
+      //Return beta if we fail high
+      if (score >= beta) {
+        //table::SaveEntry(board, move, score, 0);
+        return score;
+      }
 
-    //Update alpha in PV nodes if possible
-    if (score > alpha) {
-      alpha = score;
+      //Update alpha in PV nodes if possible
+      if (score > alpha) {
+        alpha = score;
+      }
+      lower_bound_score = score;
     }
   }
 
   //Return the lower bound after all has been said and done.
-  return alpha;
+  return lower_bound_score;
 }
 
 inline Score get_futility_margin(Depth depth, Score score, bool improving) {
@@ -772,13 +781,13 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
-  const Score original_alpha = alpha;
+  Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
 
   //Immediately return 0 if we detect a draw.
   if (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2)) {
     t.nodes++;
-    if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kQuiescent>().empty()) {
-      return kMinScore;
+    if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kNonQuiescent>().empty()) {
+      return kMinScore+t.board.get_num_made_moves();
     }
     return 0;
   }
@@ -850,7 +859,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
                                     depth - R, (expected_node & (~0x1)) + 2);
       t.board.UnMake();
       if (score >= beta) {
-        return beta;
+        return score;
       }
     }
   }
@@ -1000,7 +1009,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
         assert(last_moved_piece != kNoPiece);
         t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination] = move;
       }
-      return beta;
+      return score;
     }
 
     //In PV nodes we might be improving Alpha without breaking Beta
@@ -1010,15 +1019,20 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       }
       //Update score and expected best move
       alpha = score;
+      lower_bound_score = score;
+      best_local_move = move;
+    }
+    if (score > lower_bound_score) {
+      lower_bound_score = score;
       best_local_move = move;
     }
   }
-  if (alpha > original_alpha) {
+  if (NodeType != kNW) {
     // We should save any best move which has improved alpha.
-    table::SavePVEntry(t.board, best_local_move, alpha, depth);
+    table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
     //table::SavePVEntry(t.board, best_local_move);
   }
-  return alpha;
+  return lower_bound_score;
 }
 
 bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry) {
@@ -1044,6 +1058,7 @@ template<int Mode>
 Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_depth,
                      std::vector<Move> &moves) {
   Score alpha = original_alpha;
+  Score lower_bound_score = kMinScore;
   //const bool in_check = board.InCheck();
   if (settings::kRepsForDraw == 3 && alpha < -1 && t.board.MoveInListCanRepeat(moves)) {
     if (beta <= 0) {
@@ -1063,6 +1078,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
         return score;
       }
       alpha = std::max(score, alpha);
+      lower_bound_score = std::max(score, lower_bound_score);
     }
     else {
 //      Depth reduction = 0;
@@ -1076,15 +1092,16 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
       if (settings::kRepsForDraw == 3 && score < 0 && t.board.CountRepetitions() >= 2) {
         score = 0;
       }
+      lower_bound_score = std::max(score, lower_bound_score);
       t.board.UnMake();
       if (finished(t)) {
         Threads.end_search = true;
-        return alpha;
+        return lower_bound_score;
       }
       if (score >= beta) {
         auto it = moves.rbegin() + moves.size() - i - 1;
         std::rotate(it, it + 1, moves.rend());
-        return beta;
+        return score;
       }
       else if (score > alpha) {
         alpha = score;
@@ -1094,10 +1111,10 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     }
   }
   if (t.id == 0) {
-    table::SavePVEntry(t.board, moves[0], alpha, current_depth);
+    table::SavePVEntry(t.board, moves[0], lower_bound_score, current_depth);
     //table::SavePVEntry(t.board, moves[0]);
   }
-  return alpha;
+  return lower_bound_score;
 }
 
 // Estimates the standard deviation of an assumed distribution of scores.
@@ -1142,7 +1159,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
         if (!is_mate_score(alpha) && !is_mate_score(beta)) {
           beta = (alpha + 3 * beta) / 4;
         }
-        alpha = std::max(alpha-delta, kMinScore);
+        alpha = std::max(score-delta, kMinScore);
         if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
           if (alpha > 0) {
             alpha = 0;
@@ -1156,7 +1173,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
         if (!is_mate_score(alpha) && !is_mate_score(beta)) {
           alpha = (3 * alpha + beta) / 4;
         }
-        beta = std::min(beta+delta, kMaxScore);
+        beta = std::min(score+delta, kMaxScore);
         if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
           if (beta < 0) {
             beta = 0;
