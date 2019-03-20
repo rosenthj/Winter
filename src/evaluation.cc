@@ -533,7 +533,9 @@ Score ScoreBoard(const Board &board) {
 //      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
 
   assert(std::abs(weights.sum() - 1.0) < 0.0001);
-  return std::round(weights.dot(score));
+  Score eval_score = std::round(weights.dot(score));
+  assert(!is_mate_score(eval_score));
+  return eval_score;
 }
 
 template std::vector<double> ScoreBoard<std::vector<double> >(const Board &board);

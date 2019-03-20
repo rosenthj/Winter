@@ -107,6 +107,10 @@ const Score kMaxScore = 100000;
 const Score kMinScore = -kMaxScore;
 const Score kNoScore = kMinScore-1;
 
+inline bool is_mate_score(const Score score) {
+  return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
+}
+
 const int kLowerBound = 1;
 const int kUpperBound = 2;
 const int kExactBound = kLowerBound | kUpperBound;

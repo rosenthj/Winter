@@ -153,6 +153,14 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
   return false;
 }
 
+//inline void assert_scores_ok(Score alpha, Score beta) {
+//  assert(alpha < beta);
+//  assert(alpha >= kMinScore);
+//  assert(alpha <= kMaxScore);
+//  assert(beta >= kMinScore);
+//  assert(beta <= kMaxScore);
+//}
+
 std::mt19937_64 rng;
 size_t min_ply = 0;
 const size_t kInfiniteNodes = 1000000000000;
@@ -521,10 +529,6 @@ inline bool sufficient_bounds(const Board &board, const table::Entry &entry,
           || (entry.bound == kUpperBound && score <= alpha));
 }
 
-inline bool is_mate_score(const Score score) {
-  return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
-}
-
 inline bool is_null_move_allowed(const Board &board, const Depth depth) {
   return settings::kUseNullMoves && depth > 1
       && board.has_non_pawn_material(board.get_turn());
@@ -780,6 +784,10 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
 
 template<int NodeType, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_node = 1) {
+  assert(alpha >= kMinScore);
+  assert(alpha <= kMaxScore);
+  assert(beta >= kMinScore);
+  assert(beta <= kMaxScore);
   assert(beta > alpha);
   assert(beta == alpha + 1 || NodeType != kNW);
 
@@ -1043,10 +1051,11 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 }
 
 bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry) {
-  const Score rBeta = entry.get_score(t.board) - 4 * depth;
+  const Score Beta = entry.get_score(t.board);
+  const Score rBeta = Beta - 4 * depth;
   const Score rAlpha = rBeta - 1;
   const Depth rDepth = (depth + 1) / 3;
-  assert(!is_mate_score(rAlpha));
+  assert(!is_mate_score(Beta));
   assert(entry.get_best_move() == moves[0]);
   assert(entry.bound != kUpperBound);
 
@@ -1064,6 +1073,12 @@ bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &mov
 template<int Mode>
 Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_depth,
                      std::vector<Move> &moves) {
+  assert(original_alpha >= kMinScore);
+  assert(original_alpha <= kMaxScore);
+  assert(beta >= kMinScore);
+  assert(beta <= kMaxScore);
+  assert(original_alpha < beta);
+
   Score alpha = original_alpha;
   Score lower_bound_score = kMinScore;
   //const bool in_check = board.InCheck();
@@ -1138,13 +1153,14 @@ inline Score estimate_Delta(const std::vector<Score> &previous_scores) {
       // Minor hack to deal with overflow/underflow issues.
       return 250;
     }
-    Score diff = belief - previous_scores[i];
+    double diff = belief - previous_scores[i]; // double to avoid overflow
     weighted_sum += diff * diff * weight;
     sum_weights += weight;
     weight *= discount;
   }
   weighted_sum += 400 * 400 * weight;
   sum_weights += weight;
+  assert(weighted_sum > 0);
   return 10 + std::round(std::sqrt(weighted_sum / sum_weights));
 }
 
@@ -1156,39 +1172,37 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   else {
     Score score = previous_scores.back();
     Score std_dev_estimate = estimate_Delta(previous_scores);
+    assert(std_dev_estimate >= 2);
     Score delta = 2 * std_dev_estimate;
     Score alpha = std::max(score-delta, kMinScore);
     Score beta = std::min(score+delta, kMaxScore);
     SortMovesML(moves, t, moves[0]);
     score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
     while (!finished(t) && (score <= alpha || score >= beta)) {
+      assert(delta > 0);
       if (score <= alpha) {
         if (!is_mate_score(alpha) && !is_mate_score(beta)) {
-          beta = (alpha + 3 * beta) / 4;
+          beta = (alpha + (3 * beta)) / 4;
         }
-        alpha = std::max(score-delta, kMinScore);
-        if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
-          if (alpha > 0) {
-            alpha = 0;
-          }
-          else {
-            alpha = kMinScore;
-          }
+        if ((score - kMinScore) < delta) {
+          alpha = kMinScore;
         }
+        else {
+          alpha = score - delta;
+        }
+        assert(alpha < beta);
       }
       else if (score >= beta) {
         if (!is_mate_score(alpha) && !is_mate_score(beta)) {
-          alpha = (3 * alpha + beta) / 4;
+          alpha = ((3 * alpha) + beta) / 4;
         }
-        beta = std::min(score+delta, kMaxScore);
-        if (delta > std_dev_estimate * 8) {// We failed thrice, all bets are off.
-          if (beta < 0) {
-            beta = 0;
-          }
-          else {
-            beta = kMaxScore;
-          }
+        if ((kMaxScore - score) < delta) {
+          beta = kMaxScore;
         }
+        else {
+          beta = score + delta;
+        }
+        assert(alpha < beta);
       }
       score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
       delta *= 2;
