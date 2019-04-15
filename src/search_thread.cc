@@ -53,6 +53,40 @@ void Thread::perturb_root_moves() {
   }
 }
 
+void Thread::set_move(Move move) {
+  Depth height = get_height();
+  if (move == kNullMove) {
+    passed_moves[height] = { kNoPiece, 0 };
+  }
+  else {
+    passed_moves[height].pt = GetPieceType(board.get_piece(GetMoveSource(move)));
+    passed_moves[height].des = GetMoveDestination(move);
+    assert(passed_moves[get_height()].pt != kNoPiece);
+  }
+}
+
+//int32_t Thread::get_fu_score(Move move) const {
+//  if (get_height() < 2) {
+//    return 0;
+//  }
+//  PieceTypeAndDestination pt_and_des = get_previous_move(2);
+//  if (pt_and_des.pt == kNoPiece) {
+//    return 0;
+//  }
+//  PieceType piece_type = GetPieceType(board.get_piece(GetMoveSource(move)));
+//  Square des = GetMoveDestination(move);
+//  return followup_move_history[pt_and_des.pt][pt_and_des.des][piece_type][des];
+//}
+
+PieceTypeAndDestination Thread::get_previous_move(Depth moves_ago) const {
+  return passed_moves[std::max(get_height() - moves_ago, 0)];
+}
+
+Depth Thread::get_height() const {
+  assert(board.get_num_made_moves() >= root_height);
+  return std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+}
+
 bool Thread::improving() const {
   Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
   // kNoScore is defined as smaller than min score, so the second condition also implies
@@ -87,9 +121,44 @@ bool Thread::strict_worsening() const {
   return height >= 2 && static_scores[height] < static_scores[height-2];
 }
 
+template<int moves_ago>
+int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
+                      const PieceType piecetype, const Square des) const {
+  const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
+  assert(idx >= 0 && idx < continuation_history.size());
+  return continuation_history[idx][opp_piecetype][opp_des][piecetype][des];
+}
+
+template<int moves_ago>
+void Thread::update_continuation_score(const PieceType opp_piecetype, const Square opp_des,
+                       const PieceType piecetype, const Square des, const int32_t score) {
+  const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
+  assert(idx >= 0 && idx < continuation_history.size());
+  continuation_history[idx][opp_piecetype][opp_des][piecetype][des] += 32 * score
+      - continuation_history[idx][opp_piecetype][opp_des][piecetype][des]
+                    * std::abs(score) / 512;
+}
+
+template<int moves_ago>
+int32_t Thread::get_continuation_score(const Move move) const {
+  if (get_height() < 2) {
+    return 0;
+  }
+  const PieceTypeAndDestination pt_and_des = get_previous_move(2);
+  if (pt_and_des.pt == kNoPiece) {
+    return 0;
+  }
+  const PieceType piece_type = GetPieceType(board.get_piece(GetMoveSource(move)));
+  const Square des = GetMoveDestination(move);
+  const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
+  assert(idx >= 0 && idx < continuation_history.size());
+  return continuation_history[idx][pt_and_des.pt][pt_and_des.des][piece_type][des];
+}
+
 ThreadPool::ThreadPool() {
   main_thread = new Thread();
   main_thread->id = 0;
+  ignorance_smp = false;
 }
 
 void ThreadPool::set_num_threads(size_t num_threads) {
@@ -108,5 +177,52 @@ void ThreadPool::set_num_threads(size_t num_threads) {
     helpers.pop_back();
   }
 }
+
+void ThreadPool::clear_killers_and_countermoves() {
+  main_thread->clear_killers_and_counter_moves();
+  for (Thread* thread : helpers) {
+    thread->clear_killers_and_counter_moves();
+  }
+}
+
+size_t ThreadPool::get_thread_count() const {
+  return helpers.size() + 1;
+}
+size_t ThreadPool::get_node_count() const {
+  size_t sum = main_thread->nodes;
+  for (Thread* helper : helpers) {
+    sum += helper->nodes;
+  }
+  return sum;
+}
+
+size_t ThreadPool::get_max_depth() const {
+  size_t max_d = main_thread->max_depth;
+  for (Thread* helper : helpers) {
+    if (helper->max_depth > max_d) {
+      max_d = helper->max_depth;
+    }
+  }
+  return max_d;
+}
+
+void ThreadPool::reset_node_count() {
+  main_thread->nodes = 0;
+  for (Thread* helper : helpers) {
+    helper->nodes = 0;
+  }
+}
+
+template int32_t Thread::get_continuation_score<1>(const PieceType opp_piecetype, const Square opp_des,
+                                                   const PieceType piecetype, const Square des) const;
+
+template void Thread::update_continuation_score<1>(const PieceType opp_piecetype, const Square opp_des,
+                                                   const PieceType piecetype, const Square des, const int32_t score);
+
+template int32_t Thread::get_continuation_score<2>(const Move move) const;
+
+template void Thread::update_continuation_score<2>(const PieceType opp_piecetype, const Square opp_des,
+                                                   const PieceType piecetype, const Square des, const int32_t score);
+
 
 }

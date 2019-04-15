@@ -40,6 +40,11 @@
 
 namespace search {
 
+struct PieceTypeAndDestination {
+  PieceType pt;
+  Square des;
+};
+
 struct Thread {
   Thread();
 
@@ -58,11 +63,13 @@ struct Thread {
       }
     }
 
-    for (PieceType pt = kPawn; pt <= kKing; pt++) {
-      for (Square sq = 0; sq < 64; sq++) {
-        for (PieceType pt_i = kPawn; pt_i <= kKing; pt_i++) {
-          for (Square sq_i = 0; sq_i < 64; sq_i++) {
-            counter_move_history[pt][sq][pt_i][sq_i] = 0;
+    for (size_t idx = 0; idx < continuation_history.size(); idx++) {
+      for (PieceType pt = kPawn; pt <= kKing; pt++) {
+        for (Square sq = 0; sq < 64; sq++) {
+          for (PieceType pt_i = kPawn; pt_i <= kKing; pt_i++) {
+            for (Square sq_i = 0; sq_i < 64; sq_i++) {
+              continuation_history[idx][pt][sq][pt_i][sq_i] = 0;
+            }
           }
         }
       }
@@ -88,18 +95,22 @@ struct Thread {
     static_scores[height] = score;
   }
 
-  int32_t get_cmh_score(const PieceType opp_piecetype, const Square opp_des,
-                        const PieceType piecetype, const Square des) const {
-    return counter_move_history[opp_piecetype][opp_des][piecetype][des];
-  }
+  template<int moves_ago>
+  int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
+                        const PieceType piecetype, const Square des) const;
 
-  void update_cmh_scores(const PieceType opp_piecetype, const Square opp_des,
-                         const PieceType piecetype, const Square des, const int32_t score) {
+  template<int moves_ago>
+  void update_continuation_score(const PieceType opp_piecetype, const Square opp_des,
+                         const PieceType piecetype, const Square des, const int32_t score);
 
-    counter_move_history[opp_piecetype][opp_des][piecetype][des] += 32 * score
-        - counter_move_history[opp_piecetype][opp_des][piecetype][des]
-                      * std::abs(score) / 512;
-  }
+  template<int moves_ago>
+  int32_t get_continuation_score(const Move move) const;
+
+  void set_move(Move move);
+
+  PieceTypeAndDestination get_previous_move(Depth moves_ago) const;
+
+  Depth get_height() const;
 
   //Multithreading objects
   int id;
@@ -110,7 +121,8 @@ struct Thread {
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
-  Array2d<Array2d<int32_t, 6, 64>, 6, 64> counter_move_history;
+  Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
+  std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   Depth root_height;
   std::array<Score, settings::kMaxDepth> static_scores;
   std::atomic<size_t> nodes;
@@ -121,39 +133,13 @@ struct ThreadPool {
   ThreadPool();
   //Set number of threads including main thread
   void set_num_threads(size_t num_threads);
-  void clear_killers_and_countermoves() {
-    main_thread->clear_killers_and_counter_moves();
-    for (Thread* thread : helpers) {
-      thread->clear_killers_and_counter_moves();
-    }
-  }
-  size_t count() {
-    return helpers.size() + 1;
-  }
-  size_t node_count() {
-    size_t sum = main_thread->nodes;
-    for (Thread* helper : helpers) {
-      sum += helper->nodes;
-    }
-    return sum;
-  }
+  void clear_killers_and_countermoves();
 
-  size_t max_depth() {
-    size_t max_d = main_thread->max_depth;
-    for (Thread* helper : helpers) {
-      if (helper->max_depth > max_d) {
-        max_d = helper->max_depth;
-      }
-    }
-    return max_d;
-  }
+  size_t get_thread_count() const;
+  size_t get_node_count() const;
 
-  void reset_node_count() {
-    main_thread->nodes = 0;
-    for (Thread* helper : helpers) {
-      helper->nodes = 0;
-    }
-  }
+  size_t get_max_depth() const;
+  void reset_node_count();
 
   bool ignorance_smp;
   std::atomic_bool end_search;

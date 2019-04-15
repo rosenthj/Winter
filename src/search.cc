@@ -175,7 +175,8 @@ inline bool finished(search::Thread &thread) {
   if (thread.id == 0) {
     if (skip_time_check <= 0) {
       skip_time_check = 256;
-      return end_time <= now() || max_nodes < search::Threads.node_count() || search::Threads.end_search.load(std::memory_order_relaxed);
+      return end_time <= now() || max_nodes < search::Threads.get_node_count()
+                               || search::Threads.end_search.load(std::memory_order_relaxed);
     }
     skip_time_check--;
     return search::Threads.end_search;
@@ -365,9 +366,10 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
     if (GetMoveType(move) < kCapture) {
       const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
       const Square destination = GetMoveDestination(move);
-      const int  score = t.get_cmh_score(last_moved_piece, last_destination,
+      const int  score = t.get_continuation_score<1>(last_moved_piece, last_destination,
                                          moving_piece, destination);
       AddFeature<T, in_check>(move_weight, kPWICMH, score / 100);
+      AddFeature<T, in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 125);
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
@@ -774,12 +776,33 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   for (int i = 0; i < quiets.size() - 1; ++i) {
     Square des = GetMoveDestination(quiets[i]);
     PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-    t.update_cmh_scores(opp_piecetype, opp_des, piecetype, des, -score);
+    t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
   }
   int i = quiets.size() - 1;
   Square des = GetMoveDestination(quiets[i]);
   PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-  t.update_cmh_scores(opp_piecetype, opp_des, piecetype, des, score);
+  t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
+
+  if (t.get_height() < 2) {
+    return;
+  }
+
+  const PieceTypeAndDestination last_own_move = t.get_previous_move(2);
+  if (last_own_move.pt == kNoPiece) {
+    return;
+  }
+  const PieceType previous_piecetype = last_own_move.pt;
+  const Square previous_des = last_own_move.des;
+
+  for (i = 0; i < quiets.size() - 1; ++i) {
+    des = GetMoveDestination(quiets[i]);
+    piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
+    t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, -score);
+  }
+  i = quiets.size() - 1;
+  des = GetMoveDestination(quiets[i]);
+  piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
+  t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
 }
 
 template<int NodeType, int Mode>
@@ -865,6 +888,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
 
     //Null Move Pruning
     if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
+      t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
       Score score = -AlphaBeta<kNW, Mode>(t, -beta, -alpha,
@@ -974,6 +998,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     }
 
     //Make moves, search and unmake
+    t.set_move(move);
     t.board.Make(move);
     Score score;
     if (i == 0) {
@@ -1060,6 +1085,7 @@ bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &mov
   assert(entry.bound != kUpperBound);
 
   for(size_t i = 1; i < moves.size(); i++) {
+    t.set_move(moves[i]);
     t.board.Make(moves[i]);
     Score score = -AlphaBeta<kNW, kNormalSearchMode>(t, -rBeta, -rAlpha, rDepth);
     t.board.UnMake();
@@ -1089,6 +1115,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     alpha = -1;
   }
   for (int i = 0; i < moves.size(); i++) {
+    t.set_move(moves[i]);
     t.board.Make(moves[i]);
     if (i == 0) {
       Score score = -AlphaBeta<kPV, Mode>(t, -beta, -alpha, current_depth - 1);
@@ -1244,7 +1271,7 @@ void Thread::search() {
       if (current_depth <= Threads.main_thread->current_depth) {
         count++;
       }
-      if ((count - 1) >= (Threads.count()+1) / 2) {
+      if ((count - 1) >= (Threads.get_thread_count()+1) / 2) {
         lock.unlock();
         continue;
       }
@@ -1277,12 +1304,12 @@ void Thread::search() {
       }
       std::vector<Move> pv;
       build_pv(board, pv, current_depth);
-      size_t node_count = Threads.node_count();
+      size_t node_count = Threads.get_node_count();
       Time end = now();
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (print_info) {
         std::cout << "info "  << " depth " << current_depth
-            << " seldepth " << (Threads.max_depth() - board.get_num_made_moves())
+            << " seldepth " << (Threads.get_max_depth() - board.get_num_made_moves())
             << " time " << time_used.count()
             << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
         if (!is_mate_score(score)) {

@@ -162,7 +162,7 @@ const int kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
 const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
 const int kPWIPieceUnderAttack = kPWIPawnAttack + 1;
 const int kPWICMH = kPWIPieceUnderAttack + 2;
-const int kNumMoveProbabilityFeatures = kPWICMH+ 1;
+const int kNumMoveProbabilityFeatures = kPWICMH + 2;
 
 const std::array<FeatureInfo, 20> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
