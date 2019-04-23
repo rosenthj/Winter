@@ -32,23 +32,25 @@
 #include <chrono>
 #include <array>
 
-//A bitboard is a 64bit boolean feature representation of the board.
+// A bitboard is a 64bit boolean feature representation of the board.
 typedef uint64_t BitBoard;
-//A square is defined by its index
+// A square is defined by its index
 typedef int32_t Square;
-//A move references a source, a destination square and a move type, but no piece.
+// A move references a source, a destination square and a move type, but no piece.
 typedef int32_t Move;
-//A movetype references whether a move is a normal move or a special move
-//such as a pawn promotion or castling.
+// A movetype references whether a move is a normal move or a special move
+// such as a pawn promotion or castling.
 typedef Move MoveType;
-//A piece is an object with a PieceType and Color
+// MoveScore is used to order moves.
+typedef int32_t MoveScore;
+// A piece is an object with a PieceType and Color
 typedef int32_t Piece;
-//A piecetype is a reference to one of King,Queen,Rook,Bishop,Knight or Pawn
+// A piecetype is a reference to one of King,Queen,Rook,Bishop,Knight or Pawn
 typedef Piece PieceType;
-//A color is a reference to one of the players.
+// A color is a reference to one of the players.
 typedef Piece Color;
-//A score is a value assigned to a position which represents how good the position
-//for the player to move.
+// A score is a value assigned to a position which represents how good the position
+// for the player to move.
 typedef int32_t Score;
 typedef int32_t Depth;
 typedef double Probability;

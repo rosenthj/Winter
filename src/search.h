@@ -36,7 +36,7 @@
 
 namespace search {
 
-uint64_t Perft(Board &board, Depth depth);
+size_t Perft(Board &board, Depth depth);
 Move DepthSearch(Board board, Depth depth);
 Move TimeSearch(Board board, Milliseconds time);
 Move FixedTimeSearch(Board board, Milliseconds time);

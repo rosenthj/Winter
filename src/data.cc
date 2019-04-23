@@ -133,7 +133,7 @@ void SaveBoardFens(std::string filename, std::vector<Board> boards) {
   for (Board board : boards) {
     std::vector<std::string> fen_tokens = board.GetFen();
     file << fen_tokens[0];
-    for (int i = 1; i < fen_tokens.size(); i++) {
+    for (size_t i = 1; i < fen_tokens.size(); i++) {
       file << " " << fen_tokens[i];
     }
     file << std::endl;

@@ -99,7 +99,7 @@ double MoveOrderTest() {
   double top_1r = 0, top_2r = 0, top_3r = 0, top_5r = 0, top_halfr = 0;
   search::clear_killers_and_counter_moves();
 
-  for (int idx = 0; idx < games.size(); idx++) {
+  for (size_t idx = 0; idx < games.size(); idx++) {
     Game game = games[idx];
     game.set_to_position_after(0);
     while (game.board.get_num_made_moves() < game.moves.size() - 1) {
@@ -109,7 +109,7 @@ double MoveOrderTest() {
         game.forward();
         continue;
       }
-      int i;
+      size_t i;
       for (i = 0; i < moves.size(); i++) {
         if (game.moves[move_num] == moves[i])
           break;
@@ -164,7 +164,7 @@ void SymmetrySuite() {
     test_sets.emplace_back(line);
   }
   //Time start = now();
-  long test_sets_passed = 0;
+  size_t test_sets_passed = 0;
   for (SymmetryTest test_set : test_sets) {
     if (evaluation::ScoreBoard(test_set.board1)
         == evaluation::ScoreBoard(test_set.board2))
@@ -188,11 +188,11 @@ void PerftSuite() {
     test_sets.emplace_back(line);
   }
   Time start = now();
-  long test_sets_passed = 0;
-  for (int i = 0; i < test_sets.size(); i++) {
+  size_t test_sets_passed = 0;
+  for (size_t i = 0; i < test_sets.size(); i++) {
     PerftTestSet test_set = test_sets[i];
     bool passed = true;
-    for (std::pair<Depth, long> depth_result : test_set.depth_results) {
+    for (std::pair<Depth, size_t> depth_result : test_set.depth_results) {
       if (search::Perft(test_set.board, depth_result.first) != depth_result.second) {
         std::cout << "\033[31mFailed set " << i << " on input ("
             << depth_result.first << "," << depth_result.second << ")\033[0m"<< std::endl;
@@ -237,7 +237,7 @@ int TimeToDepthSuite() {
     depths.push_back(depth);
   }
   Time start = now();
-  for (unsigned int t = 0; t < boards.size(); t++) {
+  for (size_t t = 0; t < boards.size(); t++) {
     Time test_start = now();
     search::DepthSearch(boards[t], depths[t]);
     Time test_end = now();
@@ -258,11 +258,11 @@ double EntropyLossTimedSuite(Milliseconds time_per_position) {
   //We want to count the number of drawn games in order to calculate the
   //minimal achievable error our engine can achieve on the data.
   double total_error = 0, decisive_error = 0, draw_error = 0;
-  int draws = 0;
+  size_t draws = 0;
   int l_margin = games.size() / 10;
   int u_margin = l_margin * 2;
   search::set_print_info(false);
-  for (int idx = 0; idx < games.size(); idx++) {
+  for (size_t idx = 0; idx < games.size(); idx++) {
     int num_made_moves = games[idx].moves.size();
     games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
                                         / (games.size() + u_margin));
@@ -308,11 +308,11 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
   //We want to count the number of drawn games in order to calculate the
   //minimal achievable error our engine can achieve on the data.
   double total_error = 0, decisive_error = 0, draw_error = 0;
-  int draws = 0;
+  size_t draws = 0;
   int l_margin = games.size() / 10;
   int u_margin = l_margin * 2;
   search::set_print_info(false);
-  for (int idx = 0; idx < games.size(); idx++) {
+  for (size_t idx = 0; idx < games.size(); idx++) {
     int num_made_moves = games[idx].moves.size();
     games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
                                         / (games.size() + u_margin));
@@ -384,16 +384,16 @@ void GenerateDatasetFromEPD() {
     Vec<double, settings::kNumClusters> component_probs = evaluation::BoardMixtureProbability(board);
     if (samples == 0) {
       dfile << "res";
-      for (int i = 0; i < component_probs.size(); i++) {
+      for (size_t i = 0; i < component_probs.size(); i++) {
         dfile << ", cp" << i;
       }
-      for (int i = 0; i < features.size(); i++) {
+      for (size_t i = 0; i < features.size(); i++) {
         dfile << ", fe" << i;
       }
       dfile << std::endl;
     }
     dfile << result;
-    for (int i = 0; i < component_probs.size(); i++) {
+    for (size_t i = 0; i < component_probs.size(); i++) {
       dfile << ", " << component_probs[i];
     }
     for (int feature : features) {
@@ -411,5 +411,3 @@ void GenerateDatasetFromEPD() {
 }
 
 }
-
-

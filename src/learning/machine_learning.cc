@@ -51,14 +51,14 @@ std::vector<double> Regressor<loss>::gradient(
   std::vector<double> gradients;
   gradients.reserve(weights.size());
   double sum = 0;
-  for (int i = 0; i < weights.size(); i++) {
+  for (size_t i = 0; i < weights.size(); i++) {
     sum += weights[i] * features[i];
   }
   double grad = 0;
   if (loss == kSigmoidCrossEntropy) {
     grad = Sigmoid(sum) - targets[0];
   }
-  for (int i = 0; i < weights.size(); i++) {
+  for (size_t i = 0; i < weights.size(); i++) {
     gradients.emplace_back(grad * features[i]);
   }
   return gradients;
@@ -69,7 +69,7 @@ template struct Regressor<kSigmoidCrossEntropy>;
 template<ActivatedLoss loss>
 void SGD<loss>::step(const std::vector<double> &features, std::vector<double> target) {
   std::vector<double> gradients = this->regressor.gradient(features, target);
-  for (int i = 0; i < gradients.size(); i++) {
+  for (size_t i = 0; i < gradients.size(); i++) {
     this->regressor.weights[i] -= this->nu * gradients[i];
   }
   this->counter++;
@@ -78,7 +78,7 @@ void SGD<loss>::step(const std::vector<double> &features, std::vector<double> ta
 template<ActivatedLoss loss>
 void Adam<loss>::step(const std::vector<double> &features, std::vector<double> target) {
   std::vector<double> gradients = this->regressor.gradient(features, target);
-  for (int i = 0; i < gradients.size(); i++) {
+  for (size_t i = 0; i < gradients.size(); i++) {
     expected_gradient[i] = beta1 * expected_gradient[i] + (1 - beta1) * gradients[i];
     expected_squared_gradient[i] = beta2 * expected_squared_gradient[i]
                                  + (1 - beta2) * gradients[i] * gradients[i];

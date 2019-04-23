@@ -156,7 +156,7 @@ Vec<double, k> NormFuzzyCMeans<k, length>::GetWeightedProbabilities(const Board 
   const Vec<double,kPhaseVecLength> sample = normalizer.normalize(GetBoardPhaseVec(board));
   const double kEpsilon = 0.00001;
   Vec<double, k> distances;
-  for (int i = 0; i < k; i++) {
+  for (size_t i = 0; i < k; i++) {
     Vec<double, length> diff =  centroids[i] - sample;
     distances[i] = diff.normL2() + kEpsilon;
   }

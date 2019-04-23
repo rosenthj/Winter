@@ -59,7 +59,7 @@ struct Regressor {
 template<ActivatedLoss loss>
 struct Optimizer {
   double nu;
-  long counter = 0;
+  size_t counter = 0;
   Regressor<loss> regressor;
   virtual void set_num_features(size_t num_features) {
     regressor.weights = std::vector<double>(num_features, 0);

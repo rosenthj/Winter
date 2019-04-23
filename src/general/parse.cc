@@ -147,15 +147,15 @@ int CountChars(int i) {
 template <typename T>
 void Save2dVecToCSV(const std::vector< std::vector<T> > &vec, const std::string filename) {
   std::ofstream file(filename);
-  for (int j = 0; j < vec[0].size(); j++) {
+  for (size_t j = 0; j < vec[0].size(); j++) {
     file << "X" << j;
     if (j < vec[0].size() - 1) {
       file << ", ";
     }
   }
   file << std::endl;
-  for (int i = 0; i < vec.size(); i++) {
-    for (int j = 0; j < vec[i].size(); j++) {
+  for (size_t i = 0; i < vec.size(); i++) {
+    for (size_t j = 0; j < vec[i].size(); j++) {
       file << vec[i][j];
       if (j < vec[i].size() - 1) {
         file << ", ";

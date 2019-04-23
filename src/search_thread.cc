@@ -83,7 +83,8 @@ PieceTypeAndDestination Thread::get_previous_move(Depth moves_ago) const {
 }
 
 Depth Thread::get_height() const {
-  assert(board.get_num_made_moves() >= root_height);
+  assert(root_height >= 0);
+  assert(board.get_num_made_moves() >= (size_t)root_height);
   return std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
 }
 

@@ -71,11 +71,11 @@ void SetTableSize(const size_t MB) {
   table_pv.resize(size_pvt);
 }
 
-int HashFunction(const HashType hash) {
+size_t HashFunction(const HashType hash) {
   return hash % size;
 }
 
-int PVHashFunction(const HashType hash) {
+size_t PVHashFunction(const HashType hash) {
   return hash % size_pvt;
 }
 
@@ -99,9 +99,9 @@ Entry GetEntry(const HashType hash) {
 void SaveEntry(const Board &board, const Move best_move, const Score score,
                const Depth depth, const uint8_t bound) {
   HashType hash = board.get_hash();
-  int index = HashFunction(hash);
+  size_t index = HashFunction(hash);
 
-  assert(index >= 0 && index < table.size());
+  assert(index < table.size());
 
   HashType best_move_cast = best_move;
   Entry entry;
@@ -115,10 +115,10 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
 
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
-  int index = HashFunction(hash);
-  int index_pv = PVHashFunction(hash);
+  size_t index = HashFunction(hash);
+  size_t index_pv = PVHashFunction(hash);
 
-  assert(index >= 0 && index < table.size());
+  assert(index < table.size());
 
   HashType best_move_cast = best_move;
   Entry entry;
@@ -137,11 +137,11 @@ bool ValidateHash(const Entry &entry, const HashType hash){
 }
 
 void ClearTable() {
-  for (unsigned int i = 0; i < table.size(); i++) {
+  for (size_t i = 0; i < table.size(); i++) {
     table[i].hash = 0;
     table[i].set_best_move(kNullMove);
   }
-  for (unsigned int i = 0; i < table_pv.size(); i++) {
+  for (size_t i = 0; i < table_pv.size(); i++) {
     table_pv[i].hash = 0;
     table_pv[i].set_best_move(kNullMove);
   }

@@ -89,7 +89,7 @@ struct Thread {
   bool strict_worsening() const;
 
   void set_static_score(const Score score) {
-    assert(board.get_num_made_moves() >= root_height);
+    assert((Depth)board.get_num_made_moves() >= root_height);
     assert(score == kNoScore || (score >= kMinScore && score <= kMaxScore));
     Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
     static_scores[height] = score;

@@ -105,7 +105,7 @@ public:
     parse::PrintBitboard(color_bitboards[kBlack]);
   }
   void PrintMadeMoves() const {
-    for (int i = 0; i < move_history.size(); i++) {
+    for (size_t i = 0; i < move_history.size(); i++) {
       std::cout << parse::MoveToString(move_history[i]) << " ";
     }
     std::cout << std::endl;

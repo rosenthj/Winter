@@ -61,7 +61,7 @@ double Sigmoid(T x) {
 
 void EnforceConstraints(std::vector<double> &variables) {
   const int k = settings::kNumClusters;
-  int idx = 0;
+  size_t idx = 0;
   for (size_t i = 0; i < positional_features::kNumFeatures; i++) {
     if (i == positional_features::kFeatureInfos[idx + 1].idx) {
       idx++;
@@ -81,19 +81,19 @@ void EnforceConstraints(std::vector<double> &variables) {
   for (size_t j = 0; j < k; j++) {
     //variables[(kKingPSTIndex + 0) * k + j] = 0;
     variables[(positional_features::kKnightSquaresIndex + 4) * k + j] = 0;
-    for (int idx = positional_features::kKnightPSTIndex; idx < positional_features::kBaseValueIndex; idx++) {
+    for (size_t idx = positional_features::kKnightPSTIndex; idx < positional_features::kBaseValueIndex; idx++) {
       variables[(idx) * k + j] += variables[(positional_features::kBaseValueIndex + kKnight) * k + j];
     }
     variables[(positional_features::kBaseValueIndex + kKnight) * k + j] = 0;
-    for (int idx = positional_features::kBishopMobility; idx < positional_features::kRookMobility; idx++) {
+    for (size_t idx = positional_features::kBishopMobility; idx < positional_features::kRookMobility; idx++) {
       variables[(idx) * k + j] += variables[(positional_features::kBaseValueIndex + kBishop) * k + j];
     }
     variables[(positional_features::kBaseValueIndex + kBishop) * k + j] = 0;
-    for (int idx = positional_features::kRookMobility; idx < positional_features::kQueenMobility; idx++) {
+    for (size_t idx = positional_features::kRookMobility; idx < positional_features::kQueenMobility; idx++) {
       variables[(idx) * k + j] += variables[(positional_features::kBaseValueIndex + kRook) * k + j];
     }
     variables[(positional_features::kBaseValueIndex + kRook) * k + j] = 0;
-    for (int idx = positional_features::kQueenMobility; idx < positional_features::kSafeChecks; idx++) {
+    for (size_t idx = positional_features::kQueenMobility; idx < positional_features::kSafeChecks; idx++) {
       variables[(idx) * k + j] += variables[(positional_features::kBaseValueIndex + kQueen) * k + j];
     }
     variables[(positional_features::kBaseValueIndex + kQueen) * k + j] = 0;
@@ -210,7 +210,7 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Game> &ga
   data::SetGamesToRandomQuiescent(games);
   std::shuffle(games.begin(), games.end(), rng);
   std::vector<Game> validation;
-  for (int i = 0; i < 10000; i++) {
+  for (size_t i = 0; i < 10000; i++) {
     validation.emplace_back(games.back());
     games.pop_back();
   }
@@ -346,7 +346,7 @@ void SampledEMForGMM(int iterations) {
   std::shuffle(games.begin(), games.end(), rng);
   std::vector<Board> positions;
   positions.reserve(games.size());
-  for (int i = 0; i < games.size(); i++) {
+  for (size_t i = 0; i < games.size(); i++) {
     positions.emplace_back(search::SampleEval(games[i].board));
     if (positions.size() % 1000 == 0) {
       std::cout << "sampled " << positions.size() << " positions!" << std::endl;
@@ -354,7 +354,7 @@ void SampledEMForGMM(int iterations) {
   }
   games.clear();
   std::vector<Board> validation;
-  for (int i = 0; i < 10000; i++) {
+  for (size_t i = 0; i < 10000; i++) {
     validation.emplace_back(positions.back());
     positions.pop_back();
   }
@@ -496,7 +496,7 @@ cluster::GaussianMixtureModel<k, kPhaseVecLength> EMForGMM(std::vector<Board> &p
 //GMM<k, kPhaseVecLength> EMForGMM(std::vector<Board> &positions, int iterations = 50) {
   std::shuffle(positions.begin(), positions.end(), rng);
   std::vector<Board> validation;
-  for (int i = 0; i < 10000; i++) {
+  for (size_t i = 0; i < 10000; i++) {
     validation.emplace_back(positions.back());
     positions.pop_back();
   }
@@ -636,7 +636,7 @@ cluster::NormFuzzyCMeans<k, kPhaseVecLength> EMForNFCM(std::vector<Board> &posit
   ml::Normalizer<kPhaseVecLength> normalizer;
   normalizer.means = v_sum / positions.size();
   v_s_sum = v_s_sum / positions.size() - normalizer.means * normalizer.means;
-  for (int i = 0; i < kPhaseVecLength; i++) {
+  for (size_t i = 0; i < kPhaseVecLength; i++) {
     normalizer.std_dev[i] = std::sqrt(v_s_sum[i]);
   }
   std::cout << "Mean: " << std::endl;
@@ -651,7 +651,7 @@ cluster::NormFuzzyCMeans<k, kPhaseVecLength> EMForNFCM(std::vector<Board> &posit
     cluster::NormFuzzyCMeans<k, kPhaseVecLength> nfcm;
     nfcm.normalizer = normalizer;
     std::cout << "setting random means" << std::endl;
-    for (int i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 4; i++) {
       nfcm.centroids[0][i] = 0;
     }
 //    nfcm.centroids[0][5] = 6;
@@ -862,18 +862,18 @@ void SGDTrainMLSet(bool from_scratch = false) {
 //        GetBoardPhaseVec(positions[index]));
     if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
       if (optimizer->counter < 50 * kMillion) {
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = 1.0 / k;
         }
       }
       else {
         double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
         double sum = 0;
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = std::pow(probabilities[i], p);
           sum += probabilities[i];
         }
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] /= sum;
         }
       }
@@ -1021,18 +1021,18 @@ void SGDTrainCSV(std::string filename, bool from_scratch = false) {
     Vec<double, k> probabilities = evaluation::BoardMixtureProbability(dataset[index].board);
     if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
       if (optimizer->counter < 50 * kMillion) {
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = 1.0 / k;
         }
       }
       else {
         double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
         double sum = 0;
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = std::pow(probabilities[i], p);
           sum += probabilities[i];
         }
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] /= sum;
         }
       }
@@ -1199,18 +1199,18 @@ void SGDTrainZCSet(bool from_scratch = false) {
 //        GetBoardPhaseVec(positions[index]));
     if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
       if (optimizer->counter < 50 * kMillion) {
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = 1.0 / k;
         }
       }
       else {
         double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
         double sum = 0;
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = std::pow(probabilities[i], p);
           sum += probabilities[i];
         }
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] /= sum;
         }
       }
@@ -1333,18 +1333,18 @@ void SGDTrain(bool from_scratch = false) {
 //        GetBoardPhaseVec(positions[index]));
     if (learning_style == kSupervised && optimizer->counter < 150 * kMillion) {
       if (optimizer->counter < 50 * kMillion) {
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = 1.0 / k;
         }
       }
       else {
         double p = (optimizer->counter - 50 * kMillion) / (100.0 * kMillion);
         double sum = 0;
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] = std::pow(probabilities[i], p);
           sum += probabilities[i];
         }
-        for (int i = 0; i < k; i++) {
+        for (size_t i = 0; i < k; i++) {
           probabilities[i] /= sum;
         }
       }

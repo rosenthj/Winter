@@ -47,7 +47,7 @@ struct FeatureInfo {
     info(info_), idx(idx_), min_value(min),
     max_value(max), encoded_info(encoded_info_){ };
   const std::string info;
-  const int idx;
+  const size_t idx;
   const Score min_value;
   const Score max_value;
   const int encoded_info;
@@ -61,42 +61,42 @@ const int kQueenKingAttackWeight = 5;
 
 const int kKingAttackerScaling[7] = {0, 0, 4, 6, 7, 7, 8};
 
-const int kKingPSTIndex = 0;
-const int kKnightPSTIndex = kKingPSTIndex + 10;
-const int kBaseValueIndex = kKnightPSTIndex + 10;
-const int kBishopPairIndex = kBaseValueIndex + 5;//No King
-const int kActivityBonusIndex = kBishopPairIndex + 1;
-const int kAbstractActivityIndex = kActivityBonusIndex + 5;//No King
-const int kPassedPawnBonusIndex = kAbstractActivityIndex + 5;//No king
-//const int kPassedPawnUnblocked = kPassedPawnBonusIndex + 6;
-//const int kPassedPawnPushBonusIndex = kPassedPawnBonusIndex + 6;
-const int kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 12;//kRookBehindPasser + 1;
-const int kIsolatedPawnIndex = kDoublePawnPenaltyIndex + 1;
-const int kTempoBonusIndex = kIsolatedPawnIndex + 1;
-const int kDirectPawnShieldBonus = kTempoBonusIndex + 1;
-const int kKingVectorExposure = kDirectPawnShieldBonus + 1;
-const int kKnightOutpost = kKingVectorExposure + 2;
-const int kCastlingRight = kKnightOutpost + 1;
-const int kPawnAttackIndex = kCastlingRight + 1;
-const int kMinorAttackIndex = kPawnAttackIndex + 1;
-const int kKingDefenceDistance = kMinorAttackIndex + 1;
-const int kKingAttackDistance = kKingDefenceDistance + 4; // No pawns, no king
-const int kKingAttack = kKingAttackDistance + 4; // No pawns, no king
-const int kKnightSquaresIndex = kKingAttack + kQueen - kPawn;
-const int kBishopMobility = kKnightSquaresIndex + 9;
-const int kRookMobility = kBishopMobility + 14;
-const int kRookOpenFile = kRookMobility + 15;
-const int kQueenMobility = kRookOpenFile + 1;
-const int kSafeChecks = kQueenMobility + 28;
-const int kUnSafeChecks = kSafeChecks + 1;
-const int kUnprotectedPieces = kUnSafeChecks + 1;
-const int kBishopVsKingPosition = kUnprotectedPieces + 1;
-const int kOpposedPawn = kBishopVsKingPosition + 36;
-const int kUnopposedPawn = kOpposedPawn + (2 * 2 * 6);
-const int kCoveredPassedPawn = kUnopposedPawn + (2 * 2 * 6);
-const int kUncoveredPassedPawn = kCoveredPassedPawn + (2 * 2 * 6);
-const int kPawnEvalIndex = kOpposedPawn;
-const int kNumFeatures = kUncoveredPassedPawn + (2 * 2 * 6);
+const size_t kKingPSTIndex = 0;
+const size_t kKnightPSTIndex = kKingPSTIndex + 10;
+const size_t kBaseValueIndex = kKnightPSTIndex + 10;
+const size_t kBishopPairIndex = kBaseValueIndex + 5;//No King
+const size_t kActivityBonusIndex = kBishopPairIndex + 1;
+const size_t kAbstractActivityIndex = kActivityBonusIndex + 5;//No King
+const size_t kPassedPawnBonusIndex = kAbstractActivityIndex + 5;//No king
+//const size_t kPassedPawnUnblocked = kPassedPawnBonusIndex + 6;
+//const size_t kPassedPawnPushBonusIndex = kPassedPawnBonusIndex + 6;
+const size_t kDoublePawnPenaltyIndex = kPassedPawnBonusIndex + 12;//kRookBehindPasser + 1;
+const size_t kIsolatedPawnIndex = kDoublePawnPenaltyIndex + 1;
+const size_t kTempoBonusIndex = kIsolatedPawnIndex + 1;
+const size_t kDirectPawnShieldBonus = kTempoBonusIndex + 1;
+const size_t kKingVectorExposure = kDirectPawnShieldBonus + 1;
+const size_t kKnightOutpost = kKingVectorExposure + 2;
+const size_t kCastlingRight = kKnightOutpost + 1;
+const size_t kPawnAttackIndex = kCastlingRight + 1;
+const size_t kMinorAttackIndex = kPawnAttackIndex + 1;
+const size_t kKingDefenceDistance = kMinorAttackIndex + 1;
+const size_t kKingAttackDistance = kKingDefenceDistance + 4; // No pawns, no king
+const size_t kKingAttack = kKingAttackDistance + 4; // No pawns, no king
+const size_t kKnightSquaresIndex = kKingAttack + kQueen - kPawn;
+const size_t kBishopMobility = kKnightSquaresIndex + 9;
+const size_t kRookMobility = kBishopMobility + 14;
+const size_t kRookOpenFile = kRookMobility + 15;
+const size_t kQueenMobility = kRookOpenFile + 1;
+const size_t kSafeChecks = kQueenMobility + 28;
+const size_t kUnSafeChecks = kSafeChecks + 1;
+const size_t kUnprotectedPieces = kUnSafeChecks + 1;
+const size_t kBishopVsKingPosition = kUnprotectedPieces + 1;
+const size_t kOpposedPawn = kBishopVsKingPosition + 36;
+const size_t kUnopposedPawn = kOpposedPawn + (2 * 2 * 6);
+const size_t kCoveredPassedPawn = kUnopposedPawn + (2 * 2 * 6);
+const size_t kUncoveredPassedPawn = kCoveredPassedPawn + (2 * 2 * 6);
+const size_t kPawnEvalIndex = kOpposedPawn;
+const size_t kNumFeatures = kUncoveredPassedPawn + (2 * 2 * 6);
 
 
 
@@ -142,27 +142,27 @@ const std::array<FeatureInfo, 33> kFeatureInfos = {{
 
 namespace move_features {
 
-const int kPWIHashMove = 0;
-const int kPWIKiller = kPWIHashMove + 1;
-const int kPWICounterMove = kPWIKiller + 2;
-const int kPWIPieceTypeXTargetPieceType = kPWICounterMove + 1;
-const int kPWIMoveType = kPWIPieceTypeXTargetPieceType + 36;
-const int kPWIMoveSource = kPWIMoveType + 9;
-const int kPWIMoveDestination = kPWIMoveSource + 10;
-const int kPWIKnightMoveSource = kPWIMoveDestination + 10;
-const int kPWIKnightMoveDestination = kPWIKnightMoveSource + 10;
-const int kPWICaptureLastMoved = kPWIKnightMoveDestination + 10;
-const int kPWISEE = kPWICaptureLastMoved + 1;
-const int kPWIGivesCheck = kPWISEE + 2;
-const int kPWITabooDestination = kPWIGivesCheck + 2;
-const int kPWIForcingChanges = kPWITabooDestination + 1;
-const int kPWIPawnRankDestination = kPWIForcingChanges + 4;
-//const int kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
-const int kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
-const int kPWIPawnAttack = kPWIPassedRankDestination + 6;
-const int kPWIPieceUnderAttack = kPWIPawnAttack + 1;
-const int kPWICMH = kPWIPieceUnderAttack + 2;
-const int kNumMoveProbabilityFeatures = kPWICMH + 2;
+const size_t kPWIHashMove = 0;
+const size_t kPWIKiller = kPWIHashMove + 1;
+const size_t kPWICounterMove = kPWIKiller + 2;
+const size_t kPWIPieceTypeXTargetPieceType = kPWICounterMove + 1;
+const size_t kPWIMoveType = kPWIPieceTypeXTargetPieceType + 36;
+const size_t kPWIMoveSource = kPWIMoveType + 9;
+const size_t kPWIMoveDestination = kPWIMoveSource + 10;
+const size_t kPWIKnightMoveSource = kPWIMoveDestination + 10;
+const size_t kPWIKnightMoveDestination = kPWIKnightMoveSource + 10;
+const size_t kPWICaptureLastMoved = kPWIKnightMoveDestination + 10;
+const size_t kPWISEE = kPWICaptureLastMoved + 1;
+const size_t kPWIGivesCheck = kPWISEE + 2;
+const size_t kPWITabooDestination = kPWIGivesCheck + 2;
+const size_t kPWIForcingChanges = kPWITabooDestination + 1;
+const size_t kPWIPawnRankDestination = kPWIForcingChanges + 4;
+//const size_t kNumMoveProbabilityFeatures = kPWIForcingChanges + 4;
+const size_t kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
+const size_t kPWIPawnAttack = kPWIPassedRankDestination + 6;
+const size_t kPWIPieceUnderAttack = kPWIPawnAttack + 1;
+const size_t kPWICMH = kPWIPieceUnderAttack + 2;
+const size_t kNumMoveProbabilityFeatures = kPWICMH + 2;
 
 const std::array<FeatureInfo, 20> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),

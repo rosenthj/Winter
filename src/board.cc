@@ -461,7 +461,7 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   std::vector<std::string> fen_position_rows = parse::split(fen_tokens[0], '/');
   for (int row = 0; row < kBoardLength; row++) {
     Square square = GetSquare(0, 7 - row);
-    for (int char_idx = 0; char_idx < fen_position_rows[row].length(); char_idx++) {
+    for (size_t char_idx = 0; char_idx < fen_position_rows[row].length(); char_idx++) {
       char c = fen_position_rows[row][char_idx];
       switch (c){
         case 'K': AddPiece(square, GetPiece(kWhite, kKing)); break;
@@ -1018,7 +1018,7 @@ bool Board::MoveInListCanRepeat(const std::vector<Move> moves) {
   std::sort(pre_hashes.begin(), pre_hashes.end());
   std::sort(potential_hashes.begin(), potential_hashes.end());
 
-  int i = 0, j = 0;
+  size_t i = 0, j = 0;
   while (i < potential_hashes.size() && j < pre_hashes.size()) {
     while (potential_hashes[i] < pre_hashes[j]) {
       i++;

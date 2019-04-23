@@ -87,14 +87,14 @@ struct Counter<1> {
 
 template<bool relative>
 void PrintCounter(Counter<2> counter, std::ostream &out = std::cout) {
-  for (int i = 0; i < counter.size(); i++) {
+  for (size_t i = 0; i < counter.size(); i++) {
     out << "Counter " << i << ": ";
     double sum = 1;
     if (relative) {
       sum = counter[i].sum();
     }
     if (sum > 0) {
-      for (int j = 0; j < counter[i].size(); j++) {
+      for (size_t j = 0; j < counter[i].size(); j++) {
         if (j != 0) {
           out << ", ";
         }
@@ -106,10 +106,10 @@ void PrintCounter(Counter<2> counter, std::ostream &out = std::cout) {
 }
 
 void PrintCounterBinary(Counter<2> counter, std::ostream &out = std::cout) {
-  for (int i = 0; i < std::min((int)counter.size(), 16); i++) {
+  for (size_t i = 0; i < std::min(counter.size(), (size_t) 16); i++) {
     out << "Counter " << i << ": ";
 
-    for (int j = 0; j < counter[i].size(); j += 2) {
+    for (size_t j = 0; j < counter[i].size(); j += 2) {
       if (j != 0) {
         out << ", ";
       }

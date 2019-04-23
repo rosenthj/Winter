@@ -542,8 +542,8 @@ template std::vector<double> ScoreBoard<std::vector<double> >(const Board &board
 
 void PrintFeatureValues(const Board &board) {
   std::vector<int> features(ScoreBoard<std::vector<int> >(board));
-  int idx = 0;
-  for (int i = 0; i < kNumFeatures; i++) {
+  size_t idx = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
@@ -578,12 +578,12 @@ void SaveGMMHardCode(std::string file_name) {
 void SaveGMMVariables() {
   std::ofstream file(settings::kGMMParamsFile);
   std::ofstream description_file(settings::kParamExplanationFile);
-  int idx = 0;
-  for (int i = 0; i < kNumFeatures; i++) {
+  size_t idx = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
-    for (int j = 0; j < settings::kNumClusters; j++) {
+    for (size_t j = 0; j < settings::kNumClusters; j++) {
       file << eval_score_values[i][j] << " ";
       description_file  << eval_score_values[i][j] << " ";
     }
@@ -601,8 +601,8 @@ void SaveGMMVariablesHardCode(std::string filename) {
   file << "const std::array<int, (" << kNumFeatures << "*"
       << settings::kNumClusters << ")> eval_weights = {" << std::endl;
 
-  int idx = 0;
-  for (int i = 0; i < kNumFeatures; i++) {
+  size_t idx = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
@@ -690,7 +690,7 @@ void CheckVariableInfluence() {
     return;
   }
   long num_positions = 0;
-  for (long index = 0; index < games.size(); index++) {
+  for (size_t index = 0; index < games.size(); index++) {
     games[index].set_to_position_after(0);
 
     while (games[index].board.get_num_made_moves() < games[index].moves.size()) {
@@ -700,7 +700,7 @@ void CheckVariableInfluence() {
       Vec<double, settings::kNumClusters> probabilities =
           cluster_model->GetWeightedProbabilities(games[index].board);
       double set_influence = 0;
-      int idx = 0;
+      size_t idx = 0;
       for (size_t i = 0; i < kNumFeatures; i++) {
         if (i == kFeatureInfos[idx + 1].idx) {
           set_influence_squared_sum[idx] += set_influence * set_influence;
@@ -730,7 +730,7 @@ void CheckVariableInfluence() {
     }
   }
   std::ofstream sfile("params/set_influence");
-  for (int idx = 0; idx < kFeatureInfos.size(); idx++) {
+  for (size_t idx = 0; idx < kFeatureInfos.size(); idx++) {
     double mean = (set_influence_abs_sum[idx] / num_positions);
     sfile  << mean
         << " +- " << std::sqrt((set_influence_squared_sum[idx] / num_positions)- mean * mean)
@@ -740,8 +740,8 @@ void CheckVariableInfluence() {
   sfile.flush();
   sfile.close();
   std::ofstream file("params/influence");
-  int idx = 0;
-  for (int i = 0; i < kNumFeatures; i++) {
+  size_t idx = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
@@ -757,7 +757,7 @@ void CheckFeatureMagnitude() {
   std::vector<Vec<double, settings::kNumClusters>> feature_magnitudes(kNumFeatures, 0);
   Vec<double, settings::kNumClusters> mixture_proportions(0);
   std::vector<Game> games = data::LoadGames();
-  for (long index = 0; index < games.size(); index++) {
+  for (size_t index = 0; index < games.size(); index++) {
     games[index].set_to_position_after(0);
 
     while (games[index].board.get_num_made_moves() < games[index].moves.size()) {
@@ -778,8 +778,8 @@ void CheckFeatureMagnitude() {
     }
   }
   std::ofstream file("params/magnitude");
-  int idx = 0;
-  for (int i = 0; i < kNumFeatures; i++) {
+  size_t idx = 0;
+  for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
       idx++;
     }
@@ -807,19 +807,19 @@ std::vector<double> GetQuantileBreakpoints() {
 
 Score EvaluateQuietMoveValue() {
   std::vector<Game> games = data::LoadGames(1200000);
-  const int max_depth = 10, n_score_bins = 40, score_bin_size = 200,
+  const size_t max_depth = 10, n_score_bins = 40, score_bin_size = 200,
             n_dif_bins = 120, dif_bin_size = 40;
   std::vector<Vec<double, settings::kNumClusters> > x(max_depth, 0), x_squared(max_depth, 0), count(max_depth, 0);
   Vec<double, max_depth> n(0), xs2(0), xs(0);
   std::vector<Array2d<long, n_score_bins, n_dif_bins> > histogram(max_depth);
-  for (int i = 0; i < max_depth; i++) {
-    for (int j = 0; j < n_score_bins; j++) {
-      for (int k = 0; k < n_dif_bins; k++) {
+  for (size_t i = 0; i < max_depth; i++) {
+    for (size_t j = 0; j < n_score_bins; j++) {
+      for (size_t k = 0; k < n_dif_bins; k++) {
         histogram[i][j][k] = 0;
       }
     }
   }
-  for (int i = 0; i < games.size(); i++) {
+  for (size_t i = 0; i < games.size(); i++) {
     Game game = games[i];
     game.set_to_position_after(0);
     std::vector<bool> quiet_move(game.moves.size());
@@ -845,15 +845,15 @@ Score EvaluateQuietMoveValue() {
     //scores[scores.size() - 1] = ScoreBoard(game.board);
     //qscores[scores.size() - 1] = search::QSearch(game.board);
 
-    for (int depth = 0; depth < max_depth; depth++) {
-      for (int i = 6; i < quiet_move.size() - depth - 2; i++) {
+    for (size_t depth = 0; depth < max_depth; depth++) {
+      for (size_t i = 6; i < quiet_move.size() - depth - 2; i++) {
         if (!in_check[i]) {
-          Score score_bin_idx = scores[i];
+          size_t score_bin_idx = scores[i];
           score_bin_idx += score_bin_size / 2;
           score_bin_idx /= score_bin_size;
           score_bin_idx += n_score_bins / 2;
           score_bin_idx = std::max(0, (int)score_bin_idx);
-          score_bin_idx = std::min(n_score_bins - 1, (int)score_bin_idx);
+          score_bin_idx = std::min(n_score_bins - 1, score_bin_idx);
 
           Score dif = (depth % 2) ? qscores[i+1+depth] - scores[i]
                                   : -qscores[i+1+depth] - scores[i];
@@ -865,9 +865,9 @@ Score EvaluateQuietMoveValue() {
           xs2[depth] += dif * dif;
           dif /= dif_bin_size;
           dif += n_dif_bins / 2;
-          dif = std::max(0, (int)dif);
-          dif = std::min(n_dif_bins - 1, (int)dif);
-          histogram[depth][score_bin_idx][dif]++;
+          size_t dif_bin = std::max(0, dif);
+          dif_bin = std::min(n_dif_bins - 1, dif_bin);
+          histogram[depth][score_bin_idx][dif_bin]++;
         }
       }
     }
@@ -876,7 +876,7 @@ Score EvaluateQuietMoveValue() {
     }
   }
   std::cout << "Mixture Based Statistics" << std::endl;
-  for (int depth = 0; depth < max_depth; depth++) {
+  for (size_t depth = 0; depth < max_depth; depth++) {
     Vec<double, settings::kNumClusters> x_mean = x[depth] / count[depth];
     Vec<double, settings::kNumClusters> variance =
         (x_squared[depth] - (x_mean * x_mean * count[depth])) / count[depth];
@@ -889,7 +889,7 @@ Score EvaluateQuietMoveValue() {
     std::cout << std::endl;
   }
   std::cout << "Non Mixture Based Statistics" << std::endl;
-  for (int depth = 0; depth < max_depth; depth++) {
+  for (size_t depth = 0; depth < max_depth; depth++) {
     double x_mean = xs[depth] / n[depth];
     double variance =
         (xs2[depth] - (x_mean * x_mean * n[depth])) / n[depth];
@@ -906,29 +906,29 @@ Score EvaluateQuietMoveValue() {
   }
   std::vector<std::vector <int> > quantiles(n_score_bins,
                                             std::vector<int>(quantile_breakpoints.size() + 1));
-  for (int i = 0; i < n_score_bins; i++) {
+  for (size_t i = 0; i < n_score_bins; i++) {
     vhistogram[i][0] = (i - (n_score_bins / 2)) * score_bin_size;
     quantiles[i][0] = (i - (n_score_bins / 2)) * score_bin_size;
   }
-  for (int depth = 0; depth < max_depth; depth++) {
-    for (int i = 0; i < n_score_bins; i++) {
+  for (size_t depth = 0; depth < max_depth; depth++) {
+    for (size_t i = 0; i < n_score_bins; i++) {
       std::cout << i << ": ";
       long sum = 0;
-      for (int j = 0; j < n_dif_bins; j++) {
+      for (size_t j = 0; j < n_dif_bins; j++) {
         vhistogram[i][j + 1] = histogram[depth][i][j];
         sum += histogram[depth][i][j];
       }
-      for (int j = 0; j < n_dif_bins; j++) {
+      for (size_t j = 0; j < n_dif_bins; j++) {
         vhistogram[i][j + 1] /= sum;
       }
       csum[i][0] = vhistogram[i][0 + 1];
-      for (int j = 1; j < n_dif_bins; j++) {
+      for (size_t j = 1; j < n_dif_bins; j++) {
         csum[i][j] = csum[i][j-1] + vhistogram[i][j + 1];
       }
       std::cout << i << ",0 = " << csum[i][0] << "|" << vhistogram[i][0 + 1] << " ";
-      for (int j = 1; j < n_dif_bins; j++) {
+      for (size_t j = 1; j < n_dif_bins; j++) {
         std::cout << i << "," << j << " = " << csum[i][j] << "|" << vhistogram[i][j + 1] << " ";
-        for (int idx = 0; idx < quantile_breakpoints.size(); idx++) {
+        for (size_t idx = 0; idx < quantile_breakpoints.size(); idx++) {
           if (csum[i][j-1] < quantile_breakpoints[idx]
               && csum[i][j] >= quantile_breakpoints[idx]) {
             quantiles[i][idx + 1] = ( (j - n_dif_bins/2) * dif_bin_size);

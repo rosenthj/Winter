@@ -317,18 +317,18 @@ struct DeterminantHelper {
   static type calculate(const SqMatrix<type, length> &mat) {
     SqMatrix<type, length - 1> h_mat;
     double det = 0;
-    for (int i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
       int sign = 1;
       if (i % 2) {
         sign = -1;
       }
       int inc = 0;
-      for (int u = 0; u < length; u++) {
+      for (size_t u = 0; u < length; u++) {
         if (u == i) {
           inc++;
           continue;
         }
-        for (int v = 1; v < length; v++) {
+        for (size_t v = 1; v < length; v++) {
           h_mat[u - inc][v-1] = mat[u][v];
         }
       }
@@ -360,20 +360,20 @@ template<typename type, size_t length> SqMatrix<type, length> SymmetricSquareMat
   double det = Determinant<type, length>(mat);
   SqMatrix<type, length> adj_mat;
   SqMatrix<type, length - 1> h_mat;
-  for (int i = 0; i < length; i++) {
-    for (int j = 0; j < length; j++) {
+  for (size_t i = 0; i < length; i++) {
+    for (size_t j = 0; j < length; j++) {
       int sign = 1;
       if ((i+j) % 2) {
         sign = -1;
       }
       int inc_u = 0;
-      for (int u = 0; u < length; u++) {
+      for (size_t u = 0; u < length; u++) {
         if (u == i) {
           inc_u++;
           continue;
         }
         int inc_v = 0;
-        for (int v = 0; v < length; v++) {
+        for (size_t v = 0; v < length; v++) {
           if (v == j) {
             inc_v++;
             continue;
@@ -384,8 +384,8 @@ template<typename type, size_t length> SqMatrix<type, length> SymmetricSquareMat
       adj_mat[i][j] = sign * Determinant<type, length - 1>(h_mat);
     }
   }
-  for (int i = 0; i < length; i++) {
-    for (int j = i+1; j < length; j++) {
+  for (size_t i = 0; i < length; i++) {
+    for (size_t j = i+1; j < length; j++) {
       double tmp = adj_mat[i][j];
       adj_mat[i][j] = adj_mat[j][i];
       adj_mat[j][i] = tmp;
