@@ -79,6 +79,10 @@ inline HashType get_color_hash() {
 
 namespace {
 
+enum class MoveGenType {
+  Fast = 0, Normal = 1, InCheck = 2
+};
+
 template<Color pawn_owner>
 inline bool clearly_drawn_pawn_ending(const BitBoard pawn_bb, const BitBoard defending_king_bb) {
   Square defending_king = bitops::NumberOfTrailingZeros(defending_king_bb);
@@ -111,10 +115,6 @@ inline bool clearly_drawn_pawn_ending(const BitBoard pawn_bb, const BitBoard kin
 namespace {
 
 const Score see_values[7] = { 100, 300, 300, 450, 900, 10000, 0 };
-
-enum MoveGenerationType {
-  kFastMoveGen = 0, kNormalMoveGen = 1, kInCheckMoveGen = 2
-};
 
 const BitBoard fourth_row = parse::StringToBitBoard("a4") | parse::StringToBitBoard("b4")
                       | parse::StringToBitBoard("c4") | parse::StringToBitBoard("d4")
@@ -192,11 +192,11 @@ void AddMoves(std::vector<Move> &move_list, Square source_square, BitBoard desti
   }
 }
 
-template<int Quiescent, int MoveGenType, int PieceType>
+template<int Quiescent, MoveGenType move_gen_type, int PieceType>
 void AddMoves(std::vector<Move> &moves, std::vector<Move> &legal_moves, BitBoard piece_bitboard,
     const BitBoard own_pieces, const BitBoard enemy_pieces,
     const BitBoard all_pieces, const BitBoard critical) {
-  if (MoveGenType == kNormalMoveGen) {
+  if (move_gen_type == MoveGenType::Normal) {
     BitBoard not_pinned = piece_bitboard & ~critical;
     piece_bitboard ^= not_pinned;
     while (not_pinned) {
@@ -210,7 +210,7 @@ void AddMoves(std::vector<Move> &moves, std::vector<Move> &legal_moves, BitBoard
   while (piece_bitboard) {
     Square piece_square = bitops::NumberOfTrailingZeros(piece_bitboard);
     BitBoard destinations = magic::GetAttackMap<PieceType>(piece_square, all_pieces);
-    if (MoveGenType == kInCheckMoveGen) {
+    if (move_gen_type == MoveGenType::InCheck) {
       destinations &= critical;
     }
     destinations &= ~own_pieces;
@@ -229,11 +229,11 @@ inline void AddPromotionMoves(const Square src, const Square des, std::vector<Mo
   }
 }
 
-template<int Quiescent, int MoveGenType, int PointOfView>
+template<int Quiescent, MoveGenType move_gen_type, Color point_of_view>
 inline void ConditionalAddPromotionMoves(const Square src, const Square des,
                                          std::vector<Move> &moves, const MoveType move_type) {
-  const int back_rank = PointOfView == kWhite ? 7 : 0;
-  if (MoveGenType >= kNormalMoveGen || GetSquareY(des) != back_rank) {
+  const int back_rank = point_of_view == kWhite ? 7 : 0;
+  if (move_gen_type != MoveGenType::Fast || GetSquareY(des) != back_rank) {
     moves.emplace_back(GetMove(src, des, move_type));
   }
   else {
@@ -250,53 +250,53 @@ inline void AddNonPromotionMovesLoop(BitBoard &des, const Square square_dif,
   }
 }
 
-template<int Quiescent, int MoveGenType, int PointOfView>
+template<int Quiescent, MoveGenType move_gen_type, Color point_of_view>
 inline void AddPawnMovesLoop(BitBoard &des, const Square square_dif,
                              std::vector<Move> &moves, const MoveType move_type) {
   while (des) {
     const Square destination = bitops::NumberOfTrailingZeros(des);
-    ConditionalAddPromotionMoves<Quiescent, MoveGenType, PointOfView>(
+    ConditionalAddPromotionMoves<Quiescent, move_gen_type, point_of_view>(
         destination - square_dif, destination, moves, move_type);
     bitops::PopLSB(des);
   }
 }
 
-template<int Quiescent, int MoveGenType, Color PointOfView>
+template<int Quiescent, MoveGenType move_gen_type, Color point_of_view>
 inline void AddPawnMoves(const BitBoard pawn_bb, const BitBoard empty,
                          const BitBoard enemy_pieces, const Square en_passant,
                          std::vector<Move> &moves, const BitBoard critical) {
-  const BitBoard double_push_row = PointOfView == kWhite ? fourth_row : fifth_row;
-  const int f_east = PointOfView == kWhite ? kNorthEast : kSouthEast;
-  const int f_west = PointOfView == kWhite ? kNorthWest : kSouthWest;
-  const int b_east = PointOfView == kWhite ? kSouthEast : kNorthEast;
-  const int b_west = PointOfView == kWhite ? kSouthWest : kNorthWest;
-  const int forward = PointOfView == kWhite ? kNorth : kSouth;
-  const int d_east = PointOfView == kWhite ? 9 : -7;
-  const int d_west = PointOfView == kWhite ? 7 : -9;
-  const int d_forward = PointOfView == kWhite ? 8 : -8;
+  const BitBoard double_push_row = point_of_view == kWhite ? fourth_row : fifth_row;
+  const int f_east = point_of_view == kWhite ? kNorthEast : kSouthEast;
+  const int f_west = point_of_view == kWhite ? kNorthWest : kSouthWest;
+  const int b_east = point_of_view == kWhite ? kSouthEast : kNorthEast;
+  const int b_west = point_of_view == kWhite ? kSouthWest : kNorthWest;
+  const int forward = point_of_view == kWhite ? kNorth : kSouth;
+  const int d_east = point_of_view == kWhite ? 9 : -7;
+  const int d_west = point_of_view == kWhite ? 7 : -9;
+  const int d_forward = point_of_view == kWhite ? 8 : -8;
 
   if (!Quiescent) {
     BitBoard single_push = bitops::Dir<forward>(pawn_bb) & empty;
     BitBoard double_push = bitops::Dir<forward>(single_push) & empty & double_push_row;
-    if (MoveGenType == kInCheckMoveGen) {
+    if (move_gen_type == MoveGenType::InCheck) {
       single_push &= critical;
     }
-    AddPawnMovesLoop<Quiescent, MoveGenType, PointOfView>(single_push, d_forward, moves, kNormalMove);
-    if (MoveGenType == kInCheckMoveGen) {
+    AddPawnMovesLoop<Quiescent, move_gen_type, point_of_view>(single_push, d_forward, moves, kNormalMove);
+    if (move_gen_type == MoveGenType::InCheck) {
       double_push &= critical;
     }
     AddNonPromotionMovesLoop(double_push, 2 * d_forward, moves, kDoublePawnMove);
   }
   BitBoard e_captures = bitops::Dir<f_east>(pawn_bb) & enemy_pieces;
-  if (MoveGenType == kInCheckMoveGen) {
+  if (move_gen_type == MoveGenType::InCheck) {
     e_captures &= critical;
   }
-  AddPawnMovesLoop<Quiescent, MoveGenType, PointOfView>(e_captures, d_east, moves, kCapture);
+  AddPawnMovesLoop<Quiescent, move_gen_type, point_of_view>(e_captures, d_east, moves, kCapture);
   BitBoard w_captures = bitops::Dir<f_west>(pawn_bb) & enemy_pieces;
-  if (MoveGenType == kInCheckMoveGen) {
+  if (move_gen_type == MoveGenType::InCheck) {
     w_captures &= critical;
   }
-  AddPawnMovesLoop<Quiescent, MoveGenType, PointOfView>(w_captures, d_west, moves, kCapture);
+  AddPawnMovesLoop<Quiescent, move_gen_type, point_of_view>(w_captures, d_west, moves, kCapture);
   if (en_passant) {
     BitBoard ep_bitboard = GetSquareBitBoard(en_passant);
     BitBoard ep_captures = (bitops::Dir<b_west>(ep_bitboard) | bitops::Dir<b_east>(ep_bitboard))
@@ -769,17 +769,18 @@ BitBoard Board::PlayerBitBoardControl(Color color, BitBoard all_pieces) const {
   return under_control;
 }
 
-template<int Quiescent, int MoveGenType>
+template<int Quiescent, int _move_gen_type>
 std::vector<Move> Board::GetMoves(const BitBoard critical) {
+  constexpr MoveGenType move_gen_type = static_cast<MoveGenType>(_move_gen_type);
   std::vector<Move> moves;
   std::vector<Move> legal_moves;
 
   const int expected_num_moves = Quiescent == kQuiescent ? 16 : 48;
-  if (MoveGenType == kInCheckMoveGen) {
+  if (move_gen_type == MoveGenType::InCheck) {
     legal_moves.reserve(expected_num_moves / 4);
     moves.reserve(expected_num_moves / 2);
   }
-  else if (MoveGenType == kFastMoveGen) {
+  else if (move_gen_type == MoveGenType::Fast) {
     moves.reserve(expected_num_moves);
   }
   else {
@@ -791,26 +792,26 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
   const BitBoard enemy_pieces = color_bitboards[get_not_turn()];
   const BitBoard all_pieces = own_pieces | enemy_pieces;
   const BitBoard empty = ~all_pieces;
-  AddMoves<Quiescent, MoveGenType, kKnight>(moves, legal_moves,
+  AddMoves<Quiescent, move_gen_type, kKnight>(moves, legal_moves,
       get_piece_bitboard(get_turn(), kKnight), own_pieces, enemy_pieces,
       all_pieces, critical);
-  AddMoves<Quiescent, MoveGenType, kBishop>(moves, legal_moves,
+  AddMoves<Quiescent, move_gen_type, kBishop>(moves, legal_moves,
       get_piece_bitboard(get_turn(), kBishop), own_pieces, enemy_pieces,
       all_pieces, critical);
-  AddMoves<Quiescent, MoveGenType, kRook>(moves, legal_moves,
+  AddMoves<Quiescent, move_gen_type, kRook>(moves, legal_moves,
       get_piece_bitboard(get_turn(), kRook), own_pieces, enemy_pieces,
       all_pieces, critical);
-  AddMoves<Quiescent, MoveGenType, kQueen>(moves, legal_moves,
+  AddMoves<Quiescent, move_gen_type, kQueen>(moves, legal_moves,
       get_piece_bitboard(get_turn(), kQueen), own_pieces, enemy_pieces,
       all_pieces, critical);
 
   //Pawns
   if (get_turn() == kWhite) {
-    AddPawnMoves<Quiescent, MoveGenType, kWhite>(
+    AddPawnMoves<Quiescent, move_gen_type, kWhite>(
         get_piece_bitboard(kWhite, kPawn), empty, enemy_pieces, en_passant, moves, critical);
   }
   else {
-    AddPawnMoves<Quiescent, MoveGenType, kBlack>(
+    AddPawnMoves<Quiescent, move_gen_type, kBlack>(
         get_piece_bitboard(kBlack, kPawn), empty, enemy_pieces, en_passant, moves, critical);
   }
 
@@ -821,7 +822,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
   king |= bitops::N(king) | bitops::S(king);
   BitBoard in_check = PlayerBitBoardControl(get_not_turn(), all_pieces);
   king &= ~(own_pieces | in_check);
-  if (MoveGenType != kNormalMoveGen) {
+  if (move_gen_type != MoveGenType::Normal) {
     AddMoves<Quiescent>(moves, king_square, king, enemy_pieces);
   }
   else {
@@ -835,7 +836,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
           && !(castling_empty_bbs[right] & all_pieces)) {
         Square source = bitops::NumberOfTrailingZeros(get_piece_bitboard(get_turn(), kKing));
         Square destination = source + 2 - (right%2)*4;
-        if (MoveGenType == kNormalMoveGen) {
+        if (move_gen_type == MoveGenType::Normal) {
           legal_moves.emplace_back(GetMove(source, destination, kCastle));
         }
         else {
@@ -845,7 +846,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
     }
   }
 
-  if (MoveGenType == kFastMoveGen) {
+  if (move_gen_type == MoveGenType::Fast) {
     return moves;
   }
 
@@ -855,7 +856,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
   for (Move move : moves) {
     BitBoard move_src = GetSquareBitBoard(GetMoveSource(move));
     bool add = false;
-    if (MoveGenType != kInCheckMoveGen) {
+    if (move_gen_type != MoveGenType::InCheck) {
       if (!(dangerous_sources & move_src) && GetMoveType(move) != kEnPassant) {
         add = true;
       }
@@ -906,7 +907,7 @@ std::vector<Move> Board::GetMoves() {
   danger |= ((bitops::SE(enemy_pawns) | bitops::SW(enemy_pawns)) << (16 * get_turn()))
       & get_piece_bitboard(get_turn(), kKing);
   if (!danger) {
-    return GetMoves<Quiescent, kFastMoveGen>();
+    return GetMoves<Quiescent, static_cast<int>(MoveGenType::Fast)>();
   }
 
 
@@ -919,7 +920,7 @@ std::vector<Move> Board::GetMoves() {
     danger |= (bitops::SE(king) | bitops::SW(king)) & enemy_pawns;
   }
   if (danger) {
-    return GetMoves<kNonQuiescent, kInCheckMoveGen>(danger);
+    return GetMoves<kNonQuiescent, static_cast<int>(MoveGenType::InCheck)>(danger);
   }
 
   BitBoard own_pieces = color_bitboards[get_turn()];
@@ -929,14 +930,14 @@ std::vector<Move> Board::GetMoves() {
   danger |= magic::GetAttackMap<kRook>(king_square, all_pieces)
       & (get_piece_bitboard(get_not_turn(), kRook) | get_piece_bitboard(get_not_turn(), kQueen));
   if (danger) {
-    return GetMoves<kNonQuiescent, kInCheckMoveGen>(
+    return GetMoves<kNonQuiescent, static_cast<int>(MoveGenType::InCheck)>(
         magic::GetAttackMap<kRook>(king_square, all_pieces));
   }
   danger |= magic::GetAttackMap<kBishop>(king_square, all_pieces)
       & (get_piece_bitboard(get_not_turn(), kBishop) | get_piece_bitboard(get_not_turn(), kQueen));
 
   if (danger) {
-    return GetMoves<kNonQuiescent, kInCheckMoveGen>(
+    return GetMoves<kNonQuiescent, static_cast<int>(MoveGenType::InCheck)>(
         magic::GetAttackMap<kBishop>(king_square, all_pieces));
   }
   BitBoard possibly_pinned = 0;
@@ -950,7 +951,7 @@ std::vector<Move> Board::GetMoves() {
                     | get_piece_bitboard(get_not_turn(), kQueen))) {
     possibly_pinned |= bishop_attacks & own_pieces;
   }
-  return GetMoves<Quiescent, kNormalMoveGen>(possibly_pinned);
+  return GetMoves<Quiescent, static_cast<int>(MoveGenType::Normal)>(possibly_pinned);
 }
 
 template std::vector<Move> Board::GetMoves<kNonQuiescent>();
