@@ -67,108 +67,109 @@ using Array2d = std::array<std::array< T, j>, i>;
 template<typename T, size_t i, size_t j, size_t k>
 using Array3d = std::array<Array2d< T, j, k>, i>;
 
-const Color kWhite = 0;
-const Color kBlack = 1;
+constexpr Color kWhite = 0;
+constexpr Color kBlack = 1;
 
-const PieceType kPawn = 0;
-const PieceType kKnight = 1;
-const PieceType kBishop = 2;
-const PieceType kRook = 3;
-const PieceType kQueen = 4;
-const PieceType kKing = 5;
-const PieceType kNoPiece = 6;
-const int kNumPieceTypes = 7;
+const constexpr PieceType kPawn = 0;
+constexpr PieceType kKnight = 1;
+constexpr PieceType kBishop = 2;
+constexpr PieceType kRook = 3;
+constexpr PieceType kQueen = 4;
+constexpr PieceType kKing = 5;
+constexpr PieceType kNoPiece = 6;
+constexpr int kNumPieceTypes = 7;
 
-const int kNumPlayers = 2;
+constexpr int kNumPlayers = 2;
 
-const int kBoardLength = 8;
-const int kBoardSize = kBoardLength * kBoardLength;
+constexpr int kBoardLength = 8;
+constexpr int kBoardSize = kBoardLength * kBoardLength;
 
 const int kNonQuiescent = 0;
 const int kQuiescent = 1;
 
-const MoveType kNormalMove = 0;
-const MoveType kCastle = 1;
-const MoveType kDoublePawnMove = 2;
-const MoveType kEnPassant = 3;
-const MoveType kCapture = 4;
+constexpr MoveType kNormalMove = 0;
+constexpr MoveType kCastle = 1;
+constexpr MoveType kDoublePawnMove = 2;
+constexpr MoveType kEnPassant = 3;
+constexpr MoveType kCapture = 4;
 //To get promotion piece we can subtract (kKnightPromotion - kKnight) from the movetype
-const MoveType kKnightPromotion = 5;
-const MoveType kBishopPromotion = 6;
-const MoveType kRookPromotion = 7;
-const MoveType kQueenPromotion = 8;
+constexpr MoveType kKnightPromotion = 5;
+constexpr MoveType kBishopPromotion = 6;
+constexpr MoveType kRookPromotion = 7;
+constexpr MoveType kQueenPromotion = 8;
 
-const Move kNullMove = 0;
+constexpr Move kNullMove = 0;
 
-const CastlingRights kWSCastle = 1;
-const CastlingRights kWLCastle = kWSCastle << 1;
-const CastlingRights kBSCastle = kWSCastle << 2;
-const CastlingRights kBLCastle = kWSCastle << 3;
+constexpr CastlingRights kWSCastle = 1;
+constexpr CastlingRights kWLCastle = kWSCastle << 1;
+constexpr CastlingRights kBSCastle = kWSCastle << 2;
+constexpr CastlingRights kBLCastle = kWSCastle << 3;
 
-const Score kMaxScore = 100000;
-const Score kMinScore = -kMaxScore;
-const Score kNoScore = kMinScore-1;
+constexpr Score kMaxScore = 100000;
+constexpr Score kMinScore = -kMaxScore;
+constexpr Score kNoScore = kMinScore-1;
 
-inline bool is_mate_score(const Score score) {
+inline constexpr bool is_mate_score(const Score score) {
   return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
 }
 
-const int kLowerBound = 1;
-const int kUpperBound = 2;
-const int kExactBound = kLowerBound | kUpperBound;
+constexpr int kLowerBound = 1;
+constexpr int kUpperBound = 2;
+constexpr int kExactBound = kLowerBound | kUpperBound;
 
-const int kOpening = 0;
-const int kEnding = 1;
+constexpr int kOpening = 0;
+constexpr int kEnding = 1;
 
-const int piece_phases[7] = {0, 3, 3, 4, 9, 0, 0};
-const int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
+constexpr int piece_phases[7] = {0, 3, 3, 4, 9, 0, 0};
+constexpr int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
               + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
               + 2 * piece_phases[kQueen];
 
-const size_t kPhaseVecLength = 4;
+constexpr size_t kPhaseVecLength = 4;
 
-const int64_t kThousand = 1000;
-const int64_t kMillion = kThousand * kThousand;
-const int64_t kBillion = kThousand * kMillion;
+constexpr int64_t kThousand = 1000;
+constexpr int64_t kMillion = kThousand * kThousand;
+constexpr int64_t kBillion = kThousand * kMillion;
 
 /**
  * In the following we define data extraction and translation functions,
  * however we will not be defining bit data manipulation functions.
  * For bit twiddling functions see bitoperations.
  */
-inline int32_t GetSquareX(const Square square) {
-  assert(square >= 0 && square < 64);
-  return square % 8; }
-inline int32_t GetSquareY(const Square square) {
-  assert(square >= 0 && square < 64);
+inline constexpr int32_t GetSquareX(const Square square) {
+//  assert(square >= 0 && square < 64);
+  return square % 8;
+}
+inline constexpr int32_t GetSquareY(const Square square) {
+//  assert(square >= 0 && square < 64);
   return square / 8;
 }
-inline Square GetSquare(const int32_t x, const int32_t y) {
-  assert(x >= 0 && x < 8 && y >= 0 && y < 8);
+inline constexpr Square GetSquare(const int32_t x, const int32_t y) {
+//  assert(x >= 0 && x < 8 && y >= 0 && y < 8);
   return x + y * 8;
 }
 
-inline Square GetMoveSource(const Move move) { return (move >> 6) & 0x3F; }
-inline Square GetMoveDestination(const Move move) { return move & 0x3F; }
-inline MoveType GetMoveType(const Move move) { return move >> 12; }
-inline int IsMoveForcing(const Move move) {
+inline constexpr Square GetMoveSource(const Move move) { return (move >> 6) & 0x3F; }
+inline constexpr Square GetMoveDestination(const Move move) { return move & 0x3F; }
+inline constexpr MoveType GetMoveType(const Move move) { return move >> 12; }
+inline constexpr int IsMoveForcing(const Move move) {
   return (GetMoveType(move) + 5) >> 3;
 }
-inline Move GetMove(const Square source, const Square destination,
+inline constexpr Move GetMove(const Square source, const Square destination,
                     const MoveType move_type = kNormalMove) {
-  assert(source >= 0 && source < 64 && destination >= 0 && destination < 64);
-  assert(source != destination || move_type == kNormalMove);
+//  assert(source >= 0 && source < 64 && destination >= 0 && destination < 64);
+//  assert(source != destination || move_type == kNormalMove);
   return move_type << 12 | (source << 6) | destination;
 }
 
 inline constexpr Piece GetPiece(const Color color, const PieceType piece_type) {
   return (color << 3) | piece_type;
 }
-inline Color GetPieceColor(const Piece piece) { return piece >> 3; }
-inline PieceType GetPieceType(const Piece piece) { return piece & 0x7; }
+inline constexpr Color GetPieceColor(const Piece piece) { return piece >> 3; }
+inline constexpr PieceType GetPieceType(const Piece piece) { return piece & 0x7; }
 
-inline BitBoard GetSquareBitBoard(const Square square) {
-  assert(square >= 0 && square < 64);
+inline constexpr BitBoard GetSquareBitBoard(const Square square) {
+//  assert(square >= 0 && square < 64);
   return ((BitBoard) 1) << square;
 }
 
