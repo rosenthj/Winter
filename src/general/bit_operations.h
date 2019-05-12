@@ -36,32 +36,53 @@ enum Directions {
 
 namespace bitops {
 
-const BitBoard a_file = parse::StringToBitBoard("a1") | parse::StringToBitBoard("a2")
-                      | parse::StringToBitBoard("a3") | parse::StringToBitBoard("a4")
-                      | parse::StringToBitBoard("a5") | parse::StringToBitBoard("a6")
-                      | parse::StringToBitBoard("a7") | parse::StringToBitBoard("a8");
+constexpr BitBoard a1_bitboard = 0x1L;
+constexpr BitBoard b1_bitboard = a1_bitboard << 1;
+constexpr BitBoard c1_bitboard = a1_bitboard << 2;
+constexpr BitBoard d1_bitboard = a1_bitboard << 3;
+constexpr BitBoard e1_bitboard = a1_bitboard << 4;
+constexpr BitBoard f1_bitboard = a1_bitboard << 5;
+constexpr BitBoard g1_bitboard = a1_bitboard << 6;
+constexpr BitBoard h1_bitboard = a1_bitboard << 7;
 
-const BitBoard h_file = parse::StringToBitBoard("h1")
-                      | parse::StringToBitBoard("h2") | parse::StringToBitBoard("h3")
-                      | parse::StringToBitBoard("h4") | parse::StringToBitBoard("h5")
-                      | parse::StringToBitBoard("h6") | parse::StringToBitBoard("h7")
-                      | parse::StringToBitBoard("h8");
+constexpr BitBoard a_file = a1_bitboard            | a1_bitboard << (1 * 8)
+                          | a1_bitboard << (2 * 8) | a1_bitboard << (3 * 8)
+                          | a1_bitboard << (4 * 8) | a1_bitboard << (5 * 8)
+                          | a1_bitboard << (6 * 8) | a1_bitboard << (7 * 8);
 
-const BitBoard rook_file = a_file | h_file;
-const BitBoard not_a_file = ~a_file;
-const BitBoard not_h_file = ~h_file;
+constexpr BitBoard b_file = a_file << 1;
+constexpr BitBoard c_file = a_file << 2;
+constexpr BitBoard d_file = a_file << 3;
+constexpr BitBoard e_file = a_file << 4;
+constexpr BitBoard f_file = a_file << 5;
+constexpr BitBoard g_file = a_file << 6;
+constexpr BitBoard h_file = a_file << 7;
 
-const BitBoard light_squares_first_two_ranks =  parse::StringToBitBoard("b1") | parse::StringToBitBoard("d1")
-                              | parse::StringToBitBoard("f1") | parse::StringToBitBoard("h1")
-                              | parse::StringToBitBoard("a2") | parse::StringToBitBoard("c2")
-                              | parse::StringToBitBoard("e2") | parse::StringToBitBoard("g2");
+constexpr BitBoard rook_file = a_file | h_file;
+constexpr BitBoard not_a_file = ~a_file;
+constexpr BitBoard not_h_file = ~h_file;
 
-const BitBoard light_squares = light_squares_first_two_ranks
-                             | (light_squares_first_two_ranks << (2 * 8))
-                             | (light_squares_first_two_ranks << (4 * 8))
-                             | (light_squares_first_two_ranks << (6 * 8));
+constexpr BitBoard first_rank = a1_bitboard      | a1_bitboard << 1
+                              | a1_bitboard << 2 | a1_bitboard << 3
+                              | a1_bitboard << 4 | a1_bitboard << 5
+                              | a1_bitboard << 6 | a1_bitboard << 7;
 
-const BitBoard dark_squares = ~light_squares;
+constexpr BitBoard second_rank  = first_rank << (1 * 8);
+constexpr BitBoard third_rank   = first_rank << (2 * 8);
+constexpr BitBoard fourth_rank  = first_rank << (3 * 8);
+constexpr BitBoard fifth_rank   = first_rank << (4 * 8);
+constexpr BitBoard sixth_rank   = first_rank << (5 * 8);
+constexpr BitBoard seventh_rank = first_rank << (6 * 8);
+constexpr BitBoard eigth_rank   = first_rank << (7 * 8);
+
+constexpr BitBoard odd_ranks = first_rank | third_rank | fifth_rank | seventh_rank;
+constexpr BitBoard even_ranks = ~odd_ranks;
+
+constexpr BitBoard odd_files = a_file | c_file | e_file | g_file;
+constexpr BitBoard even_files = ~odd_files;
+
+constexpr BitBoard dark_squares = (odd_ranks & odd_files) | (even_ranks & even_files);
+constexpr BitBoard light_squares = ~dark_squares;
 
 inline BitBoard N(const BitBoard bb) { return bb << 8; }
 inline BitBoard S(const BitBoard bb) { return bb >> 8; }

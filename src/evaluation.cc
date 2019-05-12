@@ -54,13 +54,6 @@ const double kEuler = std::exp(1);
 std::mt19937_64 rng;
 const double eval_scaling = 1024.0;
 
-const BitBoard fourth_row = parse::StringToBitBoard("a4") | parse::StringToBitBoard("b4")
-                      | parse::StringToBitBoard("c4") | parse::StringToBitBoard("d4")
-                      | parse::StringToBitBoard("e4") | parse::StringToBitBoard("f4")
-                      | parse::StringToBitBoard("g4") | parse::StringToBitBoard("h4");
-
-const BitBoard fifth_row = fourth_row << 8;
-
 struct TrainingPosition{
   Board board;
   double target;
@@ -80,33 +73,23 @@ cluster::ClusterModel<settings::kNumClusters>* init_cluster_model() {
 cluster::ClusterModel<settings::kNumClusters>* cluster_model = init_cluster_model();
 
 const Array2d<BitBoard, 2, 64> get_king_pawn_coverage() {
-  const BitBoard second_row = parse::StringToBitBoard("a2") | parse::StringToBitBoard("b2")
-                        | parse::StringToBitBoard("c2") | parse::StringToBitBoard("d2")
-                        | parse::StringToBitBoard("e2") | parse::StringToBitBoard("f2")
-                        | parse::StringToBitBoard("g2") | parse::StringToBitBoard("h2");
-
-  const BitBoard seventh_row = second_row << (8 * 5);
   Array2d<BitBoard, 2, 64> coverage;
   for (Square square = 0; square < 64; square++) {
     BitBoard bb = GetSquareBitBoard(square);
-    int i = GetSquareY(square);
-    while (i) {
+    for (int i = GetSquareY(square); i; --i) {
       bb |= bitops::E(bb) | bitops::W(bb);
-      i--;
     }
     bb = bitops::FillNorthEast(bb, ~0) | bitops::FillNorthWest(bb, ~0);
     bb = bitops::FillNorth(bb, ~0);
-    bb &= ~seventh_row | bitops::N(bb);
+    bb &= ~bitops::seventh_rank | bitops::N(bb);
     coverage[kWhite][square] = bb;
     bb = GetSquareBitBoard(square);
-    i = 7 - GetSquareY(square);
-    while (i) {
+    for (int i = 7 - GetSquareY(square); i; --i) {
       bb |= bitops::E(bb) | bitops::W(bb);
-      i--;
     }
     bb = bitops::FillSouthEast(bb, ~0) | bitops::FillSouthWest(bb, ~0);
     bb = bitops::FillSouth(bb, ~0);
-    bb &= ~second_row | bitops::S(bb);
+    bb &= ~bitops::second_rank | bitops::S(bb);
     coverage[kBlack][square] = bb;
   }
   return coverage;
@@ -171,8 +154,8 @@ std::array<BitBoard, 2> get_p_forward(const std::array<BitBoard, 2> &pawn_bb, co
       bitops::S(pawn_bb[kBlack]) & empty
   };
 
-  p_forward[kWhite] |= bitops::N(p_forward[kWhite]) & empty & fourth_row;
-  p_forward[kBlack] |= bitops::S(p_forward[kBlack]) & empty & fifth_row;
+  p_forward[kWhite] |= bitops::N(p_forward[kWhite]) & empty & bitops::fourth_rank;
+  p_forward[kBlack] |= bitops::S(p_forward[kBlack]) & empty & bitops::fifth_rank;
   return p_forward;
 }
 
@@ -600,7 +583,7 @@ Score ScoreBoard(const Board &board) {
 template std::vector<double> ScoreBoard<std::vector<double> >(const Board &board);
 
 void PrintFeatureValues(const Board &board) {
-  std::vector<int> features(ScoreBoard<std::vector<int> >(board));
+  std::vector<Score> features(ScoreBoard<std::vector<Score> >(board));
   size_t idx = 0;
   for (size_t i = 0; i < kNumFeatures; i++) {
     if (i == kFeatureInfos[idx + 1].idx) {
