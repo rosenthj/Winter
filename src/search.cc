@@ -350,12 +350,15 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
       AddFeature<T, in_check>(move_weight, kPWICounterMove);
     }
     if (GetMoveType(move) < kCapture) {
+      const Color color = t.board.get_turn();
       const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+      const Square source = GetMoveSource(move);
       const Square destination = GetMoveDestination(move);
-      const int  score = t.get_continuation_score<1>(last_moved_piece, last_destination,
+      const int32_t score = t.get_continuation_score<1>(last_moved_piece, last_destination,
                                          moving_piece, destination);
-      AddFeature<T, in_check>(move_weight, kPWICMH, score / 100);
-      AddFeature<T, in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 125);
+      AddFeature<T, in_check>(move_weight, kPWICMH, score / 1000);
+      AddFeature<T, in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 1000);
+      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 1000);
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
@@ -753,21 +756,26 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
+  const Color color = t.board.get_turn();
   const Move move = t.board.get_last_move();
   Square opp_des = GetMoveDestination(move);
   PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
   // TODO deal with promotion situations
-  int32_t score = std::min(depth * depth, 200);
+  const int32_t score = std::min(depth * depth, 200);
 
   for (size_t i = 0; i < quiets.size() - 1; ++i) {
+    Square src = GetMoveSource(quiets[i]);
     Square des = GetMoveDestination(quiets[i]);
     PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
     t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
+    t.update_history_score(color, src, des, -score);
   }
   size_t i = quiets.size() - 1;
+  Square src = GetMoveSource(quiets[i]);
   Square des = GetMoveDestination(quiets[i]);
   PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
   t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
+  t.update_history_score(color, src, des, score);
 
   if (t.get_height() < 2) {
     return;
@@ -895,10 +903,10 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     return 0;
   }
 
-//  if (Mode == kSamplingSearchMode && NodeType == kNW && depth <= kMaxDepthSampled) {
+//  if (Mode == kSamplingSearchMode && node_type == NodeType::kNW && depth <= kMaxDepthSampled) {
 //    sample_nodes++;
-//    if (sample_nodes >= kNodeCountSampleAt && (in_check || sample_nodes >= kNodeCountSampleAt + 10)) {
-//      return sample_node_and_return_alpha(t.board, depth, NodeType, alpha);
+//    if (sample_nodes >= kNodeCountSampleAt && (!in_check || sample_nodes >= kNodeCountSampleAt + 100)) {
+//      return sample_node_and_return_alpha(t.board, depth, node_type, alpha);
 //    }
 //  }
 
@@ -1427,128 +1435,7 @@ void end_search() {
 }
 
 void clear_killers_and_counter_moves() {
-//  for (size_t i = 0; i < killers.size(); ++i) {
-//    killers[i][0] = 0;
-//    killers[i][1] = 0;
-//  }
-//
-//  for (size_t c = 0; c < 2; ++c) {
-//    for (PieceType pt = kPawn; pt <= kKing; ++pt) {
-//      for (Square sq = 0; sq < 64; ++sq) {
-//        counter_moves[c][pt][sq] = kNullMove;
-//      }
-//    }
-//  }
   Threads.clear_killers_and_countermoves();
-}
-
-void CreateSearchParamDataset2(bool from_scratch) {
-  if (from_scratch) {
-    debug::Error("Dataset creation from scratch not supported at the moment.");
-  }
-  set_print_info(false);
-  std::vector< std::vector <int> > samples;
-  std::vector<Game> games = data::LoadGames();
-  int sampled_positions = 0;
-  int all_above = 0, all_below = 0, too_easy = 0;
-  while (samples.size() < 1 * kMillion) {
-    clear_killers_and_counter_moves();
-    table::ClearTable();
-    kNodeCountSampleAt = 1000 + rng() % 500;
-    Game game = games[rng() % games.size()];
-    if (game.moves.size() < 25) {
-      continue;
-    }
-    game.set_to_position_after((1 * game.moves.size() / 3)
-                               + (rng() % (2 * game.moves.size() / 3)) - 2);
-    Board board = game.board;
-    sample_nodes = 0;
-    sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(200));
-    if (sampled_alpha == kMinScore) {
-      continue;
-    }
-    end_time = get_infinite_time();
-    std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
-    std::shuffle(moves.begin(), moves.end(), rng);
-    Threads.main_thread->board.SetToSamePosition(sampled_board);
-    SortMovesML(moves, *Threads.main_thread, kNullMove);
-    std::vector<std::vector<int> > features;
-    MoveOrderInfo info(sampled_board);
-    if (sampled_board.InCheck()) {
-      for (size_t i = 0; i < moves.size(); ++i) {
-        features.emplace_back(GetMoveWeight<std::vector<int>, true>(moves[i], *Threads.main_thread, info));
-      }
-    }
-    else {
-      for (size_t i = 0; i < moves.size(); ++i) {
-        features.emplace_back(GetMoveWeight<std::vector<int>, false>(moves[i], *Threads.main_thread, info));
-      }
-    }
-    std::vector<Score> scores(features.size());
-    size_t low = 0, high = 0;
-    for (size_t i = 0; i < moves.size(); ++i) {
-      sampled_board.Make(moves[i]);
-      Threads.main_thread->board.SetToSamePosition(sampled_board);
-      Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(*Threads.main_thread,
-                                                       -(sampled_alpha+1),
-                                                       -sampled_alpha,
-                                                       sampled_depth - 1);
-      sampled_board.UnMake();
-      scores[i] = score;
-      if (score > sampled_alpha) {
-        high++;
-        if (high > moves.size() / 2) {
-          break;
-        }
-      }
-      else {
-        low++;
-      }
-    }
-    if (high == 0) {
-      all_below++;
-      continue;
-    }
-    else if (low == 0) {
-      all_above++;
-      continue;
-    }
-    else if (high > low) {
-      too_easy++;
-      continue;
-    }
-    size_t i = rng() % moves.size();
-    Score score;
-    sampled_board.Make(moves[i]);
-    if (sampled_node_type == NodeType::kNW) {
-      score = scores[i];
-    }
-    else {
-      Threads.main_thread->board.SetToSamePosition(sampled_board);
-      score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
-                                                 -(sampled_alpha+1),
-                                                 -sampled_alpha,
-                                                 sampled_depth - 1);
-    }
-    sampled_board.UnMake();
-    int target = 0;
-    if (score > sampled_alpha) {
-      target = 1;
-    }
-    features[i][0] = target;
-    samples.emplace_back(features[i]);
-    sampled_positions++;
-    if (sampled_positions % 1000 == 0) {
-      std::cout << "Sampled " << sampled_positions << " positions!" << std::endl;
-      std::cout << "Further " << all_above << " all cut nodes, "
-                              << all_below << " all nodes and "
-                              << too_easy << " too easy nodes!" << std::endl;
-      parse::Save2dVecToCSV<int>(samples, "data/search_param_dataset.csv");
-    }
-  }
-  parse::Save2dVecToCSV<int>(samples, "data/search_param_dataset.csv");
-  std::cout << "Finished creating dataset!" << std::endl;
 }
 
 // For move ordering we train a logistic regression classifier to predict whether a move will break beta.
@@ -1845,11 +1732,13 @@ void CreateSearchParamDataset() {
         continue;
       }
       sampled_board.Make(moves[i]);
-      Threads.main_thread->board.SetToSamePosition(sampled_board);
-      Score score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
-                                                       kMinScore,
-                                                       kMaxScore,
-                                                       6);//sampled_depth - 1);
+      RootSearch<kNormalSearchMode>(sampled_board, 6, Milliseconds(100));
+      Score score = -last_search_score;
+//      Threads.main_thread->board.SetToSamePosition(sampled_board);
+//      Score score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
+//                                                       kMinScore,
+//                                                       kMaxScore,
+//                                                       6);//sampled_depth - 1);
       sampled_board.UnMake();
       SearchTrainHelper sth;
       sth.move = moves[i];
@@ -1883,11 +1772,14 @@ void CreateSearchParamDataset() {
     }
     if (sampled_positions % 1000 == 0) {
       if (!samples.empty()) {
-        PrintDataset(samples, "search_params/DSet3.csv");
+        PrintDataset(samples, "search_params/DSet4.csv");
       }
       if (!samples_in_check.empty()) {
-        PrintDataset(samples_in_check, "search_params/DSetInCheck3.csv");
+        PrintDataset(samples_in_check, "search_params/DSetInCheck4.csv");
       }
+    }
+    if (sampled_positions > 40005) {
+      break;
     }
   }
 }

@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "0.5.5d";
+const std::string engine_version = "0.5.6";
 const std::string engine_author = "Jonathan Rosenthal";
 
 const int kNumClusters = 4;
@@ -47,7 +47,7 @@ const std::string kGMMParamsFile = kParamPath + "gmm_params_nfcm" + std::to_stri
 const std::string kParamExplanationFile = kGMMParamsFile + ".info";
 
 const std::string kSearchParamPath = "search_params/";
-const std::string kSearchParamVersionExtension = "181031b";
+const std::string kSearchParamVersionExtension = "190516";
 
 const std::string kSearchParamFile = kSearchParamPath + "sparams"
     + kSearchParamVersionExtension + ".txt";

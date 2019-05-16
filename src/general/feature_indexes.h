@@ -161,10 +161,11 @@ const size_t kPWIPawnRankDestination = kPWIForcingChanges + 4;
 const size_t kPWIPassedRankDestination = kPWIPawnRankDestination + 6;
 const size_t kPWIPawnAttack = kPWIPassedRankDestination + 6;
 const size_t kPWIPieceUnderAttack = kPWIPawnAttack + 1;
-const size_t kPWICMH = kPWIPieceUnderAttack + 2;
+const size_t kPWIHistory = kPWIPieceUnderAttack + 2;
+const size_t kPWICMH = kPWIHistory + 1;
 const size_t kNumMoveProbabilityFeatures = kPWICMH + 2;
 
-const std::array<FeatureInfo, 20> kFeatureInfos = {{
+const std::array<FeatureInfo, 21> kFeatureInfos = {{
     FeatureInfo("Hash Move", kPWIHashMove),
     FeatureInfo("Killer Move", kPWIKiller),
     FeatureInfo("Counter Move", kPWICounterMove),
@@ -183,6 +184,7 @@ const std::array<FeatureInfo, 20> kFeatureInfos = {{
     FeatureInfo("Rank of passed pawn destination", kPWIPassedRankDestination),
     FeatureInfo("Pawn move attacks a piece", kPWIPawnAttack),
     FeatureInfo("Piece under attack", kPWIPieceUnderAttack),
+    FeatureInfo("History", kPWIHistory),
     FeatureInfo("CMH", kPWICMH),
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};

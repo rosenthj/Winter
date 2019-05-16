@@ -114,6 +114,16 @@ bool Thread::worsening() const {
                       || static_scores[height] == kNoScore);
 }
 
+int32_t Thread::get_history_score(const Color color, const Square src,
+                                  const Square des) const {
+  return history[color][src][des];
+}
+
+void Thread::update_history_score(const Color color, const Square src, const Square des,
+                             const int32_t score) {
+  history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
+}
+
 bool Thread::strict_worsening() const {
   Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
   // kNoScore is defined as smaller than min score, so the second condition also implies

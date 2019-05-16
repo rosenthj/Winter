@@ -39,7 +39,7 @@ namespace hardcode {
 // Normalized Fuzzy C-Means Parameters
 // First Centroid set to zero vector normalized. Last centroid set to start pos.
 // m = 3
-const std::array<double, 8+(4*4)> NFCM_params = {
+constexpr std::array<double, 8+(4*4)> NFCM_params = {
     // Means and Standard Deviations
     1.4501, 1.34111,
     1.81476, 1.38448,
@@ -54,7 +54,7 @@ const std::array<double, 8+(4*4)> NFCM_params = {
 
 
 // Gaussian Mixture Model Parameters
-const std::array<double, (4+4*(6+1)*6)> gmm_components = {
+constexpr std::array<double, (4+4*(6+1)*6)> gmm_components = {
     // Component 0 weights
     222663,
     // Component 0 means
@@ -109,7 +109,7 @@ const std::array<double, (4+4*(6+1)*6)> gmm_components = {
 
 // Eval parameters for NFCM
 // Winter Dset d4, reduced base learn rate
-const std::array<int, (272*4)> eval_weights = {
+constexpr std::array<int, (272*4)> eval_weights = {
     -607,  -678,  -51,   120,   // King Piece Square Table
     -349,  -361,  183,   289,   // King Piece Square Table
     -36,   -34,   -317,  -98,   // King Piece Square Table
@@ -385,7 +385,7 @@ const std::array<int, (272*4)> eval_weights = {
 };
 
 // Eval parameters for GMM
-const std::array<int, (174*4)> eval_weights_gmm = {
+constexpr std::array<int, (174*4)> eval_weights_gmm = {
     -348,  -313,  -168,  30,    // King Piece Square Table
     -90,   -134,  47,    127,   // King Piece Square Table
     -176,  -99,   -100,  11,    // King Piece Square Table
@@ -565,244 +565,244 @@ const std::array<int, (174*4)> eval_weights_gmm = {
 // Search Parameters
 // ------------------------------------------------------------------------------------------------
 
-// Search parameters used for move ordering when not in check
-const std::array<int, 116> search_params = {
+constexpr std::array<int, 117> search_params = {
     2000, // Hash Move
-    142,  // Killer Move
-    112,  // Killer Move
-    92,   // Counter Move
-    83,   // Moving and Target Piece Type
-    271,  // Moving and Target Piece Type
-    265,  // Moving and Target Piece Type
-    377,  // Moving and Target Piece Type
-    673,  // Moving and Target Piece Type
-    140,  // Moving and Target Piece Type
-    170,  // Moving and Target Piece Type
-    156,  // Moving and Target Piece Type
+    80,   // Killer Move
+    77,   // Killer Move
+    72,   // Counter Move
+    -60,  // Moving and Target Piece Type
+    80,   // Moving and Target Piece Type
+    89,   // Moving and Target Piece Type
+    202,  // Moving and Target Piece Type
+    333,  // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    5,    // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    139,  // Moving and Target Piece Type
+    290,  // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    -65,  // Moving and Target Piece Type
+    69,   // Moving and Target Piece Type
+    131,  // Moving and Target Piece Type
+    286,  // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    -18,  // Moving and Target Piece Type
+    84,   // Moving and Target Piece Type
     116,  // Moving and Target Piece Type
-    313,  // Moving and Target Piece Type
-    546,  // Moving and Target Piece Type
-    66,   // Moving and Target Piece Type
-    155,  // Moving and Target Piece Type
+    123,  // Moving and Target Piece Type
+    293,  // Moving and Target Piece Type
+    -1,   // Moving and Target Piece Type
+    -120, // Moving and Target Piece Type
+    -27,  // Moving and Target Piece Type
+    1,    // Moving and Target Piece Type
+    32,   // Moving and Target Piece Type
+    161,  // Moving and Target Piece Type
+    3,    // Moving and Target Piece Type
+    -81,  // Moving and Target Piece Type
+    56,   // Moving and Target Piece Type
     37,   // Moving and Target Piece Type
-    209,  // Moving and Target Piece Type
-    283,  // Moving and Target Piece Type
-    556,  // Moving and Target Piece Type
-    37,   // Moving and Target Piece Type
-    110,  // Moving and Target Piece Type
-    255,  // Moving and Target Piece Type
-    267,  // Moving and Target Piece Type
-    248,  // Moving and Target Piece Type
-    605,  // Moving and Target Piece Type
-    33,   // Moving and Target Piece Type
-    4,    // Moving and Target Piece Type
-    98,   // Moving and Target Piece Type
-    145,  // Moving and Target Piece Type
-    164,  // Moving and Target Piece Type
-    312,  // Moving and Target Piece Type
-    41,   // Moving and Target Piece Type
-    74,   // Moving and Target Piece Type
-    218,  // Moving and Target Piece Type
-    238,  // Moving and Target Piece Type
-    406,  // Moving and Target Piece Type
+    189,  // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -318, // Move Type
-    -185, // Move Type
-    -352, // Move Type
-    14,   // Move Type
-    -74,  // Move Type
-    -311, // Move Type
-    -1000,// Move Type
-    -1000,// Move Type
+    -58,  // Moving and Target Piece Type
     0,    // Move Type
-    57,   // Move Source
-    32,   // Move Source
-    44,   // Move Source
-    31,   // Move Source
-    3,    // Move Source
-    9,    // Move Source
-    13,   // Move Source
-    8,    // Move Source
-    3,    // Move Source
+    142,  // Move Type
+    -48,  // Move Type
+    192,  // Move Type
+    287,  // Move Type
+    31,   // Move Type
+    -1000,// Move Type
+    -1000,// Move Type
+    404,  // Move Type
+    45,   // Move Source
+    24,   // Move Source
+    25,   // Move Source
+    19,   // Move Source
+    -8,   // Move Source
+    -1,   // Move Source
     0,    // Move Source
-    -135, // Move Destination
-    -86,  // Move Destination
-    -92,  // Move Destination
-    -78,  // Move Destination
-    -35,  // Move Destination
-    -37,  // Move Destination
-    -37,  // Move Destination
-    -25,  // Move Destination
-    -18,  // Move Destination
+    -7,   // Move Source
+    -11,  // Move Source
+    -16,  // Move Source
+    -83,  // Move Destination
+    -47,  // Move Destination
+    -44,  // Move Destination
+    -28,  // Move Destination
+    -6,   // Move Destination
     0,    // Move Destination
-    175,  // Knight Move Source
-    124,  // Knight Move Source
-    85,   // Knight Move Source
-    71,   // Knight Move Source
-    76,   // Knight Move Source
-    49,   // Knight Move Source
-    42,   // Knight Move Source
-    21,   // Knight Move Source
-    -4,   // Knight Move Source
+    4,    // Move Destination
+    13,   // Move Destination
+    19,   // Move Destination
+    30,   // Move Destination
+    186,  // Knight Move Source
+    80,   // Knight Move Source
+    38,   // Knight Move Source
+    44,   // Knight Move Source
+    36,   // Knight Move Source
+    29,   // Knight Move Source
+    19,   // Knight Move Source
     0,    // Knight Move Source
-    -369, // Knight Move Destination
-    -259, // Knight Move Destination
-    -191, // Knight Move Destination
-    -149, // Knight Move Destination
-    -150, // Knight Move Destination
-    -90,  // Knight Move Destination
-    -76,  // Knight Move Destination
-    -57,  // Knight Move Destination
-    -14,  // Knight Move Destination
-    0,    // Knight Move Destination
-    66,   // Move Captures Last Moved Piece
-    -426, // Move SEE
-    -232, // Move SEE
-    82,   // Move Gives Check
-    160,  // Move Gives Check
-    -369, // Move Destination Taboo
-    39,   // Changes Between Non-/Forcing States
-    -39,  // Changes Between Non-/Forcing States
+    -17,  // Knight Move Source
+    -22,  // Knight Move Source
+    -226, // Knight Move Destination
+    -159, // Knight Move Destination
+    -102, // Knight Move Destination
+    -67,  // Knight Move Destination
+    -78,  // Knight Move Destination
+    -12,  // Knight Move Destination
+    3,    // Knight Move Destination
+    27,   // Knight Move Destination
+    44,   // Knight Move Destination
+    60,   // Knight Move Destination
+    101,  // Move Captures Last Moved Piece
+    -387, // Move SEE
+    -244, // Move SEE
+    93,   // Move Gives Check
+    180,  // Move Gives Check
+    -343, // Move Destination Taboo
     0,    // Changes Between Non-/Forcing States
     0,    // Changes Between Non-/Forcing States
-    -167, // Rank of pawn destination
-    -143, // Rank of pawn destination
-    -74,  // Rank of pawn destination
-    11,   // Rank of pawn destination
+    -22,  // Changes Between Non-/Forcing States
+    41,   // Changes Between Non-/Forcing States
+    -46,  // Rank of pawn destination
+    -8,   // Rank of pawn destination
+    69,   // Rank of pawn destination
+    141,  // Rank of pawn destination
     0,    // Rank of pawn destination
     0,    // Rank of pawn destination
-    -186, // Rank of passed pawn destination
-    -97,  // Rank of passed pawn destination
-    -56,  // Rank of passed pawn destination
-    -30,  // Rank of passed pawn destination
+    -50,  // Rank of passed pawn destination
+    35,   // Rank of passed pawn destination
+    51,   // Rank of passed pawn destination
+    64,   // Rank of passed pawn destination
+    101,  // Rank of passed pawn destination
     0,    // Rank of passed pawn destination
-    0,    // Rank of passed pawn destination
-    128,  // Pawn move attacks a piece
-    131,  // Piece under attack
-    206,   // Piece under attack
-    1,
-    1
+    119,  // Pawn move attacks a piece
+    86,   // Piece under attack
+    159,  // Piece under attack
+    7,    // History // TODO: try smoothing histories so weights = 1.
+    14,   // CMH
+    2     // CMH
 };
 
-// Search parameters used for move ordering when in check
-const std::array<int, 116> search_params_in_check = {
+constexpr std::array<int, 117> search_params_in_check = {
     2000, // Hash Move
-    123,  // Killer Move
-    116,  // Killer Move
-    188,  // Counter Move
-    -135, // Moving and Target Piece Type
-    -55,  // Moving and Target Piece Type
-    -2,   // Moving and Target Piece Type
-    143,  // Moving and Target Piece Type
-    262,  // Moving and Target Piece Type
+    60,   // Killer Move
+    53,   // Killer Move
+    131,  // Counter Move
+    -50,  // Moving and Target Piece Type
+    -47,  // Moving and Target Piece Type
+    -21,  // Moving and Target Piece Type
+    21,   // Moving and Target Piece Type
+    8,    // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
-    -97,  // Moving and Target Piece Type
-    -53,  // Moving and Target Piece Type
-    4,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    160,  // Moving and Target Piece Type
-    -16,  // Moving and Target Piece Type
-    -68,  // Moving and Target Piece Type
-    -22,  // Moving and Target Piece Type
-    88,   // Moving and Target Piece Type
-    35,   // Moving and Target Piece Type
-    183,  // Moving and Target Piece Type
-    -8,   // Moving and Target Piece Type
-    -80,  // Moving and Target Piece Type
-    17,   // Moving and Target Piece Type
-    66,   // Moving and Target Piece Type
-    112,  // Moving and Target Piece Type
-    183,  // Moving and Target Piece Type
-    2,    // Moving and Target Piece Type
-    -128, // Moving and Target Piece Type
-    -22,  // Moving and Target Piece Type
-    38,   // Moving and Target Piece Type
-    -28,  // Moving and Target Piece Type
-    237,  // Moving and Target Piece Type
-    6,    // Moving and Target Piece Type
-    -198, // Moving and Target Piece Type
-    -107, // Moving and Target Piece Type
     -49,  // Moving and Target Piece Type
+    -68,  // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    -22,  // Moving and Target Piece Type
+    30,   // Moving and Target Piece Type
+    -19,  // Moving and Target Piece Type
+    -2,   // Moving and Target Piece Type
+    3,    // Moving and Target Piece Type
+    3,    // Moving and Target Piece Type
+    9,    // Moving and Target Piece Type
+    50,   // Moving and Target Piece Type
+    -12,  // Moving and Target Piece Type
+    -4,   // Moving and Target Piece Type
+    -27,  // Moving and Target Piece Type
+    25,   // Moving and Target Piece Type
+    61,   // Moving and Target Piece Type
     64,   // Moving and Target Piece Type
-    192,  // Moving and Target Piece Type
-    -70,  // Moving and Target Piece Type
-    -75,  // Move Type
+    13,   // Moving and Target Piece Type
+    -14,  // Moving and Target Piece Type
+    -27,  // Moving and Target Piece Type
+    14,   // Moving and Target Piece Type
+    -11,  // Moving and Target Piece Type
+    40,   // Moving and Target Piece Type
+    4,    // Moving and Target Piece Type
+    -81,  // Moving and Target Piece Type
+    0,    // Moving and Target Piece Type
+    -11,  // Moving and Target Piece Type
+    38,   // Moving and Target Piece Type
+    44,   // Moving and Target Piece Type
+    -82,  // Moving and Target Piece Type
     0,    // Move Type
-    -59,  // Move Type
-    76,   // Move Type
-    137,  // Move Type
-    -15,  // Move Type
+    0,    // Move Type
+    -18,  // Move Type
+    -134, // Move Type
+    254,  // Move Type
+    151,  // Move Type
     -1000,// Move Type
     -1000,// Move Type
-    0,    // Move Type
-    53,   // Move Source
-    21,   // Move Source
-    27,   // Move Source
-    40,   // Move Source
-    -11,  // Move Source
+    395,  // Move Type
+    35,   // Move Source
     -3,   // Move Source
+    11,   // Move Source
+    17,   // Move Source
+    4,    // Move Source
     0,    // Move Source
-    -26,  // Move Source
-    -35,  // Move Source
-    -48,  // Move Source
-    -99,  // Move Destination
-    -37,  // Move Destination
-    -70,  // Move Destination
-    -88,  // Move Destination
-    -1,   // Move Destination
-    11,   // Move Destination
+    -1,   // Move Source
+    -23,  // Move Source
+    -29,  // Move Source
+    -32,  // Move Source
+    -131, // Move Destination
+    -75,  // Move Destination
+    -78,  // Move Destination
+    -76,  // Move Destination
+    -19,  // Move Destination
     0,    // Move Destination
-    40,   // Move Destination
-    48,   // Move Destination
-    56,   // Move Destination
-    12,   // Knight Move Source
-    34,   // Knight Move Source
-    17,   // Knight Move Source
+    8,    // Move Destination
+    30,   // Move Destination
+    35,   // Move Destination
+    45,   // Move Destination
+    0,    // Knight Move Source
+    -6,   // Knight Move Source
+    0,    // Knight Move Source
+    3,    // Knight Move Source
     0,    // Knight Move Source
     0,    // Knight Move Source
-    -1,   // Knight Move Source
     0,    // Knight Move Source
-    -9,   // Knight Move Source
-    -49,  // Knight Move Source
-    -12,  // Knight Move Source
+    0,    // Knight Move Source
+    0,    // Knight Move Source
+    -4,   // Knight Move Source
     0,    // Knight Move Destination
-    -79,  // Knight Move Destination
-    -79,  // Knight Move Destination
-    -116, // Knight Move Destination
-    7,    // Knight Move Destination
+    -127, // Knight Move Destination
+    -105, // Knight Move Destination
+    -131, // Knight Move Destination
+    -62,  // Knight Move Destination
+    -13,  // Knight Move Destination
     0,    // Knight Move Destination
-    -15,  // Knight Move Destination
+    1,    // Knight Move Destination
     0,    // Knight Move Destination
-    0,    // Knight Move Destination
-    7,    // Knight Move Destination
-    78,   // Move Captures Last Moved Piece
-    -499, // Move SEE
-    -419, // Move SEE
-    59,   // Move Gives Check
-    76,   // Move Gives Check
-    -418, // Move Destination Taboo
+    45,   // Knight Move Destination
+    5,    // Move Captures Last Moved Piece
+    -344, // Move SEE
+    -369, // Move SEE
+    61,   // Move Gives Check
+    65,   // Move Gives Check
+    -367, // Move Destination Taboo
     0,    // Changes Between Non-/Forcing States
-    104,  // Changes Between Non-/Forcing States
-    -208, // Changes Between Non-/Forcing States
+    55,   // Changes Between Non-/Forcing States
+    -138, // Changes Between Non-/Forcing States
     0,    // Changes Between Non-/Forcing States
-    -19,  // Rank of pawn destination
-    38,   // Rank of pawn destination
-    54,   // Rank of pawn destination
-    166,  // Rank of pawn destination
+    -24,  // Rank of pawn destination
+    40,   // Rank of pawn destination
+    40,   // Rank of pawn destination
     0,    // Rank of pawn destination
     0,    // Rank of pawn destination
-    -1,   // Rank of passed pawn destination
-    35,   // Rank of passed pawn destination
-    73,   // Rank of passed pawn destination
-    249,  // Rank of passed pawn destination
-    126,  // Rank of passed pawn destination
+    0,    // Rank of pawn destination
+    -66,  // Rank of passed pawn destination
+    56,   // Rank of passed pawn destination
+    124,  // Rank of passed pawn destination
+    70,   // Rank of passed pawn destination
+    129,  // Rank of passed pawn destination
     0,    // Rank of passed pawn destination
-    -15,  // Pawn move attacks a piece
-    75,   // Piece under attack
-    11,   // Piece under attack
-    1,
-    1
+    -8,   // Pawn move attacks a piece
+    34,   // Piece under attack
+    0,    // Piece under attack
+    7,    // History
+    13,   // CMH
+    2     // CMH
 };
 
 }

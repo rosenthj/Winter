@@ -50,24 +50,27 @@ struct Thread {
 
   void clear_killers_and_counter_moves() {
     static_scores.fill(kNoScore);
-    for (size_t i = 0; i < killers.size(); i++) {
+    for (size_t i = 0; i < killers.size(); ++i) {
       killers[i][0] = 0;
       killers[i][1] = 0;
     }
 
-    for (size_t c = 0; c < 2; c++) {
-      for (PieceType pt = kPawn; pt <= kKing; pt++) {
-        for (Square sq = 0; sq < 64; sq++) {
-          counter_moves[c][pt][sq] = kNullMove;
+    for (Color c = kWhite; c <= kBlack; ++c) {
+      for (Square src = 0; src < kBoardSize; ++src) {
+        for (PieceType pt = kPawn; pt <= kKing; ++pt) {
+          counter_moves[c][pt][src] = kNullMove;
+        }
+        for (Square des = 0; des < kBoardSize; ++des) {
+          history[c][src][des] = 0;
         }
       }
     }
 
     for (size_t idx = 0; idx < continuation_history.size(); idx++) {
-      for (PieceType pt = kPawn; pt <= kKing; pt++) {
-        for (Square sq = 0; sq < 64; sq++) {
-          for (PieceType pt_i = kPawn; pt_i <= kKing; pt_i++) {
-            for (Square sq_i = 0; sq_i < 64; sq_i++) {
+      for (PieceType pt = kPawn; pt <= kKing; ++pt) {
+        for (Square sq = 0; sq < kBoardSize; ++sq) {
+          for (PieceType pt_i = kPawn; pt_i <= kKing; ++pt_i) {
+            for (Square sq_i = 0; sq_i < kBoardSize; ++sq_i) {
               continuation_history[idx][pt][sq][pt_i][sq_i] = 0;
             }
           }
@@ -95,6 +98,10 @@ struct Thread {
     static_scores[height] = score;
   }
 
+  int32_t get_history_score(const Color color, const Square src, const Square des) const;
+
+  void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
+
   template<int moves_ago>
   int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
                         const PieceType piecetype, const Square des) const;
@@ -121,6 +128,7 @@ struct Thread {
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
+  Array3d<int32_t, 2, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   Depth root_height;
