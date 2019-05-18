@@ -1232,8 +1232,6 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
 }
 
-std::mutex mutex;
-
 void Thread::search() {
   const Time begin = now();
   double time_factor = 1.0;
@@ -1248,32 +1246,32 @@ void Thread::search() {
   Move last_best = kNullMove;
   std::vector<Score> previous_scores;
 
-  for (current_depth = 1; current_depth <= rsearch_depth; ++current_depth) {
+  for (Depth depth = current_depth; depth <= rsearch_depth; ++depth) {
     if(finished(*this)) {
       Threads.end_search = true;
       break;
     }
 
     if (id != 0 && current_depth > 4 && !Threads.ignorance_smp) {
-      std::unique_lock<std::mutex> lock(mutex);
+      static std::mutex mutex;
+      std::lock_guard<std::mutex> lock(mutex);
+      current_depth = depth;
+
       size_t count = 0;
       for (Thread* t : Threads.helpers) {
         if (current_depth <= t->current_depth) {
           count++;
         }
       }
-      if (current_depth <= Threads.main_thread->current_depth) {
-        count++;
-      }
-      if (count >= (Threads.get_thread_count()+3) / 2) {
-        lock.unlock();
+      if (count - 1 >= Threads.get_thread_count() / 2) {
         continue;
       }
-      lock.unlock();
-      if ((rng() % 4) == 0) {
-        perturb_root_moves();
-      }
+      //if ((rng() % 4) == 0) {
+      //  perturb_root_moves();
+      //}
     }
+
+    current_depth = depth;
 
     if (rsearch_mode == kNormalSearchMode) {
       //std::cout << "T" << id << " searching depth " << current_depth << " nodes: " << nodes << std::endl;
@@ -1348,6 +1346,7 @@ template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)){
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
+  Threads.reset_depths();
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
   rsearch_mode = Mode;
@@ -1366,7 +1365,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
-  Threads.ignorance_smp = moves.size() > 10;
+  Threads.ignorance_smp = false; // moves.size() > 10;
   std::vector<std::thread> helpers;
   for (Thread* t : Threads.helpers) {
     t->board.SetToSamePosition(board);
@@ -1387,7 +1386,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
       }
     }
     t->max_depth = t->board.get_num_made_moves();
-    t->current_depth = 1;
     helpers.emplace_back(std::thread(&Thread::search, t));
   }
   Threads.main_thread->search();

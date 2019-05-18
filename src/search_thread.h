@@ -35,8 +35,6 @@
 #include <thread>
 #include <vector>
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
 
 namespace search {
 
@@ -142,6 +140,7 @@ struct ThreadPool {
   //Set number of threads including main thread
   void set_num_threads(size_t num_threads);
   void clear_killers_and_countermoves();
+  void reset_depths();
 
   size_t get_thread_count() const;
   size_t get_node_count() const;

@@ -30,7 +30,6 @@
 #include <random>
 #include <algorithm>
 #include <iostream>
-#include <mutex>
 
 namespace {
 std::mt19937_64 rng;
@@ -190,10 +189,17 @@ void ThreadPool::set_num_threads(size_t num_threads) {
 }
 
 void ThreadPool::clear_killers_and_countermoves() {
-  main_thread->clear_killers_and_counter_moves();
   for (Thread* thread : helpers) {
     thread->clear_killers_and_counter_moves();
   }
+  main_thread->clear_killers_and_counter_moves();
+}
+
+void ThreadPool::reset_depths() {
+  for (Thread* thread : helpers) {
+    thread->current_depth = 1;
+  }
+  main_thread->current_depth = 1;
 }
 
 size_t ThreadPool::get_thread_count() const {
