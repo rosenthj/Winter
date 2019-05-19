@@ -65,7 +65,7 @@ const std::string kEngineNamePrefix = "id name ";
 const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
-    "option name Hash type spin default 32 min 1 max 104576\noption name Threads type spin default 1 min 1 max 64";
+    "option name Hash type spin default 32 min 1 max 104576\noption name Threads type spin default 1 min 1 max 256";
 
 struct Timer {
   Timer() {
