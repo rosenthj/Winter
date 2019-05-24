@@ -1252,29 +1252,27 @@ void Thread::search() {
       break;
     }
 
-    if (id != 0 && current_depth > 4 && !Threads.ignorance_smp) {
+    if (id != 0 && depth > 4 && !Threads.ignorance_smp) {
       static std::mutex mutex;
       std::lock_guard<std::mutex> lock(mutex);
-      current_depth = depth;
 
       size_t count = 0;
       for (Thread* t : Threads.helpers) {
-        if (current_depth <= t->current_depth) {
+        if (depth <= t->current_depth) {
           count++;
         }
       }
-      if (count - 1 >= Threads.get_thread_count() / 2) {
-        continue;
+      if (count >= Threads.get_thread_count() / 2) {
+        if ((id % 3) != (depth % 3)) {
+          continue;
+        }
+        depth = std::min(depth+1, rsearch_depth);
       }
-      //if ((rng() % 4) == 0) {
-      //  perturb_root_moves();
-      //}
     }
 
     current_depth = depth;
 
     if (rsearch_mode == kNormalSearchMode) {
-      //std::cout << "T" << id << " searching depth " << current_depth << " nodes: " << nodes << std::endl;
       score = PVS<kNormalSearchMode>(*this, current_depth, previous_scores, moves);
     }
     else if (rsearch_mode == kSamplingSearchMode) {
@@ -1284,9 +1282,6 @@ void Thread::search() {
       assert(rsearch_mode == kSamplingEvalMode);
       score = PVS<kSamplingEvalMode>(*this, current_depth, previous_scores, moves);
     }
-    //score = MTDf<Mode>(board, current_depth, score, moves);
-    //score = sMTDf<Mode>(board, current_depth, score, moves);
-
 
     if(!finished(*this)) {
       last_search_score = score;
