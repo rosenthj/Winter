@@ -8,20 +8,20 @@ SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE:=Winter
 
-all: $(SOURCES) $(EXECUTABLE) clean
+all: $(SOURCES) $(EXECUTABLE)
 
 target no_bmi: CFLAGS += -DNO_BMI
 no_bmi: all
 
-target ancient: CFLAGS=-c -O3 -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
+target ancient: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
 target ancient: LDFLAGS=-Wall -static
 ancient: all
 
-target old: CFLAGS=-c -O3 -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
+target old: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
 target old: LDFLAGS=-Wall -static
 old: all
 
-target new: CFLAGS=-c -O3 -Wall -Wno-sign-compare -m64 -mavx2 -mbmi -mbmi2 -std=c++11 -Isrc -Isrc/general -Isrc/learning
+target new: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -mavx2 -mbmi -mbmi2 -std=c++11 -Isrc -Isrc/general -Isrc/learning
 target new: LDFLAGS=-Wall -static
 new: all
 

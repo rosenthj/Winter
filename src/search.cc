@@ -1108,6 +1108,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     }
     alpha = -1;
   }
+  const bool in_check = t.board.InCheck();
   for (size_t i = 0; i < moves.size(); ++i) {
     t.set_move(moves[i]);
     t.board.Make(moves[i]);
@@ -1124,11 +1125,15 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
       lower_bound_score = std::max(score, lower_bound_score);
     }
     else {
-//      Depth reduction = 0;
-//      if (!in_check && !board.InCheck() && GetMoveType(moves[i]) <= kDoublePawnMove) {
-//        reduction = get_lmr_reduction<kPV>(current_depth, i) / 2;
-//      }
-      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha + 1), -alpha, current_depth - 1);
+      Depth reduction = 0;
+      if (!in_check && !t.board.InCheck() && i > 2) {
+        //Late Move Reduction factor
+        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2);
+        if (GetMoveType(moves[i]) > kDoublePawnMove) {
+          reduction = (2 * reduction) / 3;
+        }
+      }
+      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha + 1), -alpha, current_depth - 1 - reduction);
       if (score > alpha) {
         score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
       }
