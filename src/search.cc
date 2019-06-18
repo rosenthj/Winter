@@ -4,7 +4,7 @@
  *
  *
  *
- *£
+ *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
  *  Copyright (C) 2017-2018 Jonathan Rosenthal
  *
@@ -39,12 +39,13 @@
 #include "general/magic.h"
 #include "benchmark.h"
 #include "search_thread.h"
-#include <random>
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 #include <fstream>
-#include <cassert>
 #include <mutex>
+#include <random>
+#include <utility>
 
 using namespace move_features;
 
@@ -750,7 +751,10 @@ inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
   }
 }
 
-bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry);
+std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
+                                       const std::vector<Move> &moves,
+                                       const table::Entry &entry,
+                                       const bool expected_cut);
 
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
@@ -800,13 +804,14 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
 }
 
 template<NodeType node_type, int Mode>
-Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_node = 1) {
+Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_cut_node = false) {
   assert(alpha >= kMinScore);
   assert(alpha <= kMaxScore);
   assert(beta >= kMinScore);
   assert(beta <= kMaxScore);
   assert(beta > alpha);
   assert(beta == alpha + 1 || node_type != NodeType::kNW);
+  assert(node_type != NodeType::kPV || !expected_cut_node);
 
   const Score original_alpha = alpha;
   Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
@@ -886,7 +891,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
       Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -beta, -alpha,
-                                    depth - R, (expected_node & (~0x1)) + 2);
+                                    depth - R, !expected_cut_node);
       t.board.UnMake();
       if (score >= beta) {
         return score;
@@ -952,8 +957,12 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
         && entry.bound != kUpperBound && !is_mate_score(entry.get_score(t.board))) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
-      if (move_is_singular(t, depth, moves, entry)) {
+      auto is_singular = move_is_singular(t, depth, moves, entry, expected_cut_node);
+      if (is_singular.first) {
         e = 1;
+      }
+      else if (expected_cut_node && is_singular.second >= beta) {
+        return is_singular.second;
       }
     }
 
@@ -997,14 +1006,15 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
     Score score;
     if (i == 0) {
       //First move gets searched at full depth and window
-      score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e, expected_node ^ 0x1);
+      score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e,
+                                          node_type==NodeType::kNW && !expected_cut_node);
     }
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
-      score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha+1), -alpha, depth - 1 + e - reduction, 1);
+      score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha+1), -alpha, depth - 1 + e - reduction, !expected_cut_node);
       //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (node_type == NodeType::kPV || reduction > 0)) {
-        score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e, 0);
+        score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e, false);
       }
     }
     assert(score >= kMinScore && score <= kMaxScore);
@@ -1069,11 +1079,13 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, int expected_no
   return lower_bound_score;
 }
 
-bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &moves, const table::Entry &entry) {
+std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
+                                       const std::vector<Move> &moves,
+                                       const table::Entry &entry, const bool expected_cut) {
   const Score Beta = entry.get_score(t.board);
   const Score rBeta = Beta - 4 * depth;
   const Score rAlpha = rBeta - 1;
-  const Depth rDepth = (depth + 1) / 3;
+  const Depth rDepth = (depth - 3) / 2;
   assert(!is_mate_score(Beta));
   assert(entry.get_best_move() == moves[0]);
   assert(entry.bound != kUpperBound);
@@ -1081,13 +1093,13 @@ bool move_is_singular(Thread &t, const Depth depth, const std::vector<Move> &mov
   for(size_t i = 1; i < moves.size(); ++i) {
     t.set_move(moves[i]);
     t.board.Make(moves[i]);
-    Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(t, -rBeta, -rAlpha, rDepth);
+    Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(t, -rBeta, -rAlpha, rDepth, !expected_cut);
     t.board.UnMake();
     if (score >= rBeta) {
-      return false;
+      return std::make_pair(false, score);
     }
   }
-  return true;
+  return std::make_pair(true, rAlpha);
 }
 
 template<int Mode>
@@ -1133,7 +1145,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
           reduction = (2 * reduction) / 3;
         }
       }
-      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha + 1), -alpha, current_depth - 1 - reduction);
+      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha + 1), -alpha, current_depth - 1 - reduction, true);
       if (score > alpha) {
         score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
       }
