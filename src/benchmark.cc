@@ -35,6 +35,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <tuple>
 #include <iostream>
 #include <cmath>
 
@@ -46,6 +47,10 @@ bool is_mate_score(Score score) {
 
 double Sigmoid(const Score score) {
   return 1 / (1 + std::exp(-score / 1024.0));
+}
+
+double SigmoidCrossEntropyLossV2(double score, double target) {
+  return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
 }
 
 double SigmoidCrossEntropyLoss(Score score, double target) {
@@ -87,6 +92,8 @@ struct SymmetryTest {
     board2.SetBoard(parse::split(tokens[1], ' '));
   }
 };
+
+using EvaluationTest = std::tuple<Board, double>;
 
 }
 
@@ -148,10 +155,6 @@ double MoveOrderTest() {
       << "\nTop 1: " << (top_1 / count) << "\nTop 2: " << (top_2 / count)
       << "\nTop 3: " << (top_3 / count) << "\nTop 5: " << (top_5 / count)
       << "\nTop Half: " << (top_half / count) << "\nCount: " << count << std::endl;
-//  std::cout << "\nRandom ordering stats after " << games.size() << " games:"
-//      << "\nTop 1 Random: " << (top_1r / count) << "\nTop 2 Random: " << (top_2r / count)
-//      << "\nTop 3 Random: " << (top_3r / count) << "\nTop 5 Random: " << (top_5r / count)
-//      << "\nTop Half Random: " << (top_halfr / count) << "\nCount: " << count << std::endl;
 
   return top_1 / count;
 }
@@ -408,6 +411,67 @@ void GenerateDatasetFromEPD() {
   file.close();
   dfile.flush();
   dfile.close();
+}
+
+double RunEvalTestSet(const std::vector<EvaluationTest> &test_set, double div) {
+  double error_sum = 0;
+  for (const EvaluationTest sample : test_set) {
+    Score score = evaluation::ScoreBoard(std::get<0>(sample));
+    double target = std::get<1>(sample);
+    //error_sum += std::abs(Sigmoid(evaluation::ScoreBoard(std::get<0>(sample)) / div)-std::get<1>(sample));
+    error_sum += SigmoidCrossEntropyLossV2(score / div, target);
+  }
+  return error_sum / test_set.size();
+}
+
+double ZuriChessDatasetLoss() {
+  std::string line;
+  std::ifstream file("quiet-labeled.epd");
+  std::vector<EvaluationTest> eval_test_set;
+  while(std::getline(file, line)) {
+    std::vector<std::string> tokens = parse::split(line, ' ');
+    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+    Board board(fen);
+    if (board.InCheck()) {
+      continue;
+    }
+    double result = -1;
+    if (tokens[5].compare("\"1-0\";") == 0) {
+      result = 1;
+    }
+    else if (tokens[5].compare("\"0-1\";") == 0) {
+      result = 0;
+    }
+    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
+      result = 0.5;
+    }
+    else {
+      std::cout << "Error detected! Line:" << std::endl;
+      std::cout << line << std::endl;
+      file.close();
+      return 0;
+    }
+    if (board.get_turn() == kBlack) {
+      result = 1 - result;
+    }
+    eval_test_set.emplace_back(board, result);
+
+    if (eval_test_set.size() % 10000 == 0) {
+      std::cout << "Processed " << (eval_test_set.size()) << " samples!" << std::endl;
+    }
+  }
+  file.close();
+  std::cout << "Processed " << (eval_test_set.size()) << " samples!" << std::endl;
+  for (double div = 0.2; div < 1; div += 0.05) {
+    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
+  }
+  for (double div = 1; div < 32; div *= 2) {
+    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
+  }
+  for (double div = 24; div <= 1524; div += 50) {
+    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
+  }
+  return 0;
 }
 
 }

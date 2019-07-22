@@ -46,6 +46,8 @@
 #include <utility>
 #include <cassert>
 
+#include "net_evaluation.h"
+
 using namespace positional_features;
 
 namespace {
@@ -569,6 +571,7 @@ T ScoreBoard(const Board &board) {
 }
 
 Score ScoreBoard(const Board &board) {
+  return net_evaluation::ScoreBoard(board);
   PScore score =  ScoreBoard<PScore>(board);
   Vec<double, settings::kNumClusters> weights =
       cluster_model->GetWeightedProbabilities(board);

@@ -95,6 +95,20 @@ struct Vec {
     return *this;
   }
   
+  inline Vec<type, length>& relu() {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = std::max(values[i], static_cast<type>(0));
+    }
+    return *this;
+  }
+
+  inline Vec<type, length>& sigmoid() {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = static_cast<type>(1) / (1 + std::exp(-values[i]));
+    }
+    return *this;
+  }
+
   friend Vec<type,length> operator+(Vec<type,length> lhs, const Vec<type,length> &rhs) {
     lhs += rhs;
     return lhs;
@@ -160,6 +174,13 @@ struct Vec {
   inline Vec<type, length>& operator/=(const double rhs) {
     for (size_t i = 0; i < length; ++i) {
       this->values[i] /= rhs;
+    }
+    return *this;
+  }
+
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+    for (size_t i = 0; i < length; ++i) {
+      this->values[i] += a[i] * b;
     }
     return *this;
   }

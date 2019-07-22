@@ -34,6 +34,8 @@
 #include "train.h"
 #include "learning/cluster.h"
 
+#include "net_evaluation.h"
+
 int main() {
   debug::EnterFunction(debug::kMain, "Main", "");
   table::SetTableSize(32);
@@ -41,7 +43,7 @@ int main() {
     train::Train(true);
   }
 //  evaluation::LoadGMMVariables();
-  evaluation::LoadGMMVariablesHardCoded();
+//  evaluation::LoadGMMVariablesHardCoded();
 //  evaluation::LoadMixturesHardCoded();
 //  evaluation::LoadVariablesFromFile();
 //  evaluation::SaveGMMHardCode("gmm_hardcoded.txt");
@@ -51,6 +53,12 @@ int main() {
 //  evaluation::RunEMForGMM();
 
 //  benchmark::GenerateDatasetFromEPD();
+//  std::cout << evaluation::ScoreBoard(Board());
+  net_evaluation::init_weights();
+
+//  net_evaluation::GenerateDatasetFromEPD();
+//  benchmark::ZuriChessDatasetLoss();
+//  net_evaluation::EstimateFeatureImpact();
 
   //search::SaveHardcodeSearchVariables();
   //evaluation::SaveGMMHardCode("gmm_hardcode.txt");
@@ -75,7 +83,6 @@ int main() {
   //evaluation::SaveTScoreVariables("t_variables.txt");
   //evaluation::Train();
   //parse::Save2dVecToCSV<Score>(vecvec,"data/test.csv");
-
   uci::Loop();
   debug::ExitFunction(debug::kMain);
   return 0;

@@ -1355,7 +1355,7 @@ void Thread::search() {
 }
 
 template<int Mode>
-Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)){
+Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
@@ -1373,6 +1373,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     tt_move = entry.get_best_move();
   }
   Threads.main_thread->board.SetToSamePosition(board);
+  Threads.main_thread->root_height = board.get_num_made_moves();
   Threads.main_thread->max_depth = board.get_num_made_moves();
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
@@ -1381,6 +1382,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   std::vector<std::thread> helpers;
   for (Thread* t : Threads.helpers) {
     t->board.SetToSamePosition(board);
+    t->root_height = board.get_num_made_moves();
     t->moves = moves;
     if (Threads.ignorance_smp) {
       if (t->id > 2 && (t->id)%2) {

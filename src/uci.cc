@@ -31,6 +31,7 @@
 #include "general/types.h"
 #include "general/bookkeeping.h"
 #include "board.h"
+#include "net_evaluation.h"
 #include "search.h"
 #include "transposition.h"
 #include "train.h"
@@ -138,6 +139,19 @@ void Loop() {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       break;
     }
+    else if (Equals(command, "gen_eval_csv")) {
+      if (tokens.size() < 2 || tokens.size() > 3) {
+        std::cout << "invalid number of arguments, expected 1 or 2 got " << (tokens.size()-1) << std::endl;
+      }
+      if (tokens.size() == 2) {
+        net_evaluation::GenerateDatasetFromUCIGames(tokens[index++]);
+      }
+      if (tokens.size() == 3) {
+        std::string filename = tokens[index++];
+        std::string out = tokens[index++];
+        net_evaluation::GenerateDatasetFromUCIGames(filename, out);
+      }
+    }
     else if (Equals(command, "isready")) {
       Reply(kEngineIsReady);
     }
@@ -146,7 +160,7 @@ void Loop() {
     }
     else if (Equals(command, "train_csv")) {
       if (tokens.size() != 2) {
-        std::cout << "invalid number of arguments, expected 1 got " << tokens.size() << std::endl;
+        std::cout << "invalid number of arguments, expected 1 got " << (tokens.size()-1) << std::endl;
       }
       train::TrainCSV(tokens[index++]);
     }
