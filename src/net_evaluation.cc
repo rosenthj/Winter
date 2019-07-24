@@ -16,6 +16,8 @@ using namespace net_features;
 using NetLayerType = Vec<float, 16>;
 
 namespace {
+const int net_version = 19072200;
+
 const int kUseQueenActivity = false;
 
 float sigmoid(float x) {
@@ -632,7 +634,13 @@ Score ScoreBoard(const Board &board) {
 
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
-
+//  float wpct = 0.5;
+//  if (board.get_turn() == kWhite) {
+//    wpct = sigmoid(win) * 0.99 + sigmoid(win_draw) * 0.01;
+//  }
+//  else {
+//    wpct = sigmoid(win) * 0.01 + sigmoid(win_draw) * 0.99;
+//  }
   float wpct = (sigmoid(win) + sigmoid(win_draw)) / 2;
   wpct = std::max(std::min(wpct, 1-epsilon), epsilon);
   float output = std::log(wpct / (1-wpct));
