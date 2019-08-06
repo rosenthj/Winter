@@ -79,10 +79,10 @@ public:
     return bitops::PopCount(color_bitboards[kWhite] | color_bitboards[kBlack]);
   }
   size_t get_num_made_moves() const { return move_history.size(); }
-  int8_t get_piece_count(const Color color, const PieceType piece_type) const {
+  int32_t get_piece_count(const Color color, const PieceType piece_type) const {
     return piece_counts[color][piece_type];
   }
-  int8_t get_piecetype_count(const PieceType piece_type) const {
+  int32_t get_piecetype_count(const PieceType piece_type) const {
     return piece_counts[kWhite][piece_type] + piece_counts[kBlack][piece_type];
   }
   CastlingRights get_castling_rights() const { return castling_rights; }

@@ -46,6 +46,14 @@ struct Vec {
     }
   }
 
+  Vec(const Vec<type, length/2> &vec_to_crelu) {
+    const size_t size = vec_to_crelu.size();
+    for (size_t i = 0; i < size; ++i) {
+      values[i] = std::max(vec_to_crelu[i], static_cast<type>(0));
+      values[i+size] = std::max(-vec_to_crelu[i], static_cast<type>(0));
+    }
+  }
+
   type sum() const {
     type t = 0;
     for (size_t i = 0; i < length; ++i) {
@@ -98,6 +106,22 @@ struct Vec {
   inline Vec<type, length>& relu() {
     for (size_t i = 0; i < length; ++i) {
       values[i] = std::max(values[i], static_cast<type>(0));
+    }
+    return *this;
+  }
+
+  /// Non-standard PReLU activation assumes alpha <= 1
+  inline Vec<type, length>& ns_prelu(const Vec<type, length> &alpha) {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = std::max(values[i], values[i] * alpha[i]);
+    }
+    return *this;
+  }
+
+  /// Non-standard PReLU activation assumes alpha <= 1
+  inline Vec<type, length>& ns_prelu(const std::array<type, length> &alpha) {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = std::max(values[i], values[i] * alpha[i]);
     }
     return *this;
   }

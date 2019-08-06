@@ -13,10 +13,14 @@
 #include <cmath>
 
 using namespace net_features;
-using NetLayerType = Vec<float, 16>;
+
+constexpr size_t block_size = 16;
+constexpr size_t act_block_size = 1 * block_size;
+using NetLayerType = Vec<float, block_size>;
+//using CReLULayerType = Vec<float, act_block_size>;
 
 namespace {
-const int net_version = 19072200;
+const int net_version = 19080500;
 
 const int kUseQueenActivity = false;
 
@@ -27,7 +31,7 @@ float sigmoid(float x) {
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
 NetLayerType bias_layer_one(0);
 
-std::vector<NetLayerType> second_layer_weights(kTotalNumFeatures, 0);
+std::vector<NetLayerType> second_layer_weights(32 * 16, 0);
 NetLayerType bias_layer_two(0);
 
 //NetLayerType output_weights(0);
@@ -531,14 +535,25 @@ inline void ScorePieces(T &score, const Board &board, const EvalConstants &ec,
   ScoreKings<T, color, our_color>(score, board, ec, counter);
 }
 
+template<typename T, Color color, Color our_color>
+inline void AddPieceCountFeatures(T &score, const Board &board) {
+  constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
+
+  AddFeature<T>(score, kPawnCountIdx + offset + board.get_piece_count(color, kPawn), 1);
+  AddFeature<T>(score, kKnightCountIdx + offset + std::min(board.get_piece_count(color, kKnight), 2), 1);
+  AddFeature<T>(score, kBishopCountIdx + offset + std::min(board.get_piece_count(color, kBishop), 2), 1);
+  AddFeature<T>(score, kRookCountIdx + offset + std::min(board.get_piece_count(color, kRook), 2), 1);
+}
+
 template<typename T, Color our_color>
 inline void AddCommonFeatures(T &score, const Board &board) {
 
-  for (PieceType piece_type = kPawn; piece_type <= kQueen; piece_type++) {
-    AddFeaturePair<T, our_color>(score, piece_type + kPieceCountsIdx,
-                                 board.get_piece_count(kWhite, piece_type),
-                                 board.get_piece_count(kBlack, piece_type));
-  }
+  AddPieceCountFeatures<T, kWhite, our_color>(score, board);
+  AddPieceCountFeatures<T, kBlack, our_color>(score, board);
+
+  AddFeaturePair<T, our_color>(score, kQueenCountIdx,
+                               board.get_piece_count(kWhite, kQueen),
+                               board.get_piece_count(kBlack, kQueen));
 
   if (board.get_piece_count(kWhite, kBishop) == 1 && board.get_piece_count(kBlack, kBishop) == 1
       && bitops::PopCount(board.get_piecetype_bitboard(kBishop) & bitops::light_squares) == 1) {
@@ -588,19 +603,23 @@ T ScoreBoard(const Board &board) {
   return score;
 }
 
-Score NetForward(NetLayerType layer_one) {
+Score NetForward(NetLayerType &layer_one) {
   constexpr float epsilon = 0.000001;
 
   layer_one += bias_layer_one;
   layer_one.relu();
+//  layer_one.ns_prelu(net_hardcode::l1_activation_weights);
 //  layer_one.sigmoid();
+//  CReLULayerType layer_one_activated(layer_one);
 
   NetLayerType layer_two = bias_layer_two;
   for (size_t i = 0; i < layer_one.size(); ++i) {
     layer_two.FMA(second_layer_weights[i], layer_one[i]);
   }
   layer_two.relu();
+//  layer_two.ns_prelu(net_hardcode::l2_activation_weights);
 //  layer_two.sigmoid();
+//  CReLULayerType activated(layer_two);
 
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
@@ -613,7 +632,6 @@ Score NetForward(NetLayerType layer_one) {
 }
 
 Score ScoreBoard(const Board &board) {
-  constexpr float epsilon = 0.0000000001;
   NetLayerType layer_one;
   if (board.get_turn() == kWhite) {
     layer_one = ScoreBoard<NetLayerType, kWhite>(board);
@@ -621,56 +639,38 @@ Score ScoreBoard(const Board &board) {
   else {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board);
   }
-  layer_one += bias_layer_one;
-  layer_one.relu();
-//  layer_one.sigmoid();
-
-  NetLayerType layer_two = bias_layer_two;
-  for (size_t i = 0; i < layer_one.size(); ++i) {
-    layer_two.FMA(second_layer_weights[i], layer_one[i]);
-  }
-  layer_two.relu();
-//  layer_two.sigmoid();
-
-  float win = layer_two.dot(win_weights) + win_bias;
-  float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
-//  float wpct = 0.5;
-//  if (board.get_turn() == kWhite) {
-//    wpct = sigmoid(win) * 0.99 + sigmoid(win_draw) * 0.01;
-//  }
-//  else {
-//    wpct = sigmoid(win) * 0.01 + sigmoid(win_draw) * 0.99;
-//  }
-  float wpct = (sigmoid(win) + sigmoid(win_draw)) / 2;
-  wpct = std::max(std::min(wpct, 1-epsilon), epsilon);
-  float output = std::log(wpct / (1-wpct));
-
-  return std::round(output * 1024);
+  return NetForward(layer_one);
 }
 
 void init_weights() {
-  net_input_weights = std::vector<NetLayerType>(net_hardcode::l1_weights.size() / 16);
-  for (size_t i = 0; i < net_hardcode::l1_weights.size() / 16; ++i) {
-    size_t j = i * 16;
-    for (size_t k = 0; k < 16; ++k) {
+  net_input_weights = std::vector<NetLayerType>(net_hardcode::l1_weights.size() / block_size);
+  for (size_t i = 0; i < net_hardcode::l1_weights.size() / block_size; ++i) {
+    size_t j = i * block_size;
+    for (size_t k = 0; k < block_size; ++k) {
       net_input_weights[i][k] = net_hardcode::l1_weights[j+k];
     }
   }
 
-  second_layer_weights = std::vector<NetLayerType>(net_hardcode::l2_weights.size() / 16);
-  for (size_t i = 0; i < net_hardcode::l2_weights.size() / 16; ++i) {
-    size_t j = i * 16;
-    for (size_t k = 0; k < 16; ++k) {
+  second_layer_weights = std::vector<NetLayerType>(net_hardcode::l2_weights.size() / block_size);
+  for (size_t i = 0; i < net_hardcode::l2_weights.size() / block_size; ++i) {
+    size_t j = i * block_size;
+    for (size_t k = 0; k < block_size; ++k) {
       second_layer_weights[i][k] = net_hardcode::l2_weights[j+k];
     }
   }
 
-  for (size_t k = 0; k < 16; ++k) {
-    win_weights[k]  = net_hardcode::output_weights[k + 0*16];
-    win_draw_weights[k] = net_hardcode::output_weights[k + 1*16];
+  for (size_t k = 0; k < block_size; ++k) {
+    win_weights[k]  = net_hardcode::output_weights[k + 0 * block_size];
+    win_draw_weights[k] = net_hardcode::output_weights[k + 1 * block_size];
 
     bias_layer_one[k] = net_hardcode::l1_bias[k];
     bias_layer_two[k] = net_hardcode::l2_bias[k];
+  }
+
+  const size_t out_block_size = win_weights.size();
+  for (size_t k = 0; k < out_block_size; ++k) {
+    win_weights[k]  = net_hardcode::output_weights[k + 0 * out_block_size];
+    win_draw_weights[k] = net_hardcode::output_weights[k + 1 * out_block_size];
   }
 
   win_bias = net_hardcode::bias_win;
@@ -742,12 +742,70 @@ void StoreEvalDataset(const std::vector<Game> &games, std::string out_file_name)
   dfile.close();
 }
 
+void RerollCommonFeatureGames(std::vector<Game> &games, size_t reroll_pct) {
+  reroll_pct = reroll_pct % 100;
+  if (reroll_pct > 0) {
+    std::vector<double> feature_counts(kTotalNumFeatures, 1);
+    for (const Game &game : games) {
+      const auto features = GetNetInputs(game.board);
+      assert(features.size() == feature_counts.size());
+      for (size_t idx = 0; idx < features.size(); ++idx) {
+        feature_counts[idx] += (features[idx] != 0);
+      }
+    }
+    std::cout << "Got feature counts" << std::endl;
+    std::vector<double> feature_values(kTotalNumFeatures, 0);
+    for (size_t idx = 0; idx < feature_counts.size(); ++idx) {
+      feature_values[idx] = 1.0 / (feature_counts[idx] / games.size());
+    }
+    std::cout << "Estimated feature values" << std::endl;
+    std::vector<double> game_value_estimate(games.size(), 0);
+    for (size_t game_idx = 0; game_idx < games.size(); ++game_idx) {
+      const auto features = GetNetInputs(games[game_idx].board);
+      for (size_t idx = 0; idx < features.size(); ++idx) {
+        game_value_estimate[game_idx] += (features[idx] != 0) * feature_values[idx];
+      }
+    }
+    std::cout << "Estimated game values" << std::endl;
+    std::vector<double> values(game_value_estimate.size(), 0);
+    for (size_t idx = 0; idx < values.size(); ++idx) {
+      values[idx] = game_value_estimate[idx];
+    }
+    std::cout << "Copied games" << std::endl;
+    std::cout << "Values size: " << values.size() << std::endl;
+    std::sort(values.begin(), values.end(), std::less<double>());
+    std::cout << "Sorted game values" << std::endl;
+    double threshold = values[(reroll_pct * games.size()) / 100];
+    std::cout << "Threshold: " << threshold << std::endl;
+    size_t reroll_count = 0;
+    for (size_t game_idx = 0; game_idx < games.size(); ++game_idx) {
+      if (game_value_estimate[game_idx] < threshold) {
+        data::SetGameToRandomQuiescent(games[game_idx]);
+        reroll_count++;
+        if (reroll_count % 10000 == 0) {
+          std::cout << "rerolled " << reroll_count << " positions" << std::endl;
+        }
+      }
+    }
+  }
+}
+
+
+std::vector<Game> LoadTrainingGamesForTraining(std::string filename, size_t reroll_pct) {
+  std::vector<Game> games = data::LoadGames(30000000, filename);
+  data::SetGamesToRandomQuiescent(games);
+  for (int i = 0; i < 5; i++) {
+//    RerollCommonFeatureGames(games, reroll_pct);
+  }
+  return games;
+}
+
 void GenerateDatasetFromEPD() {
   std::string line;
   std::ifstream file("quiet-labeled.epd");
 
-  std::vector<Game> games = data::LoadGames(3000000, "Games.ucig");
-  data::SetGamesToRandomQuiescent(games);
+  std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 30);
+
   while(std::getline(file, line)) {
     std::vector<std::string> tokens = parse::split(line, ' ');
     std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
@@ -786,9 +844,8 @@ void GenerateDatasetFromEPD() {
   StoreEvalDataset(games, "eval_dataset.csv");
 }
 
-void GenerateDatasetFromUCIGames(std::string filename, std::string out_name) {
-  std::vector<Game> games = data::LoadGames(30000000, filename);
-  data::SetGamesToRandomQuiescent(games);
+void GenerateDatasetFromUCIGames(std::string filename, std::string out_name, size_t reroll_pct) {
+  std::vector<Game> games = LoadTrainingGamesForTraining(filename, reroll_pct);
   StoreEvalDataset(games, out_name);
 }
 
