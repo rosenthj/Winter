@@ -26,7 +26,6 @@
 
 #include "benchmark.h"
 #include "uci.h"
-#include "evaluation.h"
 #include "general/settings.h"
 #include "general/types.h"
 #include "general/bookkeeping.h"
@@ -34,7 +33,6 @@
 #include "net_evaluation.h"
 #include "search.h"
 #include "transposition.h"
-#include "train.h"
 #include "general/debug.h"
 #include "search_thread.h"
 #include <cstdint>
@@ -158,23 +156,24 @@ void Loop() {
     else if (Equals(command, "print")) {
       board.Print();
     }
-    else if (Equals(command, "train_csv")) {
-      if (tokens.size() != 2) {
-        std::cout << "invalid number of arguments, expected 1 got " << (tokens.size()-1) << std::endl;
-      }
-      train::TrainCSV(tokens[index++]);
-    }
+//    else if (Equals(command, "train_csv")) {
+//      if (tokens.size() != 2) {
+//        std::cout << "invalid number of arguments, expected 1 got " << (tokens.size()-1) << std::endl;
+//      }
+//      train::TrainCSV(tokens[index++]);
+//    }
     else if (Equals(command, "print_bitboards")) {
       board.PrintBitBoards();
     }
     else if (Equals(command, "print_features")) {
-      evaluation::PrintFeatureValues(board);
+//      TODO replace with function from net_eval
+//      evaluation::PrintFeatureValues(board);
     }
     else if (Equals(command, "isdraw")) {
       std::cout << board.IsDraw() << std::endl;
     }
     else if (Equals(command, "evaluate")) {
-      std::cout << evaluation::ScoreBoard(board) << std::endl;
+      std::cout << net_evaluation::ScoreBoard(board) << std::endl;
     }
     else if (Equals(command, "uci")) {
       Reply(kEngineNamePrefix + settings::engine_name + " "
@@ -315,12 +314,12 @@ void Loop() {
         debug::Error("Hash after perft function is changed!", false);
       }
     }
-    else if (Equals(command, "estimate_variable_influence")) {
-      evaluation::CheckVariableInfluence();
-    }
-    else if (Equals(command, "train_params")) {
-      train::Train(false);
-    }
+//    else if (Equals(command, "estimate_variable_influence")) {
+//      evaluation::CheckVariableInfluence();
+//    }
+//    else if (Equals(command, "train_params")) {
+//      train::Train(false);
+//    }
     else if (Equals(command, "bookkeeping_reset")) {
       bookkeeping::reset_counters();
     }

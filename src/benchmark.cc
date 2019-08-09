@@ -28,7 +28,7 @@
 #include "data.h"
 #include "search.h"
 #include "transposition.h"
-#include "evaluation.h"
+#include "net_evaluation.h"
 #include "general/parse.h"
 #include "general/settings.h"
 #include "benchmark.h"
@@ -169,8 +169,8 @@ void SymmetrySuite() {
   //Time start = now();
   size_t test_sets_passed = 0;
   for (SymmetryTest test_set : test_sets) {
-    if (evaluation::ScoreBoard(test_set.board1)
-        == evaluation::ScoreBoard(test_set.board2))
+    if (net_evaluation::ScoreBoard(test_set.board1)
+        == net_evaluation::ScoreBoard(test_set.board2))
       test_sets_passed++;
   }
   if (test_sets_passed == test_sets.size()) {
@@ -355,68 +355,68 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
                      - kMinDrawLoss * draws) / games.size();
 }
 
-void GenerateDatasetFromEPD() {
-  std::string line;
-  std::ifstream file("quiet-labeled.epd");
-  std::ofstream dfile("zurichess_epd_data.csv");
-  size_t samples = 0;
-  while(std::getline(file, line)) {
-    std::vector<std::string> tokens = parse::split(line, ' ');
-    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
-    Board board(fen);
-    double result = -1;
-    if (tokens[5].compare("\"1-0\";") == 0) {
-      result = 1;
-    }
-    else if (tokens[5].compare("\"0-1\";") == 0) {
-      result = 0;
-    }
-    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
-      result = 0.5;
-    }
-    else {
-      std::cout << "Error detected! Line:" << std::endl;
-      std::cout << line << std::endl;
-      file.close();
-      return;
-    }
-    if (board.get_turn() == kBlack) {
-      result = 1 - result;
-    }
-    std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
-    Vec<double, settings::kNumClusters> component_probs = evaluation::BoardMixtureProbability(board);
-    if (samples == 0) {
-      dfile << "res";
-      for (size_t i = 0; i < component_probs.size(); i++) {
-        dfile << ", cp" << i;
-      }
-      for (size_t i = 0; i < features.size(); i++) {
-        dfile << ", fe" << i;
-      }
-      dfile << std::endl;
-    }
-    dfile << result;
-    for (size_t i = 0; i < component_probs.size(); i++) {
-      dfile << ", " << component_probs[i];
-    }
-    for (int feature : features) {
-      dfile << ", " << feature;
-    }
-    dfile << std::endl;
-    samples++;
-    if (samples % 10000 == 0) {
-      std::cout << "Processed " << samples << " samples!" << std::endl;
-    }
-  }
-  file.close();
-  dfile.flush();
-  dfile.close();
-}
+//void GenerateDatasetFromEPD() {
+//  std::string line;
+//  std::ifstream file("quiet-labeled.epd");
+//  std::ofstream dfile("zurichess_epd_data.csv");
+//  size_t samples = 0;
+//  while(std::getline(file, line)) {
+//    std::vector<std::string> tokens = parse::split(line, ' ');
+//    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+//    Board board(fen);
+//    double result = -1;
+//    if (tokens[5].compare("\"1-0\";") == 0) {
+//      result = 1;
+//    }
+//    else if (tokens[5].compare("\"0-1\";") == 0) {
+//      result = 0;
+//    }
+//    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
+//      result = 0.5;
+//    }
+//    else {
+//      std::cout << "Error detected! Line:" << std::endl;
+//      std::cout << line << std::endl;
+//      file.close();
+//      return;
+//    }
+//    if (board.get_turn() == kBlack) {
+//      result = 1 - result;
+//    }
+//    std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
+//    Vec<double, settings::kNumClusters> component_probs = evaluation::BoardMixtureProbability(board);
+//    if (samples == 0) {
+//      dfile << "res";
+//      for (size_t i = 0; i < component_probs.size(); i++) {
+//        dfile << ", cp" << i;
+//      }
+//      for (size_t i = 0; i < features.size(); i++) {
+//        dfile << ", fe" << i;
+//      }
+//      dfile << std::endl;
+//    }
+//    dfile << result;
+//    for (size_t i = 0; i < component_probs.size(); i++) {
+//      dfile << ", " << component_probs[i];
+//    }
+//    for (int feature : features) {
+//      dfile << ", " << feature;
+//    }
+//    dfile << std::endl;
+//    samples++;
+//    if (samples % 10000 == 0) {
+//      std::cout << "Processed " << samples << " samples!" << std::endl;
+//    }
+//  }
+//  file.close();
+//  dfile.flush();
+//  dfile.close();
+//}
 
 double RunEvalTestSet(const std::vector<EvaluationTest> &test_set, double div) {
   double error_sum = 0;
   for (const EvaluationTest sample : test_set) {
-    Score score = evaluation::ScoreBoard(std::get<0>(sample));
+    Score score = net_evaluation::ScoreBoard(std::get<0>(sample));
     double target = std::get<1>(sample);
     //error_sum += std::abs(Sigmoid(evaluation::ScoreBoard(std::get<0>(sample)) / div)-std::get<1>(sample));
     error_sum += SigmoidCrossEntropyLossV2(score / div, target);

@@ -46,15 +46,12 @@
 #include <utility>
 #include <cassert>
 
-#include "net_evaluation.h"
-
 using namespace positional_features;
 
 namespace {
 const double pi = std::acos(-1);
 const double kEuler = std::exp(1);
 std::mt19937_64 rng;
-const double eval_scaling = 1024.0;
 
 struct TrainingPosition{
   Board board;
@@ -66,10 +63,7 @@ int kSign[2] = {1,-1};
 std::vector<PScore> eval_score_values(kNumFeatures, 0);
 
 cluster::ClusterModel<settings::kNumClusters>* init_cluster_model() {
-  if (settings::kClusterModelType == settings::kClusterNFCM) {
-    return new cluster::NormFuzzyCMeans<settings::kNumClusters, kPhaseVecLength>();
-  }
-  return new cluster::GaussianMixtureModel<settings::kNumClusters, kPhaseVecLength>();
+  return new cluster::NormFuzzyCMeans<settings::kNumClusters, kPhaseVecLength>();
 }
 
 cluster::ClusterModel<settings::kNumClusters>* cluster_model = init_cluster_model();
@@ -571,11 +565,9 @@ T ScoreBoard(const Board &board) {
 }
 
 Score ScoreBoard(const Board &board) {
-  return net_evaluation::ScoreBoard(board);
   PScore score =  ScoreBoard<PScore>(board);
   Vec<double, settings::kNumClusters> weights =
       cluster_model->GetWeightedProbabilities(board);
-//      gmm_main.GetWeightedProbabilities(GetBoardPhaseVec(board));
 
   assert(std::abs(weights.sum() - 1.0) < 0.0001);
   Score eval_score = std::round(weights.dot(score));
@@ -595,25 +587,6 @@ void PrintFeatureValues(const Board &board) {
     std::cout << features[i]
               << " <-- " << kFeatureInfos[idx].info << std::endl;
   }
-}
-
-template<int k>
-void SaveGMM(cluster::GaussianMixtureModel<k,kPhaseVecLength> &gmm, std::string file_name) {
-  std::ofstream file(file_name);
-  for (size_t m = 0; m < k; m++) {
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      file << gmm.mixtures[m].mu[i] << " ";
-    }
-    file << gmm.weights[m] << std::endl;
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        file << gmm.mixtures[m].sigma[i][j] << " ";
-      }
-      file << std::endl;
-    }
-  }
-  file.flush();
-  file.close();
 }
 
 void SaveGMMHardCode(std::string file_name) {
@@ -673,14 +646,8 @@ void SaveGMMVariablesHardCode(std::string filename) {
 }
 
 void LoadMixturesHardCoded() {
-  if (settings::kClusterModelType == settings::kClusterNFCM) {
-    std::vector<double> params(hardcode::NFCM_params.begin(), hardcode::NFCM_params.end());
-    cluster_model->LoadFromParams(params);
-  }
-  else {
-    std::vector<double> params(hardcode::gmm_components.begin(), hardcode::gmm_components.end());
-    cluster_model->LoadFromParams(params);
-  }
+  std::vector<double> params(hardcode::NFCM_params.begin(), hardcode::NFCM_params.end());
+  cluster_model->LoadFromParams(params);
 }
 
 void LoadVariablesFromFile() {
@@ -695,16 +662,10 @@ void LoadVariablesFromFile() {
 }
 
 void LoadGMMVariablesHardCoded() {
-  const int k = settings::kNumClusters;
   int c = 0;
   for (size_t i = 0; i < kNumFeatures; i++) {
-    for (size_t j = 0; j < k; j++) {
-      if (settings::kClusterModelType == settings::kClusterNFCM) {
-        eval_score_values[i][j] = hardcode::eval_weights[c++];
-      }
-      else {
-        eval_score_values[i][j] = hardcode::eval_weights_gmm[c++];
-      }
+    for (size_t j = 0; j < settings::kNumClusters; j++) {
+      eval_score_values[i][j] = hardcode::eval_weights[c++];
     }
   }
 

@@ -75,23 +75,6 @@ struct Gaussian {
   double sqrt_det_sigma_times_divisor;
 };
 
-// Currently there is no abstract mixture model.
-// In case of implementation of a new mixture model, it may make sense to add
-// such a class.
-template <size_t k, size_t length>
-struct GaussianMixtureModel : ClusterModel<k> {
-
-  Vec<double, k> GetWeightedProbabilities(const Board &board) const override;
-  void LoadFromParams(const std::vector<double> &params) override;
-  void SaveHardCode(std::string file_name) const override;
-  void SetModel(ClusterModel<k>* other) override;
-
-  double GetSampleProbability(const Board &board) const;
-
-  std::array<Gaussian<length>, k> components;
-  Vec<double, k> weights;
-};
-
 // Normalized Fuzzy C-Means
 template<size_t k, size_t length>
 struct NormFuzzyCMeans : ClusterModel<k> {

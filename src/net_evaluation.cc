@@ -15,7 +15,8 @@
 using namespace net_features;
 
 constexpr size_t block_size = 16;
-constexpr size_t act_block_size = 1 * block_size;
+// The (post-) activation block size is only needed if dimension is different from preactivation
+//constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
 //using CReLULayerType = Vec<float, act_block_size>;
 
@@ -100,13 +101,13 @@ const std::array<int, 15*15> relative_king_map = {
     0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
 };
 
-template<typename T>
-std::vector<T> operator-(std::vector<T> v) {
-  for (size_t i = 0; i < v.size(); i++) {
-    v[i] *= (-1);
-  }
-  return v;
-}
+//template<typename T>
+//std::vector<T> operator-(std::vector<T> v) {
+//  for (size_t i = 0; i < v.size(); i++) {
+//    v[i] *= (-1);
+//  }
+//  return v;
+//}
 
 template<typename T>
 T init() {

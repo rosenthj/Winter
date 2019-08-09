@@ -45,110 +45,7 @@ Vec<double, kPhaseVecLength> GetBoardPhaseVec(const Board &board) {
     vec[pt - 1] += board.get_piecetype_count(pt);
   }
 
-    // OCB feature
-//    if (board.get_piece_count(kWhite, kBishop) == 1 && board.get_piece_count(kBlack, kBishop) == 1 &&
-//        bitops::PopCount(board.get_piecetype_bitboard(kBishop) & bitops::light_squares) == 1) {
-//      vec[4] = 1;
-//    }
-//    else {
-//      vec[4] = 0;
-//    }
-
   return vec;
-}
-
-template<size_t k, size_t length>
-Vec<double, k> GaussianMixtureModel<k, length>::GetWeightedProbabilities(const Board &board) const {
-  const Vec<double,kPhaseVecLength> sample = GetBoardPhaseVec(board);
-
-  Vec<double, k> weighted_probabilities(0.00000001);
-  double sum = 0;
-  for (size_t i = 0; i < k; i++) {
-    weighted_probabilities[i] += weights[i] * components[i].pdf(sample);
-    sum += weighted_probabilities[i];
-  }
-  for (size_t i = 0; i < k; i++) {
-    weighted_probabilities[i] /= sum;
-  }
-  return weighted_probabilities;
-}
-
-template<size_t k, size_t length>
-void GaussianMixtureModel<k, length>::LoadFromParams(const std::vector<double> &params) {
-  int c = 0;
-  for (size_t m = 0; m < k; m++) {
-    weights[m] = params[c++];
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      components[m].mu[i] = params[c++];
-    }
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        components[m].sigma[i][j] = params[c++];
-      }
-    }
-    components[m].set_sigma_inv();
-  }
-}
-
-template<size_t k, size_t length>
-void GaussianMixtureModel<k, length>::SaveHardCode(std::string file_name) const {
-  std::ofstream file(file_name);
-  file << "const std::array<double, (" << k << "+" << k << "*("
-      << kPhaseVecLength << "+1)*" << kPhaseVecLength << ")> gmm_components = {" << std::endl;
-
-  for (size_t m = 0; m < k; m++) {
-    file << "    // Component " << m << " weights" << std::endl
-        << "    " << weights[m] << "," << std::endl;
-
-    file << "    // Component " << m << " means" << std::endl << "    ";
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      file << components[m].mu[i] << ", ";
-    }
-    file << std::endl;
-    file << "    // Component " << m << " covariances" << std::endl;
-    for (size_t i = 0; i < kPhaseVecLength; i++) {
-      for (size_t j = 0; j < kPhaseVecLength; j++) {
-        if (j > 0) {
-          file << ", ";
-        }
-        else {
-          file << "    ";
-        }
-        file << components[m].sigma[i][j];
-      }
-      if (i+1 < kPhaseVecLength || m+1 < k) {
-        file << ",";
-      }
-      file << std::endl;
-    }
-    if (m+1 == k) {
-      file << "};";
-    }
-    file << std::endl;
-  }
-  file.flush();
-  file.close();
-}
-
-template<size_t k, size_t length>
-void GaussianMixtureModel<k, length>::SetModel(ClusterModel<k>* other) {
-  cluster::GaussianMixtureModel <k, kPhaseVecLength>* gmm_p =
-      static_cast<cluster::GaussianMixtureModel <k, kPhaseVecLength>* >(other);
-  components = gmm_p->components;
-  weights = gmm_p->weights;
-}
-
-template<size_t k, size_t length>
-double GaussianMixtureModel<k, length>::GetSampleProbability(const Board &board) const {
-  Vec<double, length> sample = GetBoardPhaseVec(board);
-  double weighted_probability = 0.00000001;
-  double sum = 0;
-  for (size_t i = 0; i < k; i++) {
-    weighted_probability += weights[i] * components[i].pdf(sample);
-    sum += weights[i];
-  }
-  weighted_probability /= sum;
-  return weighted_probability;
 }
 
 template<size_t k, size_t length>
@@ -221,7 +118,6 @@ void NormFuzzyCMeans<k, length>::SetModel(ClusterModel<k>* other) {
   normalizer = nfcm_p->normalizer;
 }
 
-template struct GaussianMixtureModel<settings::kNumClusters, kPhaseVecLength>;
 template struct NormFuzzyCMeans<settings::kNumClusters, kPhaseVecLength>;
 
 }

@@ -19,7 +19,6 @@
 
 #include <iostream>
 
-#include "evaluation.h"
 #include "benchmark.h"
 #include "transposition.h"
 #include "uci.h"
@@ -31,7 +30,6 @@
 #include "general/bookkeeping.h"
 #include "board.h"
 #include "search.h"
-#include "train.h"
 #include "learning/cluster.h"
 
 #include "net_evaluation.h"
@@ -39,38 +37,27 @@
 int main() {
   debug::EnterFunction(debug::kMain, "Main", "");
   table::SetTableSize(32);
-  if (settings::kTrainFromScratch) {
-    train::Train(true);
-  }
-//  evaluation::LoadGMMVariables();
-//  evaluation::LoadGMMVariablesHardCoded();
-//  evaluation::LoadMixturesHardCoded();
-//  evaluation::LoadVariablesFromFile();
-//  evaluation::SaveGMMHardCode("gmm_hardcoded.txt");
-//  evaluation::SaveGMMVariablesHardCode("eval_weights_hardcoded.txt");
+
   search::LoadSearchVariablesHardCoded();
+  net_evaluation::init_weights();
+
 //  train::RunEMForNFCM();
 //  evaluation::RunEMForGMM();
 
 //  benchmark::GenerateDatasetFromEPD();
-//  std::cout << evaluation::ScoreBoard(Board());
-  net_evaluation::init_weights();
 
 //  net_evaluation::GenerateDatasetFromEPD();
 //  benchmark::ZuriChessDatasetLoss();
 //  net_evaluation::EstimateFeatureImpact();
+//  std::cout << "Startpos eval: " << net_evaluation::ScoreBoard(Board()) << std::endl;
 
   //search::SaveHardcodeSearchVariables();
-  //evaluation::SaveGMMHardCode("gmm_hardcode.txt");
-  //evaluation::SaveGMMVariablesHardCode("gmm_score_weights_hardcode.txt");
+
   //The following commented lines remain to remind me how to do stuff =)
-  //if (settings::kExperimental)
-  //  evaluation::Train(false);
   //search::CreateSearchParamDataset(false);
   //if (settings::kExperimental)
   //  search::TrainSearchParams(false);
   //search::CreateSearchParamDataset();
-  //evaluation::SGDDrawMarginTrain();
   //evaluation::CheckFeatureMagnitude();
   //evaluation::CheckVariableInfluence();
   //benchmark::EntropyLossTimedSuite(Milliseconds(10));
@@ -80,8 +67,6 @@ int main() {
   //search::EvaluateScoreDistributions(2);
   //search::EvaluateCaptureMoveValue(1000);
   //benchmark::TimeToDepthSuite();
-  //evaluation::SaveTScoreVariables("t_variables.txt");
-  //evaluation::Train();
   //parse::Save2dVecToCSV<Score>(vecvec,"data/test.csv");
   uci::Loop();
   debug::ExitFunction(debug::kMain);

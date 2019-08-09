@@ -33,31 +33,31 @@
 #include <array>
 
 // A bitboard is a 64bit boolean feature representation of the board.
-typedef uint64_t BitBoard;
+using BitBoard = uint64_t;
 // A square is defined by its index
-typedef int32_t Square;
+using Square = int32_t;
 // A move references a source, a destination square and a move type, but no piece.
-typedef int32_t Move;
+using Move = int32_t;
 // A movetype references whether a move is a normal move or a special move
 // such as a pawn promotion or castling.
-typedef Move MoveType;
+using MoveType = Move;
 // MoveScore is used to order moves.
-typedef int32_t MoveScore;
+using MoveScore = int32_t;
 // A piece is an object with a PieceType and Color
-typedef int32_t Piece;
+using Piece = int32_t;
 // A piecetype is a reference to one of King,Queen,Rook,Bishop,Knight or Pawn
-typedef Piece PieceType;
+using PieceType = Piece;
 // A color is a reference to one of the players.
-typedef Piece Color;
+using Color = Piece;
 // A score is a value assigned to a position which represents how good the position
 // for the player to move.
-typedef int32_t Score;
-typedef int32_t Depth;
-typedef double Probability;
-typedef int32_t CastlingRights;
-typedef uint64_t HashType;
-typedef std::chrono::time_point<std::chrono::steady_clock> Time;
-typedef std::chrono::milliseconds Milliseconds;
+using Score = int32_t;
+using Depth = int32_t;
+using Probability = double;
+using CastlingRights = int32_t;
+using HashType = uint64_t;
+using Time = std::chrono::time_point<std::chrono::steady_clock>;
+using Milliseconds = std::chrono::milliseconds;
 
 inline Time now() { return std::chrono::steady_clock::now(); }
 
@@ -70,7 +70,7 @@ using Array3d = std::array<Array2d< T, j, k>, i>;
 constexpr Color kWhite = 0;
 constexpr Color kBlack = 1;
 
-const constexpr PieceType kPawn = 0;
+constexpr PieceType kPawn = 0;
 constexpr PieceType kKnight = 1;
 constexpr PieceType kBishop = 2;
 constexpr PieceType kRook = 3;

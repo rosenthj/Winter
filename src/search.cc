@@ -29,7 +29,7 @@
  */
 
 #include "search.h"
-#include "evaluation.h"
+#include "net_evaluation.h"
 #include "transposition.h"
 #include "data.h"
 #include "general/debug.h"
@@ -582,7 +582,7 @@ Board get_sampled_board() {
 
 Score SQSearch(Board &board, Score alpha, Score beta) {
   if (!board.InCheck()) {
-    Score static_eval = evaluation::ScoreBoard(board);
+    Score static_eval = net_evaluation::ScoreBoard(board);
     if (static_eval >= beta) {
       return beta;
     }
@@ -651,7 +651,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
 //      }
 //    }
 
-    static_eval = evaluation::ScoreBoard(t.board);
+    static_eval = net_evaluation::ScoreBoard(t.board);
     if (valid_hash && entry.bound == kLowerBound && static_eval < entry.get_score(t.board)) {
       static_eval = entry.get_score(t.board);
     }
@@ -829,7 +829,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
   if (depth <= 0) {
     if (!settings::kUseQS) {
       t.nodes++;
-      return evaluation::ScoreBoard(t.board);
+      return net_evaluation::ScoreBoard(t.board);
     }
     return QuiescentSearch<Mode>(t, alpha, beta);
   }
@@ -863,7 +863,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
         static_eval = entry.get_score(t.board);
       }
       else {
-        static_eval = evaluation::ScoreBoard(t.board);
+        static_eval = net_evaluation::ScoreBoard(t.board);
         if ( (entry.bound == kLowerBound && static_eval < entry.get_score(t.board))
             || (entry.bound == kUpperBound && static_eval > entry.get_score(t.board)) ) {
           static_eval = entry.get_score(t.board);
@@ -871,7 +871,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
       }
     }
     else {
-      static_eval = evaluation::ScoreBoard(t.board);
+      static_eval = net_evaluation::ScoreBoard(t.board);
     }
     t.set_static_score(static_eval);
     strict_worsening = t.strict_worsening();
@@ -1258,7 +1258,7 @@ void Thread::search() {
     end_time = begin+rsearch_duration;
   }
 
-  Score score = evaluation::ScoreBoard(board);
+  Score score = net_evaluation::ScoreBoard(board);
   set_static_score(score);
   Move last_best = kNullMove;
   std::vector<Score> previous_scores;
@@ -1942,7 +1942,7 @@ void EvaluateScoreDistributions(const int focus) {
     if (sampled_alpha == kMinScore || sampled_board.InCheck()) {
       continue;
     }
-    Score score = evaluation::ScoreBoard(sampled_board);
+    Score score = net_evaluation::ScoreBoard(sampled_board);
     Score score_bin_idx = score;
     score_bin_idx += score_bin_size / 2;
     score_bin_idx /= score_bin_size;
@@ -2077,16 +2077,16 @@ void EvaluateCaptureMoveValue(int n) {
       if (GetMoveType(move) == kCapture
           && !game.board.GivesCheck(move)) {
         PieceType target = game.board.get_piece(GetMoveDestination(move));
-        Score before = evaluation::ScoreBoard(game.board);
+        Score before = net_evaluation::ScoreBoard(game.board);
         game.forward();
-        Score after = -evaluation::ScoreBoard(game.board);
+        Score after = -net_evaluation::ScoreBoard(game.board);
         move_scores[GetPieceType(target)].emplace_back(after - before);
       }
       else if (GetMoveType(move) == kEnPassant
           && !game.board.GivesCheck(move)) {
-        Score before = evaluation::ScoreBoard(game.board);
+        Score before = net_evaluation::ScoreBoard(game.board);
         game.forward();
-        Score after = -evaluation::ScoreBoard(game.board);
+        Score after = -net_evaluation::ScoreBoard(game.board);
         move_scores[5].emplace_back(after - before);
       }
       else {
