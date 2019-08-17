@@ -9,7 +9,9 @@ Winter has relied on many machine learning algorithms and techniques over the co
 As of Winter 0.6.2, the evaluation function relies on a small neural network for more precise evaluations.
 
 ## Installation
-In order to run it on Linux, just compile it via "make" in the root directory and then run it from the root directory. Systems which do not have the newest generation of processors may lack access to the BMI2 instruction set, in this case compile with "make no_bmi" instead.
+In order to run it on Linux, just compile it via "make" in the root directory and then run it from the root directory. Tested with clang (recommended) and gcc (default).
+
+When running Winter from command line, be sure to call "uci" to get information about the current version, including its number and the detected architecture.
 
 Winter does not rely on any external libraries aside from the Standard Template Library. All algorithms have been implemented from scratch. As of Winter 0.6.2 I have started to build an external codebase for neural network training.
 

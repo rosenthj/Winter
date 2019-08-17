@@ -33,8 +33,20 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "0.6.4";
+const std::string engine_version = "0.6.4a";
 const std::string engine_author = "Jonathan Rosenthal";
+
+#if defined(__BMI2__)
+const std::string compile_arch = "BMI2";
+#elif defined(__AVX__)
+const std::string compile_arch = "AVX";
+#elif defined(__SSE4_2__)
+const std::string compile_arch = "SSE4.2";
+#elif defined(__SSE4_1__)
+const std::string compile_arch = "SSE4.1";
+#else
+const std::string compile_arch = "";
+#endif
 
 const int kNumClusters = 4;
 
@@ -73,13 +85,6 @@ const Depth kMaxDepth = 128;
 const Depth kSingularExtensionDepth = 9;
 
 const bool kUseQS = true;
-
-enum cluster_model_type {
-  kClusterGMM, kClusterNFCM
-};
-
-const cluster_model_type kClusterModelType = kClusterNFCM;
-
 
 }
 

@@ -72,7 +72,7 @@ constexpr std::array<BitBoard, 64> rookMask = {
     0x6e10101010101000L, 0x5e20202020202000L, 0x3e40404040404000L, 0x7e80808080808000L
 };
 
-#ifdef NO_BMI
+#ifndef __BMI2__
 const BitBoard bishopMagicNumber[] = {
     0x10020800408200L, 0x8080800802000L, 0x4040082000000L, 0x4040080000000L, 0x2021000000000L, 0x901008000000L, 0x880808040000L, 0x1002082201000L,
     0x81001020400L, 0x80204040020L, 0x40802004000L, 0x40400800000L, 0x20210000000L, 0x10402400000L, 0x8084104000L, 0x20082011000L,
@@ -222,7 +222,7 @@ const std::array<std::array<BitBoard, (1L << 9)>, 64> generateBishopAttackMaps()
         BitBoard origin = GetSquareBitBoard(squareIndex);
         //get mask bits
         BitBoard maskBits = bishopMask[squareIndex];
-#ifdef NO_BMI
+#ifndef __BMI2__
         //get magic number
         BitBoard magic = bishopMagicNumber[squareIndex];
 #endif
@@ -236,7 +236,7 @@ const std::array<std::array<BitBoard, (1L << 9)>, 64> generateBishopAttackMaps()
                     bitops::NW(bitops::FillNorthWest(origin, empty));
             //Calculate Index via multiplication of magic number
             //Save calculated attack map to calculated index for square index of piece
-#ifndef NO_BMI
+#ifdef __BMI2__
               bishopMagic[squareIndex][_pext_u64(~empty, maskBits)] = attackMap;
 #else
               bishopMagic[squareIndex][(int) ((~empty * magic) >> (64 - bishopShiftBits[squareIndex]))] = attackMap;
@@ -255,7 +255,7 @@ const std::array<std::array<BitBoard, (1L << 12)>, 64> generateRookAttackMaps() 
         BitBoard origin = GetSquareBitBoard(squareIndex);
         //get mask bits
         BitBoard maskBits = rookMask[squareIndex];
-#ifdef NO_BMI
+#ifndef __BMI2__
         //get magic number
         BitBoard magic = rookMagicNumber[squareIndex];
 #endif
@@ -269,7 +269,7 @@ const std::array<std::array<BitBoard, (1L << 12)>, 64> generateRookAttackMaps() 
                 bitops::W(bitops::FillWest(origin, empty));
             //Calculate Index via multiplication of magic number
             //Save calculated attack map to calculated index for square index of piece
-#ifndef NO_BMI
+#ifdef __BMI2__
               rookMagic[squareIndex][_pext_u64(~empty, maskBits)] = attackMap;
 #else
               rookMagic[squareIndex][(int) ((~empty * magic) >> (64 - rookShiftBits[squareIndex]))] = attackMap;
@@ -333,7 +333,7 @@ template<> BitBoard GetAttackMap<kKnight>(const int &index, BitBoard allPieces) 
 }
 
 template<> BitBoard GetAttackMap<kBishop>(const int &index, BitBoard allPieces) {
-#ifndef NO_BMI
+#ifdef __BMI2__
     return bishopMagic[index][_pext_u64(allPieces, bishopMask[index])];
 #else
   allPieces &= bishopMask[index];
@@ -342,7 +342,7 @@ template<> BitBoard GetAttackMap<kBishop>(const int &index, BitBoard allPieces) 
 }
 
 template<> BitBoard GetAttackMap<kRook>(const int &index, BitBoard allPieces) {
-#ifndef NO_BMI
+#ifdef __BMI2__
     return rookMagic[index][_pext_u64(allPieces, rookMask[index])];
 #else
     allPieces &= rookMask[index];

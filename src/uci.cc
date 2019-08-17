@@ -177,7 +177,7 @@ void Loop() {
     }
     else if (Equals(command, "uci")) {
       Reply(kEngineNamePrefix + settings::engine_name + " "
-          + settings::engine_version);
+          + settings::engine_version + " " + settings::compile_arch);
       Reply(kEngineAuthorPrefix + settings::engine_author);
       Reply(kUCIHashOptionString);
       Reply(kOk);
