@@ -21,7 +21,7 @@ using NetLayerType = Vec<float, block_size>;
 //using CReLULayerType = Vec<float, act_block_size>;
 
 namespace {
-const int net_version = 19080500;
+const int net_version = 19081700;
 
 const int kUseQueenActivity = false;
 
@@ -84,7 +84,7 @@ const Array2d<BitBoard, 2, 64> get_king_pawn_coverage() {
 const Array2d<BitBoard, 2, 64> king_pawn_coverage = get_king_pawn_coverage();
 
 const std::array<int, 15*15> relative_king_map = {
-    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0,
+    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 8,
     1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
     2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
     3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
@@ -98,7 +98,7 @@ const std::array<int, 15*15> relative_king_map = {
     3, 10, 16, 21, 22, 23, 24, 25, 24, 23, 22, 21, 16, 10, 3,
     2,  9, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15,  9, 2,
     1,  8,  9, 10, 11, 12, 13, 14, 13, 12, 11, 10,  9,  8, 1,
-    0,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
+    8,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
 };
 
 //template<typename T>
@@ -310,10 +310,30 @@ inline void ScoreIsolated(T &score, const EvalConstants &ec) {
   AddFeature<T>(score, offset + kIsolatedPawnIndex, bitops::PopCount(ec.pawn_bb[color] & ~not_isolated));
 }
 
+enum PawnCategory {
+  Opposed = 0, Unopposed = 1, PassedCovered = 2, PassedUncovered = 3
+};
+
+template<typename T, Color color, Color our_color, PawnCategory cat>
+inline void ScorePawnsByGroup(T &score, const EvalConstants &ec, BitBoard cat_pawns) {
+  constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
+  constexpr int forward_dir = color == kWhite ? 1 : -1;
+  constexpr int cat_offset = 24 * cat;
+
+  for (; cat_pawns; bitops::PopLSB(cat_pawns)) {
+    Square pawn_square = bitops::NumberOfTrailingZeros(cat_pawns);
+    BitBoard pawn = bitops::GetLSB(cat_pawns);
+    bool is_protected = pawn & ec.covered_once[color];
+    bool is_neighbored = pawn & ec.neighbored_pawns[color];
+    int pawn_rank = color * 7 + forward_dir * GetSquareY(pawn_square) - 1;
+    AddFeature<T>(score, offset + kPawnEvalIndex + cat_offset + 12 * is_neighbored
+                                               + 6 * is_protected + pawn_rank, 1);
+  }
+}
+
 template<typename T, Color color, Color our_color>
 inline void ScorePawns(T &score, const EvalConstants &ec) {
   constexpr Color not_color = color ^ 0x1;
-  constexpr int forward_dir = color == kWhite ? 1 : -1;
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
 
   ScoreIsolated<T, color, our_color>(score, ec);
@@ -322,24 +342,14 @@ inline void ScorePawns(T &score, const EvalConstants &ec) {
                 bitops::PopCount(ec.covered_once[color]
                                 & (ec.c_pieces[not_color] ^ ec.pawn_bb[not_color])));
 
-  std::array<BitBoard, 4> categorized_pawns {
-    ec.pawn_bb[color] & ec.opposed_pawns,
-    ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]),
-    ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]],
-    ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]]
-  };
-  for (int cat = 0; cat < 4; cat++) {
-    int cat_offset = 24 * cat;
-    for (BitBoard cat_pawns = categorized_pawns[cat]; cat_pawns; bitops::PopLSB(cat_pawns)) {
-      Square pawn_square = bitops::NumberOfTrailingZeros(cat_pawns);
-      BitBoard pawn = bitops::GetLSB(cat_pawns);
-      bool is_neighbored = pawn & ec.neighbored_pawns[color];
-      bool is_protected = pawn & ec.covered_once[color];
-      int pawn_rank = color * 7 + forward_dir * GetSquareY(pawn_square) - 1;
-      AddFeature<T>(score, offset + kPawnEvalIndex + cat_offset + 12 * is_neighbored
-                                                 + 6 * is_protected + pawn_rank, 1);
-    }
-  }
+  ScorePawnsByGroup<T, color, our_color, PawnCategory::Opposed>(
+      score, ec, ec.pawn_bb[color] & ec.opposed_pawns);
+  ScorePawnsByGroup<T, color, our_color, PawnCategory::Unopposed>(
+      score, ec, ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]));
+  ScorePawnsByGroup<T, color, our_color, PawnCategory::PassedCovered>(
+      score, ec, ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]]);
+  ScorePawnsByGroup<T, color, our_color, PawnCategory::PassedUncovered>(
+      score, ec, ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]]);
 }
 
 template<typename T, Color color, Color our_color>
@@ -801,11 +811,45 @@ std::vector<Game> LoadTrainingGamesForTraining(std::string filename, size_t rero
   return games;
 }
 
-void GenerateDatasetFromEPD() {
+void AddArasanEPDs(std::vector<Game> &games) {
+  std::string line;
+  std::ifstream file("lichess-new-labeled.epd");
+
+  while(std::getline(file, line)) {
+    std::vector<std::string> tokens = parse::split(line, ' ');
+    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+    Board board(fen);
+    if (board.InCheck()) {
+      continue;
+    }
+    Game game;
+    game.board = board;
+    if (tokens[8].compare("\"1.000\";") == 0) {
+      game.result = 1;
+    }
+    else if (tokens[8].compare("\"0.000\";") == 0) {
+      game.result = 0;
+    }
+    else if (tokens[8].compare("\"0.500\";") == 0) {
+      game.result = 0.5;
+    }
+    else {
+      std::cout << "Error detected! Line:" << std::endl;
+      std::cout << line << std::endl;
+      file.close();
+      return;
+    }
+    games.emplace_back(game);
+    if (games.size() % 10000 == 0) {
+      std::cout << "Loaded " << games.size() << " samples!" << std::endl;
+    }
+  }
+  file.close();
+}
+
+void AddZCEPDs(std::vector<Game> &games) {
   std::string line;
   std::ifstream file("quiet-labeled.epd");
-
-  std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 30);
 
   while(std::getline(file, line)) {
     std::vector<std::string> tokens = parse::split(line, ' ');
@@ -837,6 +881,13 @@ void GenerateDatasetFromEPD() {
     }
   }
   file.close();
+}
+
+void GenerateDatasetFromEPD() {
+
+  std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 30);
+  AddZCEPDs(games);
+  AddArasanEPDs(games);
 
   std::random_device rd;
   std::mt19937 g(rd());
