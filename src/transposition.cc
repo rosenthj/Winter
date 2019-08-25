@@ -64,23 +64,42 @@ size_t size_pvt = 10001;
 std::vector<Entry> table(size);
 std::vector<Entry> table_pv(size_pvt);
 
+uint8_t current_generation = 0;
+
+void UpdateGeneration() {
+  current_generation += (0x1 << 2);
+}
+
 void SetTableSize(const size_t MB) {
   size = (6 * (MB << 16)) / 7;
   size_pvt = size / 6;
+
+  size -= size % 4;
+
   table.resize(size);
   table_pv.resize(size_pvt);
 }
 
 size_t HashFunction(const HashType hash) {
-  return hash % size;
+  return (hash % size) & ~(0x3);
 }
 
 size_t PVHashFunction(const HashType hash) {
   return hash % size_pvt;
 }
 
+Entry GetMainEntryIdx(const HashType hash) {
+  size_t idx = HashFunction(hash);
+  for (size_t i = 0; i < 3; ++i) {
+    if (ValidateHash(table[idx+i], hash)) {
+      return table[idx+i];
+    }
+  }
+  return table[idx+3];
+}
+
 Entry GetEntry(const HashType hash) {
-  Entry entry = table.at(HashFunction(hash));
+  Entry entry = GetMainEntryIdx(hash);
   Entry entry_pv = table_pv.at(PVHashFunction(hash));
 
   if (!ValidateHash(entry, hash)) {
@@ -95,11 +114,33 @@ Entry GetEntry(const HashType hash) {
   return entry_pv;
 }
 
+size_t GetIdxToReplace(HashType hash) {
+  size_t idx = HashFunction(hash);
+  if (ValidateHash(table[idx], hash)) {
+    return idx;
+  }
+  int worst_score = 1024 + static_cast<int>(table[idx].depth)
+      - 512 * (table[idx].get_generation() != current_generation);
+  size_t worst_idx = idx;
+
+  for (size_t i = 1; i <= 3; ++i) {
+    if (ValidateHash(table[idx+i], hash)) {
+      return idx + i;
+    }
+    int score = 1024 + static_cast<int>(table[idx+i].depth)
+          - 512 * (table[idx+i].get_generation() != current_generation);
+    if (score < worst_score) {
+      worst_score = score;
+      worst_idx = idx + i;
+    }
+  }
+  return worst_idx;
+}
 
 void SaveEntry(const Board &board, const Move best_move, const Score score,
                const Depth depth, const uint8_t bound) {
   HashType hash = board.get_hash();
-  size_t index = HashFunction(hash);
+  size_t index = GetIdxToReplace(hash); // HashFunction(hash);
 
   assert(index < table.size());
 
@@ -108,14 +149,14 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   entry.hash = hash ^ best_move_cast;
   entry.set_score(score, board);
   entry.set_best_move(best_move);
+  entry.set_gen_and_bound(bound);
   entry.depth = depth;
-  entry.bound = bound;
   table[index] = entry;
 }
 
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {
   HashType hash = board.get_hash();
-  size_t index = HashFunction(hash);
+  size_t index = GetIdxToReplace(hash); // HashFunction(hash);
   size_t index_pv = PVHashFunction(hash);
 
   assert(index < table.size());
@@ -126,7 +167,7 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   entry.set_score(score, board);
   entry.set_best_move(best_move);
   entry.depth = depth;
-  entry.bound = kExactBound;
+  entry.set_gen_and_bound(kExactBound);
   table[index] = entry;
   table_pv[index_pv] = entry;
 }
@@ -155,6 +196,13 @@ Score Entry::get_score(const Board &board) const {
   return tt_score_to_score(score, board.get_num_made_moves());
 }
 
+void Entry::set_gen() {
+  gen_and_bound = current_generation | get_bound();
+}
+
+void Entry::set_gen_and_bound(uint8_t bound) {
+  gen_and_bound = current_generation | bound;
+}
 
 }
 

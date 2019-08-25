@@ -516,9 +516,9 @@ inline bool sufficient_bounds(const Board &board, const table::Entry &entry,
                               const Depth depth) {
   Score score = entry.get_score(board);
   return entry.depth >= depth
-      && ((entry.bound == kExactBound)
-          || (entry.bound == kLowerBound && score >= beta)
-          || (entry.bound == kUpperBound && score <= alpha));
+      && ((entry.get_bound() == kExactBound)
+          || (entry.get_bound() == kLowerBound && score >= beta)
+          || (entry.get_bound() == kUpperBound && score <= alpha));
 }
 
 inline bool is_null_move_allowed(const Board &board, const Depth depth) {
@@ -634,7 +634,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
       return entry.get_score(t.board);
     }
     // assert(entry.bound == kLowerBound || entry.bound == kExactBound);
-    if (entry.bound != kUpperBound) {
+    if (entry.get_bound() != kUpperBound) {
       lower_bound_score = entry.get_score(t.board);
     }
   }
@@ -652,7 +652,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
 //    }
 
     static_eval = net_evaluation::ScoreBoard(t.board);
-    if (valid_hash && entry.bound == kLowerBound && static_eval < entry.get_score(t.board)) {
+    if (valid_hash && entry.get_bound() == kLowerBound && static_eval < entry.get_score(t.board)) {
       static_eval = entry.get_score(t.board);
     }
 
@@ -859,13 +859,13 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
 
     //Set static eval from board and TT entry.
     if (valid_entry) {
-      if (entry.bound == kExactBound) {
+      if (entry.get_bound() == kExactBound) {
         static_eval = entry.get_score(t.board);
       }
       else {
         static_eval = net_evaluation::ScoreBoard(t.board);
-        if ( (entry.bound == kLowerBound && static_eval < entry.get_score(t.board))
-            || (entry.bound == kUpperBound && static_eval > entry.get_score(t.board)) ) {
+        if ( (entry.get_bound() == kLowerBound && static_eval < entry.get_score(t.board))
+            || (entry.get_bound() == kUpperBound && static_eval > entry.get_score(t.board)) ) {
           static_eval = entry.get_score(t.board);
         }
       }
@@ -954,7 +954,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
     Depth e = 0;// Extensions
     if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
         && entry.depth >= depth - 3 && !(node_type == NodeType::kPV && moves.size() == 1)
-        && entry.bound != kUpperBound && !is_mate_score(entry.get_score(t.board))) {
+        && entry.get_bound() != kUpperBound && !is_mate_score(entry.get_score(t.board))) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
       auto is_singular = move_is_singular(t, depth, moves, entry, expected_cut_node);
@@ -1088,7 +1088,7 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   const Depth rDepth = (depth - 3) / 2;
   assert(!is_mate_score(Beta));
   assert(entry.get_best_move() == moves[0]);
-  assert(entry.bound != kUpperBound);
+  assert(entry.get_bound() != kUpperBound);
 
   for(size_t i = 1; i < moves.size(); ++i) {
     t.set_move(moves[i]);
@@ -1356,6 +1356,7 @@ void Thread::search() {
 
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
+  table::UpdateGeneration();
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
