@@ -55,8 +55,7 @@ enum class NodeType {
   kPV, kNW
 };
 
-// const int kPV = 0;
-// const int kNW = 1;
+constexpr Score kSNMPMargin = 600;
 
 const int kNormalSearchMode = 0;
 const int kSamplingSearchMode = 1;
@@ -97,24 +96,15 @@ const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)];
 }
 
-const Vec<Score, 4> init_futility_margins() {
+Vec<Score, 4> init_futility_margins(Score s) {
   Vec<Score, 4> kFutilityMargins(0);
-  if (false) {
-    kFutilityMargins[0] = 0;
-    kFutilityMargins[1] = 413;
-    kFutilityMargins[2] = 722;
-    kFutilityMargins[3] = 1071;
-  }
-  else {
-    kFutilityMargins[0] = 0;
-    kFutilityMargins[1] = 550;
-    kFutilityMargins[2] = 1100;
-    kFutilityMargins[3] = 1650;
+  for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
+    kFutilityMargins[i] = s * i;
   }
   return kFutilityMargins;
 }
 
-const Vec<Score, 4> kFutileMargin = init_futility_margins();
+const Vec<Score, 4> kFutileMargin = init_futility_margins(710);
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 std::vector<MoveScore> search_weights(kNumMoveProbabilityFeatures);
@@ -878,7 +868,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
-      Score margin = (360 - 60 * !strict_worsening) * depth;
+      Score margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
       if (settings::kUseScoreBasedPruning && static_eval > beta + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
@@ -2130,6 +2120,14 @@ std::vector<Board> GenerateEvalSampleSet(std::string filename) {
   set_print_info(true);
   data::SaveBoardFens(filename, boards);
   return boards;
+}
+
+void SetFutilityMargin(Score score) {
+  //kFutileMargin = init_futility_margins(score);
+}
+
+void SetSNMPMargin(Score score) {
+  //kSNMPMargin = score;
 }
 
 }

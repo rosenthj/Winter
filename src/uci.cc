@@ -64,7 +64,10 @@ const std::string kEngineNamePrefix = "id name ";
 const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
-    "option name Hash type spin default 32 min 1 max 104576\noption name Threads type spin default 1 min 1 max 256";
+    "option name Hash type spin default 32 min 1 max 104576"
+    "\noption name Threads type spin default 1 min 1 max 256";
+    //"\noption name Futility type spin default 55 min 30 max 80"
+    //"\noption name SNMPMargin type spin default 360 min 0 max 2000";
 
 struct Timer {
   Timer() {
@@ -75,8 +78,10 @@ struct Timer {
     movetime = 0;
     moves_to_go = 0;
     search_depth = 0;
+    nodes = 0;
   }
   int time[2], inc[2], movetime;
+  size_t nodes;
   Depth moves_to_go, search_depth;
 };
 
@@ -92,6 +97,9 @@ void Go(Board *board, Timer timer) {
   else if (timer.movetime != 0) {
     Milliseconds duration = Milliseconds(maxtime(timer.movetime));
     move = search::FixedTimeSearch((*board), duration);
+  }
+  else if (timer.nodes != 0) {
+    move = search::NodeSearch((*board), timer.nodes);
   }
   else {
     if (timer.moves_to_go == 0) {
@@ -185,6 +193,9 @@ void Loop() {
     else if (Equals(command, "stop")) {
       search::end_search();
     }
+    else if (Equals(command, "ucinewgame")) {
+      board = Board();
+    }
     else if (Equals(command, "setoption")) {
       index++;
       command = tokens[index++];
@@ -197,6 +208,16 @@ void Loop() {
         index++;
         int num_threads = atoi(tokens[index++].c_str());
         search::Threads.set_num_threads(num_threads);
+      }
+      if (Equals(command, "Futility")) {
+        index++;
+        int futility = atoi(tokens[index++].c_str());
+        search::SetFutilityMargin(10 * futility);
+      }
+      if (Equals(command, "SNMPMargin")) {
+        index++;
+        int margin = atoi(tokens[index++].c_str());
+        search::SetSNMPMargin(margin);
       }
     }
     else if (Equals(command, "print_moves")) {
@@ -274,6 +295,9 @@ void Loop() {
           }
           else if(Equals(arg, "movestogo")){
             timer.moves_to_go = atoi(tokens[index++].c_str());
+          }
+          else if(Equals(arg, "nodes")){
+            timer.nodes = atol(tokens[index++].c_str());
           }
         }
       }

@@ -65,6 +65,9 @@ void LoadSearchVariablesHardCoded();
 void EvaluateCaptureMoveValue(int n);
 void EvaluateScoreDistributions(const int focus);
 
+void SetFutilityMargin(Score score);
+void SetSNMPMargin(Score score);
+
 }
 
 #endif /* SEARCH_H_ */
