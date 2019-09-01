@@ -67,6 +67,7 @@ void EvaluateScoreDistributions(const int focus);
 
 void SetFutilityMargin(Score score);
 void SetSNMPMargin(Score score);
+void SetLMRDiv(double div);
 
 }
 

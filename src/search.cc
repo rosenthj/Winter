@@ -55,8 +55,6 @@ enum class NodeType {
   kPV, kNW
 };
 
-constexpr Score kSNMPMargin = 600;
-
 const int kNormalSearchMode = 0;
 const int kSamplingSearchMode = 1;
 const int kSamplingEvalMode = 2;
@@ -74,26 +72,15 @@ NodeType sampled_node_type;
 Depth sampled_depth;
 int skip_time_check = 0;
 
-const Array2d<Depth, 64, 64> init_lmr_reductions() {
+Array2d<Depth, 64, 64> init_lmr_reductions(double div) {
   Array2d<Depth, 64, 64> lmr_reductions;
   for (Depth i = 0; i < 64; ++i) {
     for (size_t j = 0; j < 64; ++j) {
-      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / 1.6);
+      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / div);
       lmr_reductions[i][j] = std::min(lmr_reductions[i][j], i);
     }
   }
   return lmr_reductions;
-}
-
-const Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions();
-
-template<NodeType node_type>
-const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
-  assert(depth > 0);
-  if (node_type == NodeType::kPV) {
-    return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)] / 2;
-  }
-  return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)];
 }
 
 Vec<Score, 4> init_futility_margins(Score s) {
@@ -104,8 +91,19 @@ Vec<Score, 4> init_futility_margins(Score s) {
   return kFutilityMargins;
 }
 
-const Vec<Score, 4> kFutileMargin = init_futility_margins(710);
+constexpr Score kSNMPMargin = 588;// 587
+Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
+const Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
+
+template<NodeType node_type>
+const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
+  assert(depth > 0);
+  if (node_type == NodeType::kPV) {
+    return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)] / 2;
+  }
+  return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)];
+}
 
 std::vector<MoveScore> search_weights(kNumMoveProbabilityFeatures);
 std::vector<MoveScore> search_weights_in_check(kNumMoveProbabilityFeatures);
@@ -2128,6 +2126,10 @@ void SetFutilityMargin(Score score) {
 
 void SetSNMPMargin(Score score) {
   //kSNMPMargin = score;
+}
+
+void SetLMRDiv(double div) {
+//  lmr_reductions = init_lmr_reductions(div);
 }
 
 }

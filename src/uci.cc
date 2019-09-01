@@ -66,8 +66,9 @@ const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
     "option name Hash type spin default 32 min 1 max 104576"
     "\noption name Threads type spin default 1 min 1 max 256";
-    //"\noption name Futility type spin default 55 min 30 max 80"
-    //"\noption name SNMPMargin type spin default 360 min 0 max 2000";
+//    "\noption name Futility type spin default 1274 min 400 max 1500"
+//    "\noption name SNMPMargin type spin default 588 min 0 max 2000"
+//    "\noption name LMRDivisor type spin default 134 min 60 max 250";
 
 struct Timer {
   Timer() {
@@ -212,12 +213,17 @@ void Loop() {
       if (Equals(command, "Futility")) {
         index++;
         int futility = atoi(tokens[index++].c_str());
-        search::SetFutilityMargin(10 * futility);
+        search::SetFutilityMargin(futility);
       }
       if (Equals(command, "SNMPMargin")) {
         index++;
         int margin = atoi(tokens[index++].c_str());
         search::SetSNMPMargin(margin);
+      }
+      if (Equals(command, "LMRDivisor")) {
+        index++;
+        int div = atoi(tokens[index++].c_str());
+        search::SetLMRDiv(div * 0.01);
       }
     }
     else if (Equals(command, "print_moves")) {
