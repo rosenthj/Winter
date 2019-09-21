@@ -65,10 +65,16 @@ const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
     "option name Hash type spin default 32 min 1 max 104576"
-    "\noption name Threads type spin default 1 min 1 max 256";
-//    "\noption name Futility type spin default 1274 min 400 max 1500"
-//    "\noption name SNMPMargin type spin default 588 min 0 max 2000"
-//    "\noption name LMRDivisor type spin default 134 min 60 max 250";
+    "\noption name Threads type spin default 1 min 1 max 256"
+    "\noption name Contempt type spin default 0 min -100 max 100"
+#ifndef TUNE
+    "\noption name Armageddon type check default false";
+#else
+    "\noption name Armageddon type check default false"
+    "\noption name Futility type spin default 1274 min 400 max 1500"
+    "\noption name SNMPMargin type spin default 588 min 0 max 2000"
+    "\noption name LMRDivisor type spin default 134 min 60 max 250";
+#endif
 
 struct Timer {
   Timer() {
@@ -118,11 +124,6 @@ void Go(Board *board, Timer timer) {
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
 }
 
-
-}
-
-namespace uci {
-
 bool Equals(std::string string_a, std::string string_b) {
   return string_a.compare(string_b) == 0;
 }
@@ -130,6 +131,15 @@ bool Equals(std::string string_a, std::string string_b) {
 void Reply(std::string message) {
   std::cout << message << std::endl;
 }
+
+bool IsTrue(std::string s) {
+  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
+}
+
+
+}
+
+namespace uci {
 
 void Loop() {
   debug::EnterFunction(debug::kUci, "uci::Loop", "");
@@ -174,10 +184,10 @@ void Loop() {
     else if (Equals(command, "print_bitboards")) {
       board.PrintBitBoards();
     }
-    else if (Equals(command, "print_features")) {
+//    else if (Equals(command, "print_features")) {
 //      TODO replace with function from net_eval
 //      evaluation::PrintFeatureValues(board);
-    }
+//    }
     else if (Equals(command, "isdraw")) {
       std::cout << board.IsDraw() << std::endl;
     }
@@ -210,8 +220,20 @@ void Loop() {
         int num_threads = atoi(tokens[index++].c_str());
         search::Threads.set_num_threads(num_threads);
       }
+      if (Equals(command, "Contempt")) {
+        index++;
+        int contempt = atoi(tokens[index++].c_str());
+        search::SetContempt(contempt);
+      }
+      if (Equals(command, "Armageddon")) {
+        index++;
+        bool armageddon_setting = IsTrue(tokens[index++]);
+        search::SetArmageddon(armageddon_setting);
+      }
+#ifdef TUNE
       if (Equals(command, "Futility")) {
         index++;
+
         int futility = atoi(tokens[index++].c_str());
         search::SetFutilityMargin(futility);
       }
@@ -225,6 +247,7 @@ void Loop() {
         int div = atoi(tokens[index++].c_str());
         search::SetLMRDiv(div * 0.01);
       }
+#endif
     }
     else if (Equals(command, "print_moves")) {
       std::vector<Move> moves = board.GetMoves<kNonQuiescent>();

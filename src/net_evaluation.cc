@@ -14,11 +14,13 @@
 
 using namespace net_features;
 
+constexpr float kEpsilon = 0.000001;
 constexpr size_t block_size = 16;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
 //using CReLULayerType = Vec<float, act_block_size>;
+std::array<float, 2> contempt = { 0.5, 0.5 };
 
 namespace {
 const int net_version = 19081700;
@@ -32,7 +34,7 @@ float sigmoid(float x) {
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
 NetLayerType bias_layer_one(0);
 
-std::vector<NetLayerType> second_layer_weights(32 * 16, 0);
+std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
 NetLayerType bias_layer_two(0);
 
 //NetLayerType output_weights(0);
@@ -614,9 +616,7 @@ T ScoreBoard(const Board &board) {
   return score;
 }
 
-Score NetForward(NetLayerType &layer_one) {
-  constexpr float epsilon = 0.000001;
-
+Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   layer_one += bias_layer_one;
   layer_one.relu();
 //  layer_one.ns_prelu(net_hardcode::l1_activation_weights);
@@ -635,8 +635,9 @@ Score NetForward(NetLayerType &layer_one) {
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
 
-  float wpct = (sigmoid(win) + sigmoid(win_draw)) / 2;
-  wpct = std::max(std::min(wpct, 1-epsilon), epsilon);
+  float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
+//  wpct = wpct * (1-kEpsilon) + 0.5 * kEpsilon;
+  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
   float output = std::log(wpct / (1-wpct));
 
   return std::round(output * 1024);
@@ -650,7 +651,7 @@ Score ScoreBoard(const Board &board) {
   else {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board);
   }
-  return NetForward(layer_one);
+  return NetForward(layer_one, contempt[board.get_turn()]);
 }
 
 void init_weights() {
@@ -958,5 +959,42 @@ void EstimateFeatureImpact() {
   }
 }
 
+void SetContempt(int value, Color color) {
+  float f = (value + 100) * 0.005;
+  contempt[color] = f;
+  contempt[color ^ 0x1] = 1-f;
+}
+
+std::array<Score, 2> GetDrawArray() {
+//  float f = contempt[0] * (1-kEpsilon) + 0.5 * kEpsilon;
+  float f = std::max(std::min(contempt[0], 1-kEpsilon), kEpsilon);
+  f = std::log(f / (1-f));
+  Score res = std::round(f * 1024);
+  std::array<Score, 2> result = { -res, res };
+  return result;
+}
+
+Score GetUnbiasedScore(Score score, Color color) {
+  Color not_color = color ^ 0x1;
+  float f = sigmoid(score / 1024.0);
+  float w, wd;
+  if (f == contempt[not_color]) {
+    return 0;
+  }
+  else if (f > contempt[not_color]) {
+    w = (f - contempt[not_color]) / contempt[color];
+    wd = 1.0;
+  }
+  else {
+    w = 0.0;
+    wd = f / contempt[not_color];
+  }
+  float x = (w + wd) / 2;
+  x = std::log(x / (1-x));
+  return std::round(x * 1024);
+  // w * vw + wd * vwd = f
+  // if f > vwd: wd = 1, w = (f - vwd) / vw
+  // else w = 0, wd = f / vwd
+}
 
 }

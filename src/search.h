@@ -65,9 +65,14 @@ void LoadSearchVariablesHardCoded();
 void EvaluateCaptureMoveValue(int n);
 void EvaluateScoreDistributions(const int focus);
 
+void SetContempt(int contempt);
+void SetArmageddon(bool armageddon);
+
+#ifdef TUNE
 void SetFutilityMargin(Score score);
 void SetSNMPMargin(Score score);
 void SetLMRDiv(double div);
+#endif
 
 }
 

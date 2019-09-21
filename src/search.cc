@@ -62,6 +62,10 @@ int kNodeCountSampleAt = 1000;
 //int kNodeCountSampleEvalAt = 5000;
 const int kMaxDepthSampled = 32;
 
+std::array<Score, 2> draw_score = { 0, 0 };
+int contempt = 0;
+bool armageddon = false;
+
 int rsearch_mode;
 Milliseconds rsearch_duration;
 Depth rsearch_depth;
@@ -91,10 +95,18 @@ Vec<Score, 4> init_futility_margins(Score s) {
   return kFutilityMargins;
 }
 
+#ifdef TUNE
+Score kSNMPMargin = 588;// 587
+Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
+Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
+std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
+
+#else
 constexpr Score kSNMPMargin = 588;// 587
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 const Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
+#endif
 
 template<NodeType node_type>
 const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
@@ -611,7 +623,7 @@ Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
 
   //End search immediately if trivial draw is reached
   if (t.board.IsTriviallyDrawnEnding()) {
-    return 0;
+    return draw_score[t.board.get_turn()];;
   }
 
   //TT probe
@@ -802,6 +814,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
   assert(node_type != NodeType::kPV || !expected_cut_node);
 
   const Score original_alpha = alpha;
+  const Score score_draw = draw_score[t.board.get_turn()];
   Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
 
   //Immediately return 0 if we detect a draw.
@@ -810,7 +823,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
     if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kNonQuiescent>().empty()) {
       return kMinScore+t.board.get_num_made_moves();
     }
-    return 0;
+    return score_draw;
   }
 
   //We drop to QSearch if we run out of depth.
@@ -893,7 +906,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
     if (in_check) {
       return kMinScore+t.board.get_num_made_moves();
     }
-    return 0;
+    return score_draw;
   }
 
 //  if (Mode == kSamplingSearchMode && node_type == NodeType::kNW && depth <= kMaxDepthSampled) {
@@ -1101,12 +1114,13 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
 
   Score alpha = original_alpha;
   Score lower_bound_score = kMinScore;
+  const Score score_draw = draw_score[t.board.get_turn()];
   //const bool in_check = board.InCheck();
-  if (settings::kRepsForDraw == 3 && alpha < -1 && t.board.MoveInListCanRepeat(moves)) {
-    if (beta <= 0) {
-      return 0;
+  if (settings::kRepsForDraw == 3 && alpha < score_draw-1 && t.board.MoveInListCanRepeat(moves)) {
+    if (beta <= score_draw) {
+      return score_draw;
     }
-    alpha = -1;
+    alpha = score_draw-1;
   }
   const bool in_check = t.board.InCheck();
   for (size_t i = 0; i < moves.size(); ++i) {
@@ -1114,8 +1128,8 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     t.board.Make(moves[i]);
     if (i == 0) {
       Score score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
-      if (settings::kRepsForDraw == 3 && score < 0 && t.board.CountRepetitions() >= 2) {
-        score = 0;
+      if (settings::kRepsForDraw == 3 && score < score_draw && t.board.CountRepetitions() >= 2) {
+        score = score_draw;
       }
       t.board.UnMake();
       if (score >= beta) {
@@ -1137,8 +1151,8 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
       if (score > alpha) {
         score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
       }
-      if (settings::kRepsForDraw == 3 && score < 0 && t.board.CountRepetitions() >= 2) {
-        score = 0;
+      if (settings::kRepsForDraw == 3 && score < score_draw && t.board.CountRepetitions() >= 2) {
+        score = score_draw;
       }
       lower_bound_score = std::max(score, lower_bound_score);
       t.board.UnMake();
@@ -1305,8 +1319,13 @@ void Thread::search() {
             << " time " << time_used.count()
             << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
         if (!is_mate_score(score)) {
-          std::cout << " score cp "
-              << (score / 8);
+          std::cout << " score cp ";
+          if (armageddon) {
+            std::cout << (score / 8);
+          }
+          else {
+            std::cout << (net_evaluation::GetUnbiasedScore(score, board.get_turn()) / 8);
+          }
         }
         else {
           Score m_score = board.get_num_made_moves();
@@ -1345,6 +1364,13 @@ void Thread::search() {
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
   table::UpdateGeneration();
+  if (armageddon) {
+    net_evaluation::SetContempt(60, kWhite);
+  }
+  else {
+    net_evaluation::SetContempt(contempt, board.get_turn());
+  }
+  draw_score = net_evaluation::GetDrawArray();
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
@@ -2120,16 +2146,26 @@ std::vector<Board> GenerateEvalSampleSet(std::string filename) {
   return boards;
 }
 
+void SetContempt(int contempt_) {
+  contempt = contempt_;
+}
+
+void SetArmageddon(bool armageddon_) {
+  armageddon = armageddon_;
+}
+
+#ifdef TUNE
 void SetFutilityMargin(Score score) {
-  //kFutileMargin = init_futility_margins(score);
+  kFutileMargin = init_futility_margins(score);
 }
 
 void SetSNMPMargin(Score score) {
-  //kSNMPMargin = score;
+  kSNMPMargin = score;
 }
 
 void SetLMRDiv(double div) {
-//  lmr_reductions = init_lmr_reductions(div);
+  lmr_reductions = init_lmr_reductions(div);
 }
+#endif
 
 }

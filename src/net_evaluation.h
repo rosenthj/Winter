@@ -47,6 +47,10 @@ void EstimateFeatureImpact();
 void GenerateDatasetFromUCIGames(std::string filename, std::string out_name = "eval_dataset.csv",
                                  size_t reroll_pct = 0);
 
+void SetContempt(int value, Color color);
+std::array<Score, 2> GetDrawArray();
+Score GetUnbiasedScore(Score score, Color color);
+
 }
 
 // TODO: Move to external file
