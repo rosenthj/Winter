@@ -969,7 +969,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
 
     Depth reduction = 0;
 
-    if (!in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
+    if (i && !in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);

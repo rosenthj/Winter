@@ -977,6 +977,7 @@ std::array<Score, 2> GetDrawArray() {
 Score GetUnbiasedScore(Score score, Color color) {
   Color not_color = color ^ 0x1;
   float f = sigmoid(score / 1024.0);
+  f = std::max(std::min(f, 1-kEpsilon), kEpsilon);
   float w, wd;
   if (f == contempt[not_color]) {
     return 0;
