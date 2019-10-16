@@ -22,13 +22,23 @@ using NetLayerType = Vec<float, block_size>;
 //using CReLULayerType = Vec<float, act_block_size>;
 std::array<float, 2> contempt = { 0.5, 0.5 };
 
+int rescale = 4000;
+
 namespace {
 const int net_version = 19081700;
 
 const int kUseQueenActivity = false;
 
-float sigmoid(float x) {
+inline float sigmoid(float x) {
   return 1 / (1 + std::exp(-x));
+}
+
+inline Score wpct_to_score(float x) {
+  return std::round(rescale * (2*x - 1));
+}
+
+inline float score_to_wpct(Score x) {
+  return (((float)x / rescale) + 1.0) / 2.0;
 }
 
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
@@ -638,9 +648,11 @@ Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
 //  wpct = wpct * (1-kEpsilon) + 0.5 * kEpsilon;
   wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
-  float output = std::log(wpct / (1-wpct));
 
-  return std::round(output * 1024);
+  return wpct_to_score(wpct);
+  //float output = std::log(wpct / (1-wpct));
+
+  //return std::round(output * 1024);
 }
 
 Score ScoreBoard(const Board &board) {
@@ -966,17 +978,15 @@ void SetContempt(int value, Color color) {
 }
 
 std::array<Score, 2> GetDrawArray() {
-//  float f = contempt[0] * (1-kEpsilon) + 0.5 * kEpsilon;
-  float f = std::max(std::min(contempt[0], 1-kEpsilon), kEpsilon);
-  f = std::log(f / (1-f));
-  Score res = std::round(f * 1024);
-  std::array<Score, 2> result = { -res, res };
+  Score score = wpct_to_score(contempt[0]);
+  std::array<Score, 2> result = { -score, score };
   return result;
 }
 
 Score GetUnbiasedScore(Score score, Color color) {
   Color not_color = color ^ 0x1;
-  float f = sigmoid(score / 1024.0);
+  //float f = sigmoid(score / 1024.0);
+  float f = score_to_wpct(score);
   f = std::max(std::min(f, 1-kEpsilon), kEpsilon);
   float w, wd;
   if (f == contempt[not_color]) {
