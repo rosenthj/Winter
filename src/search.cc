@@ -1430,7 +1430,7 @@ void set_print_info(bool print_info_) {
 }
 
 Score get_last_search_score() {
-  return net_evaluation::GetUnbiasedScore(last_search_score, kWhite);
+  return last_search_score;
 }
 
 Move DepthSearch(Board board, Depth depth) {

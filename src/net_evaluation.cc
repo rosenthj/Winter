@@ -14,7 +14,6 @@
 
 using namespace net_features;
 
-constexpr float kEpsilon = 0.000001;
 constexpr size_t block_size = 16;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
@@ -22,23 +21,13 @@ using NetLayerType = Vec<float, block_size>;
 //using CReLULayerType = Vec<float, act_block_size>;
 std::array<float, 2> contempt = { 0.5, 0.5 };
 
-int rescale = 4000;
-
 namespace {
 const int net_version = 19081700;
 
-const int kUseQueenActivity = false;
+constexpr bool kUseQueenActivity = false;
 
 inline float sigmoid(float x) {
   return 1 / (1 + std::exp(-x));
-}
-
-inline Score wpct_to_score(float x) {
-  return std::round(rescale * (2*x - 1));
-}
-
-inline float score_to_wpct(Score x) {
-  return (((float)x / rescale) + 1.0) / 2.0;
 }
 
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
@@ -165,11 +154,6 @@ void AddFeaturePair<NetLayerType, kBlack>(NetLayerType &s, const int index, cons
   s.FMA(net_input_weights[index], value_black);
   s.FMA(net_input_weights[index + kSideDependentFeatureCount], value_white);
 }
-
-//template<> inline void AddFeature<PScore>(PScore &s, const Color color, const int index,
-//    const int value) {
-//  s.FMA(eval_score_values[index], kSign[color] * value);
-//}
 
 BitBoard get_all_major_pieces(const Board &board) {
   BitBoard all_major_pieces = 0;
@@ -646,13 +630,8 @@ Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
 
   float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
-//  wpct = wpct * (1-kEpsilon) + 0.5 * kEpsilon;
-  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
 
   return wpct_to_score(wpct);
-  //float output = std::log(wpct / (1-wpct));
-
-  //return std::round(output * 1024);
 }
 
 Score ScoreBoard(const Board &board) {
@@ -985,27 +964,22 @@ std::array<Score, 2> GetDrawArray() {
 
 Score GetUnbiasedScore(Score score, Color color) {
   Color not_color = color ^ 0x1;
-  //float f = sigmoid(score / 1024.0);
-  float f = score_to_wpct(score);
-  f = std::max(std::min(f, 1-kEpsilon), kEpsilon);
+  constexpr float kEpsilon = 0.000001;
+  float wpct = score_to_wpct(score);
+  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
   float w, wd;
-  if (f == contempt[not_color]) {
+  if (wpct == contempt[not_color]) {
     return 0;
   }
-  else if (f > contempt[not_color]) {
-    w = (f - contempt[not_color]) / contempt[color];
+  else if (wpct > contempt[not_color]) {
+    w = (wpct - contempt[not_color]) / contempt[color];
     wd = 1.0;
   }
   else {
     w = 0.0;
-    wd = f / contempt[not_color];
+    wd = wpct / contempt[not_color];
   }
-  float x = (w + wd) / 2;
-  x = std::log(x / (1-x));
-  return std::round(x * 1024);
-  // w * vw + wd * vwd = f
-  // if f > vwd: wd = 1, w = (f - vwd) / vw
-  // else w = 0, wd = f / vwd
+  return wpct_to_cp((w + wd) / 2);
 }
 
 }

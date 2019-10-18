@@ -31,6 +31,7 @@
 #include "net_evaluation.h"
 #include "general/parse.h"
 #include "general/settings.h"
+#include "general/types.h"
 #include "benchmark.h"
 #include <fstream>
 #include <string>
@@ -40,14 +41,6 @@
 #include <cmath>
 
 namespace {
-
-bool is_mate_score(Score score) {
-  return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
-}
-
-double Sigmoid(const Score score) {
-  return 1 / (1 + std::exp(-score / 1024.0));
-}
 
 double SigmoidCrossEntropyLossV2(double score, double target) {
   return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
@@ -62,7 +55,7 @@ double SigmoidCrossEntropyLoss(Score score, double target) {
       score = kMaxScore;
     }
   }
-  double prediction = Sigmoid(score);
+  double prediction = score_to_wpct(score);
   prediction = std::min(std::max(prediction, 0.0001), 0.9999);
   return target * std::log(prediction) + (1 - target) * std::log(1 - prediction);
 }

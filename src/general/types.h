@@ -27,10 +27,11 @@
 #ifndef GENERAL_TYPES_H_
 #define GENERAL_TYPES_H_
 
-#include <cassert>
-#include <cstdint>
-#include <chrono>
 #include <array>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
 
 // A bitboard is a 64bit boolean feature representation of the board.
 using BitBoard = uint64_t;
@@ -105,12 +106,29 @@ constexpr CastlingRights kWLCastle = kWSCastle << 1;
 constexpr CastlingRights kBSCastle = kWSCastle << 2;
 constexpr CastlingRights kBLCastle = kWSCastle << 3;
 
-constexpr Score kMaxScore = 100000;
+constexpr Score kRescale = 4000; // Used to transform wpct into Score.
+constexpr Score kNumMateInScores = 2000;
+
+constexpr Score kMaxScore = kRescale + 100 + kNumMateInScores;
 constexpr Score kMinScore = -kMaxScore;
 constexpr Score kNoScore = kMinScore-1;
 
 inline constexpr bool is_mate_score(const Score score) {
-  return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
+  return (score < kMinScore + kNumMateInScores) || (score > kMaxScore - kNumMateInScores);
+}
+
+inline Score wpct_to_score(float x) {
+  return std::round(kRescale * (2*x - 1));
+}
+
+inline float score_to_wpct(Score x) {
+  return (((float)x / kRescale) + 1.0) / 2.0;
+}
+
+inline Score wpct_to_cp(float wpct) {
+  constexpr float kEpsilon = 0.000001;
+  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
+  return std::round(std::log(wpct / (1-wpct)) * 1024);
 }
 
 constexpr int kLowerBound = 1;
