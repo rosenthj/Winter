@@ -107,21 +107,56 @@ constexpr CastlingRights kBSCastle = kWSCastle << 2;
 constexpr CastlingRights kBLCastle = kWSCastle << 3;
 
 constexpr Score kRescale = 4000; // Used to transform wpct into Score.
-constexpr Score kNumMateInScores = 2000;
+constexpr Score kMaxStaticEval = kRescale;
+constexpr Score kMinStaticEval = -kMaxStaticEval;
 
-constexpr Score kMaxScore = kRescale + 100 + kNumMateInScores;
+constexpr Score kMinMatingScore = kMaxStaticEval + 100;
+constexpr Score kMaxMatedScore = -kMinMatingScore;
+
+constexpr Score kNumMateInScores = 2000;
+constexpr Score kMaxScore = kMinMatingScore + kNumMateInScores;
 constexpr Score kMinScore = -kMaxScore;
 constexpr Score kNoScore = kMinScore-1;
 
-inline constexpr bool is_mate_score(const Score score) {
-  return (score < kMinScore + kNumMateInScores) || (score > kMaxScore - kNumMateInScores);
+inline Score get_next_score(Score score) {
+  if (score == kMaxStaticEval) {
+    return kMinMatingScore;
+  }
+  if (score == kMaxMatedScore) {
+    return kMinStaticEval;
+  }
+  return score + 1;
+}
+
+inline Score get_previous_score(Score score) {
+  if (score == kMinMatingScore) {
+    return kMaxStaticEval;
+  }
+  if (score == kMinStaticEval) {
+    return kMaxMatedScore;
+  }
+  return score - 1;
+}
+
+// Returns true for scores in range for static eval. This includes draw_score.
+inline constexpr bool is_static_eval(Score score) {
+  return (score >= kMinStaticEval) && (score <= kMaxStaticEval);
+}
+
+inline constexpr bool is_mate_score(Score score) {
+  return (score <= kMaxMatedScore) || (score >= kMinMatingScore);
+}
+
+inline constexpr bool is_valid_score(Score score) {
+  return score == kNoScore || (score >= kMinScore && score <= kMaxScore &&
+      (is_static_eval(score) || is_mate_score(score)));
 }
 
 inline Score wpct_to_score(float x) {
   return std::round(kRescale * (2*x - 1));
 }
 
-inline float score_to_wpct(Score x) {
+inline constexpr float score_to_wpct(Score x) {
   return (((float)x / kRescale) + 1.0) / 2.0;
 }
 
@@ -129,6 +164,26 @@ inline Score wpct_to_cp(float wpct) {
   constexpr float kEpsilon = 0.000001;
   wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
   return std::round(std::log(wpct / (1-wpct)) * 1024);
+}
+
+// Rounds score to next valid score
+inline Score get_valid_score(Score score) {
+  if (!is_valid_score(score) || score == kNoScore) {
+    if (score < kMinScore) {
+      return kMinScore;
+    }
+    if (score < kMinStaticEval) {
+      return kMinStaticEval;
+    }
+    if (score > kMaxScore) {
+      return kMaxScore;
+    }
+    if (score > kMaxStaticEval) {
+      return kMaxStaticEval;
+    }
+    assert(false); // Unreachable
+  }
+  return score;
 }
 
 constexpr int kLowerBound = 1;

@@ -71,6 +71,7 @@ const std::string kUCIHashOptionString =
     "\noption name Armageddon type check default false";
 #else
     "\noption name Armageddon type check default false"
+    "\noption name AspirationDelta type spin default 120 min 10 max 800"
     "\noption name Futility type spin default 1274 min 400 max 1500"
     "\noption name SNMPMargin type spin default 588 min 0 max 2000"
     "\noption name LMRDivisor type spin default 134 min 60 max 250";
@@ -231,9 +232,13 @@ void Loop() {
         search::SetArmageddon(armageddon_setting);
       }
 #ifdef TUNE
+      if (Equals(command, "AspirationDelta")) {
+        index++;
+        Score delta = atoi(tokens[index++].c_str());
+        search::SetInitialAspirationDelta(delta);
+      }
       if (Equals(command, "Futility")) {
         index++;
-
         int futility = atoi(tokens[index++].c_str());
         search::SetFutilityMargin(futility);
       }

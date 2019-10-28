@@ -96,12 +96,14 @@ Vec<Score, 4> init_futility_margins(Score s) {
 }
 
 #ifdef TUNE
+Score kInitialAspirationDelta = 120;
 Score kSNMPMargin = 588;// 587
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
 std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 #else
+constexpr Score kInitialAspirationDelta = 120;
 constexpr Score kSNMPMargin = 588;// 587
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 const Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
@@ -803,14 +805,16 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
 }
 
+inline constexpr Score get_singular_beta(Score beta, Depth depth) {
+  return beta - 4*depth;
+}
+
 template<NodeType node_type, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_cut_node = false) {
-  assert(alpha >= kMinScore);
-  assert(alpha <= kMaxScore);
-  assert(beta >= kMinScore);
-  assert(beta <= kMaxScore);
+  assert(is_valid_score(alpha));
+  assert(is_valid_score(beta));
   assert(beta > alpha);
-  assert(beta == alpha + 1 || node_type != NodeType::kNW);
+  assert(beta == get_next_score(alpha) || node_type != NodeType::kNW);
   assert(node_type != NodeType::kPV || !expected_cut_node);
 
   const Score original_alpha = alpha;
@@ -856,7 +860,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
   bool strict_worsening = false;
 
   //Speculative pruning methods
-  if (node_type == NodeType::kNW && beta > kMinScore + 2000 && alpha < kMaxScore - 2000 && !in_check) {
+  if (node_type == NodeType::kNW && is_static_eval(beta) && !in_check) {
 
     //Set static eval from board and TT entry.
     if (valid_entry) {
@@ -944,6 +948,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
   Vec<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
   std::vector<Move> quiets;
+  Score alpha_nw = get_next_score(alpha);
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
     if (i == 1 && !moves_sorted) {
@@ -955,7 +960,8 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
     Depth e = 0;// Extensions
     if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
         && entry.depth >= depth - 3 && !(node_type == NodeType::kPV && moves.size() == 1)
-        && entry.get_bound() != kUpperBound && !is_mate_score(entry.get_score(t.board))) {
+        && entry.get_bound() != kUpperBound && is_static_eval(entry.get_score(t.board))
+        && is_static_eval(get_singular_beta(entry.get_score(t.board), depth)-1)) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
       auto is_singular = move_is_singular(t, depth, moves, entry, expected_cut_node);
@@ -1012,13 +1018,14 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
     }
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
-      score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha+1), -alpha, depth - 1 + e - reduction, !expected_cut_node);
+      score = -AlphaBeta<NodeType::kNW, Mode>(t, -alpha_nw, -alpha,
+                                              depth - 1 + e - reduction, !expected_cut_node);
       //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (node_type == NodeType::kPV || reduction > 0)) {
         score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e, false);
       }
     }
-    assert(score >= kMinScore && score <= kMaxScore);
+    assert(is_valid_score(score));
     t.board.UnMake();
 
     //Ensure we still have time and our score was not prematurely terminated
@@ -1061,6 +1068,7 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
       }
       //Update score and expected best move
       alpha = score;
+      alpha_nw = get_next_score(alpha);
       lower_bound_score = score;
       best_local_move = move;
     }
@@ -1083,11 +1091,13 @@ Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_c
 std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
                                        const std::vector<Move> &moves,
                                        const table::Entry &entry, const bool expected_cut) {
-  const Score Beta = entry.get_score(t.board);
-  const Score rBeta = Beta - 4 * depth;
-  const Score rAlpha = rBeta - 1;
+  const Score beta = entry.get_score(t.board);
+  const Score rBeta = get_singular_beta(beta, depth);
+  const Score rAlpha = get_previous_score(rBeta);
   const Depth rDepth = (depth - 3) / 2;
-  assert(!is_mate_score(Beta));
+  assert(is_static_eval(beta));
+  assert(is_static_eval(rBeta));
+  assert(is_static_eval(rAlpha));
   assert(entry.get_best_move() == moves[0]);
   assert(entry.get_bound() != kUpperBound);
 
@@ -1106,10 +1116,8 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
 template<int Mode>
 Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_depth,
                      std::vector<Move> &moves) {
-  assert(original_alpha >= kMinScore);
-  assert(original_alpha <= kMaxScore);
-  assert(beta >= kMinScore);
-  assert(beta <= kMaxScore);
+  assert(is_valid_score(original_alpha));
+  assert(is_valid_score(beta));
   assert(original_alpha < beta);
 
   Score alpha = original_alpha;
@@ -1128,6 +1136,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
     t.board.Make(moves[i]);
     if (i == 0) {
       Score score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
+      assert(is_valid_score(score));
       if (settings::kRepsForDraw == 3 && score < score_draw && t.board.CountRepetitions() >= 2) {
         score = score_draw;
       }
@@ -1147,7 +1156,8 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
           reduction = (2 * reduction) / 3;
         }
       }
-      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -(alpha + 1), -alpha, current_depth - 1 - reduction, true);
+      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -get_next_score(alpha),
+                                                    -alpha, current_depth - 1 - reduction, true);
       if (score > alpha) {
         score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
       }
@@ -1179,31 +1189,6 @@ Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_
   return lower_bound_score;
 }
 
-// Estimates the standard deviation of an assumed distribution of scores.
-// The true mean is assumed to be the previous search score.
-inline Score estimate_Delta(const std::vector<Score> &previous_scores) {
-  double weight = 1, discount = 0.9, weighted_sum = 0, sum_weights = 0;
-  const Score belief = previous_scores.back();
-  if (is_mate_score(belief)) {
-    // If we believe we have mate, then +-10 should suffice.
-    return 10;
-  }
-  for (size_t i = previous_scores.size() - 2; i < previous_scores.size(); i--) {
-    if (is_mate_score(previous_scores[i])) {
-      // Minor hack to deal with overflow/underflow issues.
-      return 250;
-    }
-    double diff = belief - previous_scores[i]; // double to avoid overflow
-    weighted_sum += diff * diff * weight;
-    sum_weights += weight;
-    weight *= discount;
-  }
-  weighted_sum += 400 * 400 * weight;
-  sum_weights += weight;
-  assert(weighted_sum > 0);
-  return 10 + std::round(std::sqrt(weighted_sum / sum_weights));
-}
-
 template<int Mode>
 inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores, std::vector<Move> &moves) {
   if (current_depth <= 4) {
@@ -1211,39 +1196,36 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score std_dev_estimate = estimate_Delta(previous_scores);
-    assert(std_dev_estimate >= 2);
-    Score delta = 2 * std_dev_estimate;
-    Score alpha = std::max(score-delta, kMinScore);
-    Score beta = std::min(score+delta, kMaxScore);
+    Score delta = kInitialAspirationDelta;
+    Score alpha = get_valid_score(score-delta);
+    Score beta = get_valid_score(score+delta);
     SortMovesML(moves, t, moves[0]);
+    assert(is_valid_score(alpha));
+    assert(is_valid_score(beta));
     score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta > 0);
       if (score <= alpha) {
-        if (!is_mate_score(alpha) && !is_mate_score(beta)) {
-          beta = (alpha + (3 * beta)) / 4;
+        if (is_static_eval(beta)) {
+          beta = (std::max(score, kMinStaticEval) + (3 * beta)) / 4;
         }
-        if ((score - kMinScore) < delta) {
-          alpha = kMinScore;
+        alpha = get_valid_score(score - delta);
+        if (alpha == score) {
+          alpha = get_previous_score(score);
         }
-        else {
-          alpha = score - delta;
-        }
-        assert(alpha < beta);
       }
       else if (score >= beta) {
-        if (!is_mate_score(alpha) && !is_mate_score(beta)) {
-          alpha = ((3 * alpha) + beta) / 4;
+        if (is_static_eval(alpha)) {
+          alpha = ((3 * alpha) + std::min(kMaxStaticEval, score)) / 4;
         }
-        if ((kMaxScore - score) < delta) {
-          beta = kMaxScore;
+        beta = get_valid_score(score + delta);
+        if (beta == score) {
+          beta = get_next_score(score);
         }
-        else {
-          beta = score + delta;
-        }
-        assert(alpha < beta);
       }
+      assert(is_valid_score(alpha));
+      assert(is_valid_score(beta));
+      assert(score > alpha && score < beta);
       score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
       delta *= 2;
     }
@@ -1533,9 +1515,9 @@ void TrainSearchParams(bool from_scratch) {
     for (size_t i = 0; i < moves.size(); ++i) {
       Threads.main_thread->board.Make(moves[i]);
       Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(*Threads.main_thread,
-                                                       -(sampled_alpha+1),
-                                                       -sampled_alpha,
-                                                       sampled_depth - 1);
+                                                                 -get_next_score(sampled_alpha),
+                                                                 -sampled_alpha,
+                                                                 sampled_depth - 1);
       Threads.main_thread->board.UnMake();
       scores[i] = score;
       if (score > sampled_alpha) {
@@ -1573,9 +1555,9 @@ void TrainSearchParams(bool from_scratch) {
       else {
         Threads.main_thread->board.SetToSamePosition(sampled_board);
         score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
-                                                  -(sampled_alpha+1),
-                                                  -sampled_alpha,
-                                                  sampled_depth - 1);
+                                                             -get_next_score(sampled_alpha),
+                                                             -sampled_alpha,
+                                                             sampled_depth - 1);
       }
       sampled_board.UnMake();
       double target = 0;
@@ -2155,6 +2137,10 @@ void SetArmageddon(bool armageddon_) {
 }
 
 #ifdef TUNE
+void SetInitialAspirationDelta(Score delta) {
+  kInitialAspirationDelta = delta;
+}
+
 void SetFutilityMargin(Score score) {
   kFutileMargin = init_futility_margins(score);
 }

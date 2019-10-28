@@ -69,6 +69,7 @@ void SetContempt(int contempt);
 void SetArmageddon(bool armageddon);
 
 #ifdef TUNE
+void SetInitialAspirationDelta(Score delta);
 void SetFutilityMargin(Score score);
 void SetSNMPMargin(Score score);
 void SetLMRDiv(double div);
