@@ -25,6 +25,7 @@
  */
 
 #include "transposition.h"
+#include "net_evaluation.h"
 #include <cassert>
 
 namespace {
@@ -70,8 +71,12 @@ void UpdateGeneration() {
   current_generation += (0x1 << 2);
 }
 
-void SetTableSize(const size_t MB) {
-  size = (6 * (MB << 16)) / 7;
+void SetTableSize(const size_t MB_total) {
+  const size_t bytes_total = MB_total << 20;
+  const size_t bytes_p_hash = bytes_total / 8;
+  const size_t bytes = bytes_total - bytes_p_hash;
+  net_evaluation::SetPHashSize(bytes_p_hash);
+  size = (6 * (bytes >> 4)) / 7;
   size_pvt = size / 6;
 
   size -= size % 4;

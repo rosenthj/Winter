@@ -222,6 +222,10 @@ inline constexpr Square GetSquare(const int32_t x, const int32_t y) {
   return x + y * 8;
 }
 
+inline constexpr Square GetMirroredSquare(const Square square) {
+  return GetSquare(GetSquareX(square), 8 - 1 - GetSquareY(square));
+}
+
 inline constexpr Square GetMoveSource(const Move move) { return (move >> 6) & 0x3F; }
 inline constexpr Square GetMoveDestination(const Move move) { return move & 0x3F; }
 inline constexpr MoveType GetMoveType(const Move move) { return move >> 12; }

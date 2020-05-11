@@ -2,7 +2,7 @@
 CC=g++
 #CC=x86_64-w64-mingw32-g++-posix
 #CC=clang++
-CFLAGS=-c -DNDEBUG -Ofast -flto -g3 -Wall -Wno-sign-compare -m64 -march=native -std=c++11 -Isrc -Isrc/general -Isrc/learning
+CFLAGS=-c -DNDEBUG -O3 -flto -g3 -Wall -Wno-sign-compare -m64 -march=native -std=c++11 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-flto -Wall
 SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
@@ -16,6 +16,10 @@ no_bmi: all
 target ancient: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
 target ancient: LDFLAGS=-Wall -static
 ancient: all
+
+target older: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -msse4.1 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
+target older: LDFLAGS=-Wall -static
+older: all
 
 target old: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
 target old: LDFLAGS=-Wall -static

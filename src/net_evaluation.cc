@@ -1,3 +1,4 @@
+#include "cnn_net_weights.h"
 #include "data.h"
 #include "net_evaluation.h"
 #include "net_weights.h"
@@ -14,21 +15,89 @@
 
 using namespace net_features;
 
+// NN types
 constexpr size_t block_size = 16;
+constexpr size_t cnn_dense_in = 4 * block_size;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
+
+// CNN types
+using CNNLayerType = Array2d<Vec<float, block_size>, 8, 8>;
+using Filter = Array2d<Vec<float, block_size>, 3, 3>;
+// The net inputs are very sparse (less than 18/640)
+// so it makes sense to rely on deconvolution instead of regular conv.
+using DeconvFilter = Array2d<Vec<float, block_size>, 3, 3>;
+
 //using CReLULayerType = Vec<float, act_block_size>;
 std::array<float, 2> contempt = { 0.5, 0.5 };
 
+struct CNNHelper {
+  std::vector<Square> our_p;
+  Square our_k;
+  std::vector<Square> opp_p;
+  Square opp_k;
+};
+
+namespace pawn_hash {
+
+// long hits = 0;
+// long misses = 0;
+
+struct PawnEntry {
+  NetLayerType output;
+  HashType hash;
+};
+
+size_t size = 10000;
+
+std::vector<PawnEntry> table(size);
+
+PawnEntry GetEntry(const HashType hash_p) {
+  return table[hash_p % table.size()];
+}
+
+void SaveEntry(const NetLayerType &output, const HashType hash_p) {
+  PawnEntry entry;
+  entry.output = output;
+  entry.hash = hash_p ^ (HashType)std::round(output[0] * 1024);
+  table[hash_p % table.size()] = entry;
+}
+
+bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
+  return hash_p == (entry.hash ^ (HashType)std::round(entry.output[0] * 1024));
+}
+
+}
+
 namespace {
-const int net_version = 19081700;
+const int net_version = 20051100;
 
 constexpr bool kUseQueenActivity = false;
 
 inline float sigmoid(float x) {
   return 1 / (1 + std::exp(-x));
 }
+
+// CNN Weights
+
+// Filters for non-const channels
+Array3d<NetLayerType, 3, 3, 10> cnn_l1_filters;
+
+// After the first convolution of the CNN, there is a constant bias.
+// This corresponds to the bias b at every location as well as
+// the output of the convolutions on the constant inputs.
+CNNLayerType cnn_input_bias;
+
+// Array3d<NetLayerType, 3, 3, 16> cnn_l2_filters;
+// NetLayerType cnn_l2_bias(0);
+
+Array3d<NetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
+NetLayerType cnn_our_p_bias(0), cnn_our_k_bias(0), cnn_opp_p_bias(0), cnn_opp_k_bias(0);
+
+std::vector<NetLayerType> cnn_dense_out(cnn_dense_in, 0);
+
+// NN weights
 
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
 NetLayerType bias_layer_one(0);
@@ -115,6 +184,16 @@ T init() {
   return T(kTotalNumFeatures);
 }
 
+template<typename T>
+T init_cnn_in() {
+  return T(kBoardSize * kNumChannels);
+}
+
+template<>
+CNNLayerType init_cnn_in() {
+  return cnn_input_bias;
+}
+
 template<>
 NetLayerType init() {
   return NetLayerType(0);
@@ -131,6 +210,7 @@ template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index
   s.FMA(net_input_weights[index], value);
 }
 
+// TODO refactor AddFeaturePair to utilize AddFeature instead.
 template<typename T, Color our_color> inline
 void AddFeaturePair(T &s, const int index, const int value_white, const int value_black) {
   if (our_color == kWhite) {
@@ -153,6 +233,28 @@ template<> inline
 void AddFeaturePair<NetLayerType, kBlack>(NetLayerType &s, const int index, const int value_white, const int value_black) {
   s.FMA(net_input_weights[index], value_black);
   s.FMA(net_input_weights[index + kSideDependentFeatureCount], value_white);
+}
+
+template<typename T> inline
+void AddRawBoardFeature(T &s, const int channel, const Square square) {
+  s[square * kNumChannels + channel]++;
+}
+
+template<> inline
+void AddRawBoardFeature(CNNLayerType &s, const int channel, const Square square) {
+  int h = GetSquareY(square);
+  int w = GetSquareX(square);
+  for (int i = 0; i < 3; ++i) {
+    if (h+i == 0 || h+i >= 9) {
+      continue;
+    }
+    for (int j = 0; j < 3; ++j) {
+      if (w+j == 0 || w+j >= 9) {
+        continue;
+      }
+      s[h+i-1][w+j-1] += cnn_l1_filters[2-i][2-j][channel];
+    }
+  }
 }
 
 BitBoard get_all_major_pieces(const Board &board) {
@@ -298,54 +400,51 @@ struct EvalCounter {
   int unsafe = 0;
 };
 
-template<typename T, Color color, Color our_color>
-inline void ScoreIsolated(T &score, const EvalConstants &ec) {
-  constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
-  BitBoard not_isolated = bitops::E(ec.pawn_bb[color]) | bitops::W(ec.pawn_bb[color]);
-  not_isolated = bitops::FillNorth(not_isolated, ~0) | bitops::FillSouth(not_isolated, ~0);
-  AddFeature<T>(score, offset + kIsolatedPawnIndex, bitops::PopCount(ec.pawn_bb[color] & ~not_isolated));
-}
-
 enum PawnCategory {
   Opposed = 0, Unopposed = 1, PassedCovered = 2, PassedUncovered = 3
 };
 
 template<typename T, Color color, Color our_color, PawnCategory cat>
-inline void ScorePawnsByGroup(T &score, const EvalConstants &ec, BitBoard cat_pawns) {
-  constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
-  constexpr int forward_dir = color == kWhite ? 1 : -1;
-  constexpr int cat_offset = 24 * cat;
+inline void AddPawnsToInputByGroup(T &score, const EvalConstants &ec, BitBoard cat_pawns, CNNHelper &helper) {
+  constexpr size_t offset = color == our_color ? 0 : kChannelsPerSide;
 
   for (; cat_pawns; bitops::PopLSB(cat_pawns)) {
     Square pawn_square = bitops::NumberOfTrailingZeros(cat_pawns);
-    BitBoard pawn = bitops::GetLSB(cat_pawns);
-    bool is_protected = pawn & ec.covered_once[color];
-    bool is_neighbored = pawn & ec.neighbored_pawns[color];
-    int pawn_rank = color * 7 + forward_dir * GetSquareY(pawn_square) - 1;
-    AddFeature<T>(score, offset + kPawnEvalIndex + cat_offset + 12 * is_neighbored
-                                               + 6 * is_protected + pawn_rank, 1);
+    if (our_color == kBlack) {
+      pawn_square = GetMirroredSquare(pawn_square);
+    }
+    if (color == our_color) {
+      helper.our_p.emplace_back(pawn_square);
+    }
+    else {
+      helper.opp_p.emplace_back(pawn_square);
+    }
+    AddRawBoardFeature<T>(score, cat + offset, pawn_square);
   }
 }
 
 template<typename T, Color color, Color our_color>
-inline void ScorePawns(T &score, const EvalConstants &ec) {
+inline void ScorePawnThreats(T &score, const EvalConstants &ec) {
   constexpr Color not_color = color ^ 0x1;
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
-
-  ScoreIsolated<T, color, our_color>(score, ec);
 
   AddFeature<T>(score, offset + kPawnAttackIndex,
                 bitops::PopCount(ec.covered_once[color]
                                 & (ec.c_pieces[not_color] ^ ec.pawn_bb[not_color])));
+}
 
-  ScorePawnsByGroup<T, color, our_color, PawnCategory::Opposed>(
-      score, ec, ec.pawn_bb[color] & ec.opposed_pawns);
-  ScorePawnsByGroup<T, color, our_color, PawnCategory::Unopposed>(
-      score, ec, ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]));
-  ScorePawnsByGroup<T, color, our_color, PawnCategory::PassedCovered>(
-      score, ec, ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]]);
-  ScorePawnsByGroup<T, color, our_color, PawnCategory::PassedUncovered>(
-      score, ec, ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]]);
+template<typename T, Color color, Color our_color>
+inline void AddPawnsToInput(T &score, const EvalConstants &ec, CNNHelper &helper) {
+  constexpr Color not_color = color ^ 0x1;
+
+  AddPawnsToInputByGroup<T, color, our_color, PawnCategory::Opposed>(
+      score, ec, ec.pawn_bb[color] & ec.opposed_pawns, helper);
+  AddPawnsToInputByGroup<T, color, our_color, PawnCategory::Unopposed>(
+      score, ec, ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]), helper);
+  AddPawnsToInputByGroup<T, color, our_color, PawnCategory::PassedCovered>(
+      score, ec, ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
+  AddPawnsToInputByGroup<T, color, our_color, PawnCategory::PassedUncovered>(
+      score, ec, ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
 }
 
 template<typename T, Color color, Color our_color>
@@ -497,7 +596,6 @@ inline void ScoreKings(T &score, const Board &board,
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
 
   Square king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(color,kKing));
-  AddFeature<T>(score, offset + kKingPSTIdx + kPSTindex[king_square], 1);
 
   if (board.get_piece_bitboard(not_color, kQueen)) {
     AddFeature<T>(score, offset + kKingVectorExposure,
@@ -529,12 +627,70 @@ inline void ScoreKings(T &score, const Board &board,
   }
 }
 
+//template<typename T, Color our_color>
+//inline void AddKingPST(T &score, const Board &board) {
+//  constexpr Color opp_color = our_color ^ 0x1;
+//  constexpr size_t offset = kSideDependentFeatureCount;
+//
+//  Square our_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(our_color,kKing));
+//  AddFeature<T>(score, kKingPSTIdx + kPSTindex[our_king_square], 1);
+//
+//  Square opp_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(opp_color,kKing));
+//  AddFeature<T>(score, offset + kKingPSTIdx + kPSTindex[opp_king_square], 1);
+//}
+
+template<typename T, Color our_color>
+inline void AddKingsToInput(T &score, const Board &board, CNNHelper &helper) {
+  constexpr Color opp_color = our_color ^ 0x1;
+
+  Square our_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(our_color,kKing));
+  helper.our_k = our_king_square;
+  Square opp_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(opp_color,kKing));
+
+  if (our_color == kBlack) {
+    our_king_square = GetMirroredSquare(our_king_square);
+    opp_king_square = GetMirroredSquare(opp_king_square);
+  }
+
+  helper.our_k = our_king_square;
+  helper.opp_k = opp_king_square;
+
+  AddRawBoardFeature<T>(score, kChanKingsIdx, our_king_square);
+  AddRawBoardFeature<T>(score, kChanKingsIdx + kChannelsPerSide, opp_king_square);
+}
+
+template<typename T, Color our_color>
+inline void AddPawnCounts(T &score, const Board &board) {
+  constexpr Color opponent_color = our_color ^ 0x1;
+  constexpr size_t offset = kSideDependentFeatureCount;
+
+  AddFeature<T>(score, kPawnCountIdx + board.get_piece_count(our_color, kPawn), 1);
+  AddFeature<T>(score, kPawnCountIdx + offset + board.get_piece_count(opponent_color, kPawn), 1);
+}
+
+template<typename T>
+inline T GetSuperStaticRawFeatures(const Board &board, const EvalConstants &ec, CNNHelper &helper) {
+  T score = init_cnn_in<T>();
+  if (board.get_turn() == kWhite) {
+    AddPawnsToInput<T, kWhite, kWhite>(score, ec, helper);
+    AddPawnsToInput<T, kBlack, kWhite>(score, ec, helper);
+    AddKingsToInput<T, kWhite>(score, board, helper);
+  }
+  else {
+    AddPawnsToInput<T, kBlack, kBlack>(score, ec, helper);
+    AddPawnsToInput<T, kWhite, kBlack>(score, ec, helper);
+    AddKingsToInput<T, kBlack>(score, board, helper);
+  }
+  return score;
+}
+
 template<typename T, Color color, Color our_color>
 inline void ScorePieces(T &score, const Board &board, const EvalConstants &ec,
                         EvalCounter &counter) {
   const BitBoard enemy_king_zone = magic::GetKingArea(ec.king_squares[color ^ 0x1]);
 
-  ScorePawns<T, color, our_color>(score, ec);
+  ScorePawnThreats<T, color, our_color>(score, ec);
+  // ScorePawns<T, color, our_color>(score, ec);
   ScoreKnights<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
   ScoreBishops<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
   ScoreRooks<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
@@ -546,7 +702,6 @@ template<typename T, Color color, Color our_color>
 inline void AddPieceCountFeatures(T &score, const Board &board) {
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
 
-  AddFeature<T>(score, kPawnCountIdx + offset + board.get_piece_count(color, kPawn), 1);
   AddFeature<T>(score, kKnightCountIdx + offset + std::min(board.get_piece_count(color, kKnight), 2), 1);
   AddFeature<T>(score, kBishopCountIdx + offset + std::min(board.get_piece_count(color, kBishop), 2), 1);
   AddFeature<T>(score, kRookCountIdx + offset + std::min(board.get_piece_count(color, kRook), 2), 1);
@@ -574,6 +729,7 @@ inline void AddCommonFeatures(T &score, const Board &board, const EvalConstants 
                                bitops::PopCount(ec.p_forward[kWhite]),
                                bitops::PopCount(ec.p_forward[kBlack]));
 
+  // TODO remove double pawn penalty as it should be part of CNN
   AddFeaturePair<T, our_color>(score, kDoublePawnPenaltyIndex,
                                bitops::PopCount(bitops::N(ec.p_fill_forward[kWhite]) & ec.pawn_bb[kWhite]),
                                bitops::PopCount(bitops::S(ec.p_fill_forward[kBlack]) & ec.pawn_bb[kBlack]));
@@ -587,12 +743,21 @@ inline void AddCommonFeatures(T &score, const Board &board, const EvalConstants 
 
 namespace net_evaluation {
 
+void SetPHashSize(const size_t bytes) {
+  pawn_hash::size = bytes / 72;
+  pawn_hash::table.resize(pawn_hash::size);
+}
+
 template<typename T, Color our_color>
-T ScoreBoard(const Board &board) {
+T ScoreBoard(const Board &board, const EvalConstants &ec) {
   T score = init<T>();
 
   // Initialize general constants
-  const EvalConstants ec(board);
+//  const EvalConstants ec(board);
+
+  // Pawn evaluations
+  AddPawnCounts<T, our_color>(score, board);
+//  AddSuperStaticFeatures<T>(score, board, ec);
 
   // Common features independent of specific individual piece placement.
   AddCommonFeatures<T, our_color>(score, board);
@@ -608,6 +773,107 @@ T ScoreBoard(const Board &board) {
   AddFeaturePair<T, our_color>(score, kUnSafeChecks, check_counter[kWhite].unsafe, check_counter[kBlack].unsafe);
 
   return score;
+}
+
+NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<NetLayerType, 3, 3, 16> &filters,
+                            const NetLayerType &bias, Square s) {
+  int h = GetSquareY(s);
+  int w = GetSquareX(s);
+  NetLayerType result = bias;
+  for (size_t i = 0; i < 3; ++i) {
+    if (h+i == 0 || h+i > 8) {
+      continue;
+    }
+    for (size_t j = 0; j < 3; ++j) {
+      if (w+j == 0 || w+j > 8) {
+        continue;
+      }
+      for (size_t c = 0; c < prev_cnn_layer[0][0].size(); ++c) {
+        result += prev_cnn_layer[h+i-1][w+j-1][c] * filters[i][j][c];
+      }
+    }
+  }
+  result.relu();
+  return result;
+}
+
+NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
+  // ReLU 1
+  for (size_t h = 0; h < kBoardLength; ++h) {
+    for (size_t w = 0; w < kBoardLength; ++w) {
+      cnn_layer_one[h][w].relu();
+    }
+  }
+
+  NetLayerType our_p_out(0);
+  for (size_t i = 0; i < helper.our_p.size(); ++i) {
+    our_p_out += FiltersForward(cnn_layer_one, cnn_our_p_filters, cnn_our_p_bias, helper.our_p[i]);
+  }
+  NetLayerType our_k_out = FiltersForward(cnn_layer_one, cnn_our_k_filters, cnn_our_k_bias, helper.our_k);
+
+  NetLayerType opp_p_out(0);
+  for (size_t i = 0; i < helper.opp_p.size(); ++i) {
+    opp_p_out += FiltersForward(cnn_layer_one, cnn_opp_p_filters, cnn_opp_p_bias, helper.opp_p[i]);
+  }
+  NetLayerType opp_k_out = FiltersForward(cnn_layer_one, cnn_opp_k_filters, cnn_opp_k_bias, helper.opp_k);
+
+  // Dense
+  NetLayerType out(0);
+  size_t i;
+  for (i = 0; i < our_p_out.size(); ++i) {
+    out += our_p_out[i] * cnn_dense_out[i];
+    out += our_k_out[i] * cnn_dense_out[i + our_p_out.size()];
+    out += opp_p_out[i] * cnn_dense_out[i + 2 * our_p_out.size()];
+    out += opp_k_out[i] * cnn_dense_out[i + 3 * our_p_out.size()];
+  }
+
+//  CNNLayerType cnn_layer_two;
+//
+//  // Bias add 2
+//  for (size_t h = 0; h < kBoardLength; ++h) {
+//    for (size_t w = 0; w < kBoardLength; ++w) {
+//      cnn_layer_two[h][w] = cnn_l2_bias;
+//    }
+//  }
+//
+//  // Convolution 2
+//  for (size_t i = 0; i < 3; ++i) {
+//    for (size_t j = 0; j < 3; ++j) {
+//      for (size_t h = 0; h < kBoardLength; ++h) {
+//        if (h+i == 0 || h+i > 8) {
+//          continue;
+//        }
+//
+//        for (size_t w = 0; w < kBoardLength; ++w) {
+//          if (w+j == 0 || w+j > 8) {
+//            continue;
+//          }
+//
+//          for (size_t c = 0; c < cnn_layer_one[0][0].size(); ++c) {
+//            cnn_layer_two[h][w] += cnn_layer_one[h+i-1][w+j-1][c] * cnn_l2_filters[i][j][c];
+//          }
+//        }
+//      }
+//    }
+//  }
+//
+//  // ReLU 2 and pooling
+//  NetLayerType pooled(0);
+//  for (size_t h = 0; h < kBoardLength; ++h) {
+//    for (size_t w = 0; w < kBoardLength; ++w) {
+//      cnn_layer_two[h][w].relu();
+//      pooled += cnn_layer_two[h][w];
+//    }
+//  }
+//  pooled /= kBoardSize;
+
+//  // Dense
+//  NetLayerType out(0);
+//  for (size_t i = 0; i < pooled.size(); ++i) {
+//    out += pooled[i] * cnn_dense_out[i];
+//  }
+
+  return out;
 }
 
 Score NetForward(NetLayerType &layer_one, float c = 0.5) {
@@ -635,19 +901,156 @@ Score NetForward(NetLayerType &layer_one, float c = 0.5) {
 }
 
 Score ScoreBoard(const Board &board) {
-  NetLayerType layer_one;
-  if (board.get_turn() == kWhite) {
-    layer_one = ScoreBoard<NetLayerType, kWhite>(board);
+  const EvalConstants ec(board);
+  HashType p_hash = board.get_pawn_hash();
+  pawn_hash::PawnEntry entry = pawn_hash::GetEntry(p_hash);
+  NetLayerType cnn_out;
+  if (pawn_hash::ValidateHash(entry, p_hash)) {
+    cnn_out = entry.output;
   }
   else {
-    layer_one = ScoreBoard<NetLayerType, kBlack>(board);
+    CNNHelper helper;
+    CNNLayerType cnn_input = GetSuperStaticRawFeatures<CNNLayerType>(board, ec, helper);
+    cnn_out = NetForward(cnn_input, helper);
+    pawn_hash::SaveEntry(cnn_out, p_hash);
   }
+
+  NetLayerType layer_one = init<NetLayerType>();
+  if (board.get_turn() == kWhite) {
+    layer_one = ScoreBoard<NetLayerType, kWhite>(board, ec);
+  }
+  else {
+    layer_one = ScoreBoard<NetLayerType, kBlack>(board, ec);
+  }
+  layer_one += cnn_out;
   return NetForward(layer_one, contempt[board.get_turn()]);
 }
 
+// Array3d<NetLayerType, 3, 3, 16> cnn_l2_filters;
+// NetLayerType cnn_l2_bias(0);
+
+template<size_t size>
+void init_cnn_weights(Array3d<NetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
+                      double multiplier = 1.0) {
+  size_t idx = 0;
+  for (size_t h = 0; h < cnn_filters.size(); ++h) {
+    for (size_t w = 0; w < cnn_filters[0].size(); ++w) {
+      for (size_t i = 0; i < cnn_filters[0][0].size(); ++i) {
+        for (size_t j = 0; j < cnn_filters[0][0][0].size(); ++j) {
+          cnn_filters[h][w][i][j] = weights[idx++] * multiplier;
+        }
+      }
+    }
+  }
+  assert(idx == size);
+}
+
+template<size_t size>
+void init_cnn_bias(NetLayerType &cnn_bias, const std::array<float, size> &bias_weights,
+                      double multiplier = 1.0) {
+  for (size_t i = 0; i < net_hardcode::cnn_l1_bias.size() && i < cnn_bias.size(); ++i) {
+    cnn_bias[i] = bias_weights[i] * multiplier;
+  }
+}
+
 void init_weights() {
+  // Init cnn net weights
+
+  Array3d<NetLayerType, 3, 3, 3> const_channel_filters;
+
+  size_t idx = 0;
+  for (size_t h = 0; h < cnn_l1_filters.size(); ++h) {
+    for (size_t w = 0; w < cnn_l1_filters[0].size(); ++w) {
+      for (size_t i = 0; i < cnn_l1_filters[0][0].size(); ++i) {
+        for (size_t j = 0; j < cnn_l1_filters[0][0][0].size(); ++j) {
+          cnn_l1_filters[h][w][i][j] = net_hardcode::cnn_l1_weights[idx++];
+        }
+      }
+      for (size_t i = 0; i < const_channel_filters[0][0].size(); ++i) {
+        for (size_t j = 0; j < const_channel_filters[0][0][0].size(); ++j) {
+          const_channel_filters[h][w][i][j] = net_hardcode::cnn_l1_weights[idx++];
+        }
+      }
+    }
+  }
+
+  NetLayerType cnn_input_bias_b(0);
+  for (size_t i = 0; i < net_hardcode::cnn_l1_bias.size() && i < cnn_input_bias_b.size(); ++i) {
+    cnn_input_bias_b[i] = net_hardcode::cnn_l1_bias[i];
+  }
+
+  Array3d<float, 8, 8, 3> const_channel_inputs;
+  for (size_t i = 0; i < 8; ++i) {
+    for (size_t j = 0; j < 8; ++j) {
+      cnn_input_bias[i][j] = cnn_input_bias_b;
+      const_channel_inputs[i][j][0] = 1;
+      const_channel_inputs[i][j][1] = i / 7.0;
+      const_channel_inputs[i][j][2] = j / 3.0;
+      if (j >= 4) {
+        const_channel_inputs[i][j][2] = (7-j) / 3.0;
+      }
+    }
+  }
+
+  for (size_t h = 0; h < cnn_input_bias.size(); ++h) {
+    for (size_t w = 0; w < cnn_input_bias[0].size(); ++w) {
+      for (size_t i = 0; i < 3; ++i) {
+        if (h+i == 0 || h+i >= 9) {
+          continue;
+        }
+        for (size_t j = 0; j < 3; ++j) {
+          if (w+j == 0 || w+j >= 9) {
+            continue;
+          }
+          for (size_t c = 0; c < const_channel_filters[i][j].size(); ++c) {
+            cnn_input_bias[h][w] += const_channel_inputs[h+i-1][w+j-1][c]
+                                            * const_channel_filters[i][j][c];
+          }
+        }
+      }
+    }
+  }
+
+//  idx = 0;
+//  for (size_t h = 0; h < cnn_l2_filters.size(); ++h) {
+//    for (size_t w = 0; w < cnn_l2_filters[0].size(); ++w) {
+//      for (size_t i = 0; i < cnn_l2_filters[0][0].size(); ++i) {
+//        for (size_t j = 0; j < cnn_l2_filters[0][0][0].size(); ++j) {
+//          cnn_l2_filters[h][w][i][j] = net_hardcode::cnn_l2_weights[idx++];
+//        }
+//      }
+//    }
+//  }
+//  assert(idx == net_hardcode::cnn_l2_weights.size());
+//
+//  for (size_t i = 0; i < net_hardcode::cnn_l1_bias.size() && i < cnn_input_bias_b.size(); ++i) {
+//    cnn_l2_bias[i] = net_hardcode::cnn_l2_bias[i];
+//  }
+
+  constexpr size_t cnn_weights_size = net_hardcode::cnn_our_k_weights.size();
+  init_cnn_weights<cnn_weights_size>(cnn_our_p_filters, net_hardcode::cnn_our_p_weights, 1.0 / 8);
+  init_cnn_weights<cnn_weights_size>(cnn_our_k_filters, net_hardcode::cnn_our_k_weights);
+  init_cnn_weights<cnn_weights_size>(cnn_opp_p_filters, net_hardcode::cnn_opp_p_weights, 1.0 / 8);
+  init_cnn_weights<cnn_weights_size>(cnn_opp_k_filters, net_hardcode::cnn_opp_k_weights);
+
+  constexpr size_t cnn_bias_size = net_hardcode::cnn_our_k_bias.size();
+  init_cnn_bias<cnn_bias_size>(cnn_our_p_bias, net_hardcode::cnn_our_p_bias, 1.0 / 8);
+  init_cnn_bias<cnn_bias_size>(cnn_our_k_bias, net_hardcode::cnn_our_k_bias);
+  init_cnn_bias<cnn_bias_size>(cnn_opp_p_bias, net_hardcode::cnn_opp_p_bias, 1.0 / 8);
+  init_cnn_bias<cnn_bias_size>(cnn_opp_k_bias, net_hardcode::cnn_opp_k_bias);
+
+  for (size_t i = 0; i < cnn_dense_in; ++i) {
+    size_t offset = (net_hardcode::l1_weights.size() / block_size) - cnn_dense_in;
+    size_t j = (offset + i) * block_size;
+    for (size_t k = 0; k < block_size; ++k) {
+      assert(j + k < net_hardcode::l1_weights.size());
+      cnn_dense_out[i][k] = net_hardcode::l1_weights[j+k];
+    }
+  }
+
+  // Init regular net weights
   net_input_weights = std::vector<NetLayerType>(net_hardcode::l1_weights.size() / block_size);
-  for (size_t i = 0; i < net_hardcode::l1_weights.size() / block_size; ++i) {
+  for (size_t i = 0; i < (net_hardcode::l1_weights.size() / block_size) - block_size; ++i) {
     size_t j = i * block_size;
     for (size_t k = 0; k < block_size; ++k) {
       net_input_weights[i][k] = net_hardcode::l1_weights[j+k];
@@ -680,14 +1083,93 @@ void init_weights() {
   win_draw_bias = net_hardcode::bias_win_draw;
 }
 
+std::vector<int32_t> GetCNNInputs(const Board &board) {
+  const EvalConstants ec(board);
+  CNNHelper helper;
+  return GetSuperStaticRawFeatures<std::vector<int32_t> >(board, ec, helper);
+}
+
 std::vector<int32_t> GetNetInputs(const Board &board) {
+  const EvalConstants ec(board);
   if (board.get_turn() == kWhite) {
-    return ScoreBoard<std::vector<int32_t>, kWhite>(board);
+    return ScoreBoard<std::vector<int32_t>, kWhite>(board, ec);
   }
-  return ScoreBoard<std::vector<int32_t>, kBlack>(board);
+  return ScoreBoard<std::vector<int32_t>, kBlack>(board, ec);
+}
+
+void AddHeader(std::ofstream &file, std::string feature_name_prefix, int feature_count) {
+  file << feature_name_prefix << "0";
+  for (int i = 1; i < feature_count; ++i) {
+    file << "," << feature_name_prefix << i;
+  }
+  file << std::endl;
+}
+
+void AddGame(const Game &game, std::ofstream &res_file, std::ofstream &dynamic_features_file,
+             std::ofstream &static_features_file) {
+  int win = 0;
+  int loss = 0;
+  if (game.result == 1) {
+    win = 1;
+  }
+  else if (game.result == 0) {
+    loss = 1;
+  }
+  else {
+    assert(game.result == 0.5);
+  }
+  if (game.board.get_turn() == kBlack) {
+    std::swap(win, loss);
+  }
+  res_file << win << "," << (1-loss) << std::endl;
+
+  std::vector<int> dynamic_features = GetNetInputs(game.board);
+  dynamic_features_file << dynamic_features[0];
+  for (int i = 1; i < dynamic_features.size(); ++i) {
+    dynamic_features_file << "," << dynamic_features[i];
+  }
+  dynamic_features_file << std::endl;
+
+  std::vector<int> static_features = GetCNNInputs(game.board);
+  static_features_file << static_features[0];
+  for (int i = 1; i < static_features.size(); ++i) {
+    static_features_file << "," << static_features[i];
+  }
+  static_features_file << std::endl;
 }
 
 void StoreEvalDataset(const std::vector<Game> &games, std::string out_file_name) {
+  std::ofstream res_file(out_file_name + ".res.csv");
+  AddHeader(res_file, "result_feature_", 2);
+  std::ofstream dynamic_features_file(out_file_name + ".dynamic.csv");
+  AddHeader(dynamic_features_file, "dy_fe", kTotalNumFeatures);
+  std::ofstream static_features_file(out_file_name + ".static.csv");
+  AddHeader(static_features_file, "st_fe", kBoardSize * kNumChannels);
+
+  Game game_start;
+  game_start.board.SetStartBoard();
+  game_start.result = 0.5;
+  AddGame(game_start, res_file, dynamic_features_file, static_features_file);
+
+  size_t samples = 1;
+  for (Game game : games) {
+    AddGame(game, res_file, dynamic_features_file, static_features_file);
+    samples++;
+    if (samples % 10000 == 0) {
+      std::cout << "Processed " << samples << " samples!" << std::endl;
+    }
+  }
+
+  res_file.flush();
+  res_file.close();
+  dynamic_features_file.flush();
+  dynamic_features_file.close();
+  static_features_file.flush();
+  static_features_file.close();
+}
+
+
+void StoreEvalDatasetOld(const std::vector<Game> &games, std::string out_file_name) {
   std::ofstream dfile(out_file_name);
   size_t samples = 0;
   if (true) {
@@ -877,15 +1359,18 @@ void AddZCEPDs(std::vector<Game> &games) {
 
 void GenerateDatasetFromEPD() {
 
-  std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 30);
+  std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 3000000);
+  std::cout << "Added positions from Games.ucig: " << games.size() << std::endl;
   AddZCEPDs(games);
+  std::cout << "Added Zurichess EPDs. Position count: " << games.size() << std::endl;
   AddArasanEPDs(games);
+  std::cout << "Added Lichess EPDs from Arasan. Position count: " << games.size() << std::endl;
 
   std::random_device rd;
   std::mt19937 g(rd());
   std::shuffle(games.begin(), games.end(), g);
 
-  StoreEvalDataset(games, "eval_dataset.csv");
+  StoreEvalDataset(games, "eval_dataset");
 }
 
 void GenerateDatasetFromUCIGames(std::string filename, std::string out_name, size_t reroll_pct) {
@@ -894,60 +1379,62 @@ void GenerateDatasetFromUCIGames(std::string filename, std::string out_name, siz
 }
 
 void EstimateFeatureImpact() {
-  std::string line;
-  std::ifstream file("quiet-labeled.epd");
-  std::vector<int64_t> feature_sums(kTotalNumFeatures, 0);
-  std::vector<int64_t> score_difference_sums(kTotalNumFeatures, 0);
-  size_t count = 0;
-  std::vector<int64_t> f_counts(kTotalNumFeatures, 0);
-  while(std::getline(file, line)) {
-    std::vector<std::string> tokens = parse::split(line, ' ');
-    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
-    Board board(fen);
-    NetLayerType layer_one;
-    if (board.get_turn() == kWhite) {
-      layer_one = ScoreBoard<NetLayerType, kWhite>(board);
-    }
-    else {
-      layer_one = ScoreBoard<NetLayerType, kBlack>(board);
-    }
-    const Score eval = NetForward(layer_one);
-    std::vector<int32_t> features = GetNetInputs(board);
-    for (size_t i = 0; i < kTotalNumFeatures; ++i) {
-      if (!features[i]) {
-        continue;
-      }
-      feature_sums[i] += features[i];
-      f_counts[i] += features[i] > 0;
-      if (i >= kSideDependentFeatureCount) {
-        continue;
-      }
-      NetLayerType modified_input(0);
-      for (size_t j = 0; j < modified_input.size(); ++j) {
-        modified_input[j] = layer_one[j] - features[i] * net_input_weights[i][j];
-        modified_input[j] -= features[i+kSideDependentFeatureCount] * net_input_weights[i+kSideDependentFeatureCount][j];
-      }
-      score_difference_sums[i] += std::abs(eval - NetForward(modified_input));
-    }
-    count++;
-    if (count % 10000 == 0) {
-      std::cout << "Loaded " << count << " samples!" << std::endl;
-    }
-  }
-  file.close();
-
-  for (size_t i = 0; i < kTotalNumFeatures; ++i) {
-    float feature_weight_sums = 0;
-    for (size_t j = 0; j < net_input_weights[i].size(); ++j) {
-      feature_weight_sums += std::abs(net_input_weights[i][j]);
-    }
-    std::cout << "Feature: " << i << " weight: " << feature_weight_sums << " count: " << f_counts[i]
-              << " weighted count: " << (feature_sums[i]*feature_weight_sums / f_counts[i]);
-    if (i < kSideDependentFeatureCount) {
-      std::cout << " weighted score diff: " << ((1.0 * score_difference_sums[i]) / f_counts[i]);
-    }
-    std::cout << std::endl;
-  }
+  std::cout << "Currently EstimateFeatureImpact() is disabled!" << std::endl;
+//  std::string line;
+//  std::ifstream file("quiet-labeled.epd");
+//  std::vector<int64_t> feature_sums(kTotalNumFeatures, 0);
+//  std::vector<int64_t> score_difference_sums(kTotalNumFeatures, 0);
+//  size_t count = 0;
+//  std::vector<int64_t> f_counts(kTotalNumFeatures, 0);
+//  while(std::getline(file, line)) {
+//    std::vector<std::string> tokens = parse::split(line, ' ');
+//    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
+//    Board board(fen);
+//    const EvalConstants ec(board);
+//    NetLayerType layer_one;
+//    if (board.get_turn() == kWhite) {
+//      layer_one = ScoreBoard<NetLayerType, kWhite>(board, ec);
+//    }
+//    else {
+//      layer_one = ScoreBoard<NetLayerType, kBlack>(board, ec);
+//    }
+//    const Score eval = NetForward(layer_one);
+//    std::vector<int32_t> features = GetNetInputs(board);
+//    for (size_t i = 0; i < kTotalNumFeatures; ++i) {
+//      if (!features[i]) {
+//        continue;
+//      }
+//      feature_sums[i] += features[i];
+//      f_counts[i] += features[i] > 0;
+//      if (i >= kSideDependentFeatureCount) {
+//        continue;
+//      }
+//      NetLayerType modified_input(0);
+//      for (size_t j = 0; j < modified_input.size(); ++j) {
+//        modified_input[j] = layer_one[j] - features[i] * net_input_weights[i][j];
+//        modified_input[j] -= features[i+kSideDependentFeatureCount] * net_input_weights[i+kSideDependentFeatureCount][j];
+//      }
+//      score_difference_sums[i] += std::abs(eval - NetForward(modified_input));
+//    }
+//    count++;
+//    if (count % 10000 == 0) {
+//      std::cout << "Loaded " << count << " samples!" << std::endl;
+//    }
+//  }
+//  file.close();
+//
+//  for (size_t i = 0; i < kTotalNumFeatures; ++i) {
+//    float feature_weight_sums = 0;
+//    for (size_t j = 0; j < net_input_weights[i].size(); ++j) {
+//      feature_weight_sums += std::abs(net_input_weights[i][j]);
+//    }
+//    std::cout << "Feature: " << i << " weight: " << feature_weight_sums << " count: " << f_counts[i]
+//              << " weighted count: " << (feature_sums[i]*feature_weight_sums / f_counts[i]);
+//    if (i < kSideDependentFeatureCount) {
+//      std::cout << " weighted score diff: " << ((1.0 * score_difference_sums[i]) / f_counts[i]);
+//    }
+//    std::cout << std::endl;
+//  }
 }
 
 void SetContempt(int value, Color color) {

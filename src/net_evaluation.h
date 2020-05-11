@@ -51,6 +51,8 @@ void SetContempt(int value, Color color);
 std::array<Score, 2> GetDrawArray();
 Score GetUnbiasedScore(Score score, Color color);
 
+void SetPHashSize(const size_t bytes);
+
 }
 
 // TODO: Move to external file
@@ -63,12 +65,13 @@ constexpr size_t kKnightCountIdx = kPawnCountIdx + 9; // 9-11
 constexpr size_t kBishopCountIdx = kKnightCountIdx + 3; // 12-14
 constexpr size_t kRookCountIdx = kBishopCountIdx + 3; // 15-17
 constexpr size_t kQueenCountIdx = kRookCountIdx + 3; // 18
-constexpr size_t kKingPSTIdx = kQueenCountIdx + 1; // 19-28
-constexpr size_t kKnightPSTIdx = kKingPSTIdx + 10; // 29-38
+//constexpr size_t kKingPSTIdx = kQueenCountIdx + 1; // 19-28
+//constexpr size_t kKnightPSTIdx = kKingPSTIdx + 10; // 29-38
+constexpr size_t kKnightPSTIdx = kQueenCountIdx + 1;
 constexpr size_t kActivityBonusIndex = kKnightPSTIdx + 10; // 39-43
 constexpr size_t kAbstractActivityIndex = kActivityBonusIndex + 5; // 44-48 //No King
-constexpr size_t kDoublePawnPenaltyIndex = kAbstractActivityIndex + 5; // 49 //No king
-constexpr size_t kIsolatedPawnIndex = kDoublePawnPenaltyIndex + 1; // 50
+constexpr size_t kDoublePawnPenaltyIndex = kAbstractActivityIndex + 5; // 49 TODO remove
+constexpr size_t kIsolatedPawnIndex = kDoublePawnPenaltyIndex + 1; // 50 TODO remove
 constexpr size_t kDirectPawnShieldBonus = kIsolatedPawnIndex + 1; // 51
 constexpr size_t kKingVectorExposure = kDirectPawnShieldBonus + 1; // 52-53
 constexpr size_t kKnightOutpost = kKingVectorExposure + 2; // 54
@@ -86,12 +89,7 @@ constexpr size_t kSafeChecks = kQueenMobility + 25; // 129
 constexpr size_t kUnSafeChecks = kSafeChecks + 1; // 130
 constexpr size_t kUnprotectedPieces = kUnSafeChecks + 1; // 131
 constexpr size_t kBishopVsKingPosition = kUnprotectedPieces + 1; // 132-167
-constexpr size_t kOpposedPawn = kBishopVsKingPosition + 36; // 168-191
-constexpr size_t kUnopposedPawn = kOpposedPawn + (2 * 2 * 6); // 192-215
-constexpr size_t kCoveredPassedPawn = kUnopposedPawn + (2 * 2 * 6); // 216-239
-constexpr size_t kUncoveredPassedPawn = kCoveredPassedPawn + (2 * 2 * 6); // 240-263
-constexpr size_t kPawnEvalIndex = kOpposedPawn;
-constexpr size_t kSideDependentFeatureCount = kUncoveredPassedPawn + (2 * 2 * 6);
+constexpr size_t kSideDependentFeatureCount = kBishopVsKingPosition + 36;
 
 
 // The remaining features cannot be asigned to a side, but may effect the evaluation in some way.
@@ -104,6 +102,15 @@ const int kRookKingAttackWeight = 3;
 const int kQueenKingAttackWeight = 5;
 
 const int kKingAttackerScaling[7] = {0, 0, 4, 6, 7, 7, 8};
+
+constexpr size_t kChanOpposedPawnsIdx = 0;
+constexpr size_t kChanUnoppposedPawnsIdx = kChanOpposedPawnsIdx + 1;
+constexpr size_t kChanCoveredPassedPawnsIdx = kChanUnoppposedPawnsIdx + 1;
+constexpr size_t kChanUncoveredPassedPawnsIdx = kChanCoveredPassedPawnsIdx + 1;
+constexpr size_t kChanKingsIdx = kChanUncoveredPassedPawnsIdx + 1;
+
+constexpr size_t kChannelsPerSide = kChanKingsIdx + 1;
+constexpr size_t kNumChannels = 2 * kChannelsPerSide;
 }
 
 
