@@ -56,7 +56,6 @@ std::vector<PawnEntry> table(size);
 PawnEntry GetEntry(const HashType hash_p) {
   return table[hash_p % table.size()];
 }
-
 void SaveEntry(const NetLayerType &output, const HashType hash_p) {
   PawnEntry entry;
   entry.output = output;
@@ -71,7 +70,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20051100;
+const int net_version = 20051601;
 
 constexpr bool kUseQueenActivity = false;
 
@@ -82,7 +81,7 @@ inline float sigmoid(float x) {
 // CNN Weights
 
 // Filters for non-const channels
-Array3d<NetLayerType, 3, 3, 10> cnn_l1_filters;
+Array3d<NetLayerType, 5, 5, 10> cnn_l1_filters;
 
 // After the first convolution of the CNN, there is a constant bias.
 // This corresponds to the bias b at every location as well as
@@ -244,15 +243,15 @@ template<> inline
 void AddRawBoardFeature(CNNLayerType &s, const int channel, const Square square) {
   int h = GetSquareY(square);
   int w = GetSquareX(square);
-  for (int i = 0; i < 3; ++i) {
-    if (h+i == 0 || h+i >= 9) {
+  for (int i = 0; i < 5; ++i) {
+    if (h+i <= 1 || h+i >= 10) {
       continue;
     }
-    for (int j = 0; j < 3; ++j) {
-      if (w+j == 0 || w+j >= 9) {
+    for (int j = 0; j < 5; ++j) {
+      if (w+j <= 1 || w+j >= 10) {
         continue;
       }
-      s[h+i-1][w+j-1] += cnn_l1_filters[2-i][2-j][channel];
+      s[h+i-2][w+j-2] += cnn_l1_filters[4-i][4-j][channel];
     }
   }
 }
@@ -956,7 +955,7 @@ void init_cnn_bias(NetLayerType &cnn_bias, const std::array<float, size> &bias_w
 void init_weights() {
   // Init cnn net weights
 
-  Array3d<NetLayerType, 3, 3, 3> const_channel_filters;
+  Array3d<NetLayerType, 5, 5, 3> const_channel_filters;
 
   size_t idx = 0;
   for (size_t h = 0; h < cnn_l1_filters.size(); ++h) {
@@ -994,16 +993,16 @@ void init_weights() {
 
   for (size_t h = 0; h < cnn_input_bias.size(); ++h) {
     for (size_t w = 0; w < cnn_input_bias[0].size(); ++w) {
-      for (size_t i = 0; i < 3; ++i) {
-        if (h+i == 0 || h+i >= 9) {
+      for (size_t i = 0; i < 5; ++i) {
+        if (h+i <= 1 || h+i >= 10) {
           continue;
         }
-        for (size_t j = 0; j < 3; ++j) {
-          if (w+j == 0 || w+j >= 9) {
+        for (size_t j = 0; j < 5; ++j) {
+          if (w+j <= 1 || w+j >= 10) {
             continue;
           }
           for (size_t c = 0; c < const_channel_filters[i][j].size(); ++c) {
-            cnn_input_bias[h][w] += const_channel_inputs[h+i-1][w+j-1][c]
+            cnn_input_bias[h][w] += const_channel_inputs[h+i-2][w+j-2][c]
                                             * const_channel_filters[i][j][c];
           }
         }
