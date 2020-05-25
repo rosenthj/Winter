@@ -38,7 +38,6 @@ namespace cluster {
 
 Vec<double, kPhaseVecLength> GetBoardPhaseVec(const Board &board);
 
-
 template <size_t k>
 struct ClusterModel {
   virtual ~ClusterModel() {};
@@ -88,9 +87,8 @@ struct NormFuzzyCMeans : ClusterModel<k> {
 };
 
 // The classic tapered model found in all state of the art non NN based engines.
-struct TaperedModel : ClusterModel<2> {
-// TODO implement
-};
+// Currently not supported.
+struct TaperedModel : ClusterModel<2> {};
 
 }
 

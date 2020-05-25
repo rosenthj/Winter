@@ -1,6 +1,5 @@
 #If you have clang, it seems to generate a faster compile as of the beginning of 2018
 #CC=g++
-#CC=x86_64-w64-mingw32-g++-posix
 CC=clang++
 CFLAGS=-c -DNDEBUG -O3 -flto -g3 -Wall -Wno-sign-compare -m64 -march=native -std=c++11 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-flto -Wall
@@ -9,25 +8,6 @@ OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE:=Winter
 
 all: $(SOURCES) $(EXECUTABLE)
-
-target no_bmi: CFLAGS += -DNO_BMI
-no_bmi: all
-
-target ancient: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
-target ancient: LDFLAGS=-Wall -static
-ancient: all
-
-target older: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -msse4.1 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
-target older: LDFLAGS=-Wall -static
-older: all
-
-target old: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++11 -Isrc -Isrc/general -Isrc/learning
-target old: LDFLAGS=-Wall -static
-old: all
-
-target new: CFLAGS=-c -DNDEBUG -O3 -Wall -Wno-sign-compare -m64 -mavx2 -mbmi -mbmi2 -std=c++11 -Isrc -Isrc/general -Isrc/learning
-target new: LDFLAGS=-Wall -static
-new: all
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lpthread

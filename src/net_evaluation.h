@@ -41,17 +41,20 @@ Score ScoreBoard(const Board &board);
 // Returns the input features for the net for a specific board position.
 // In the future this may become more complicated, depending on how pieces get encoded.
 std::vector<int32_t> GetNetInputs(const Board &board);
-void GenerateDatasetFromEPD();
 void init_weights();
-void EstimateFeatureImpact();
-void GenerateDatasetFromUCIGames(std::string filename, std::string out_name = "eval_dataset.csv",
-                                 size_t reroll_pct = 0);
 
 void SetContempt(int value, Color color);
 std::array<Score, 2> GetDrawArray();
 Score GetUnbiasedScore(Score score, Color color);
 
 void SetPHashSize(const size_t bytes);
+
+#ifdef EVAL_TRAINING
+void GenerateDatasetFromEPD();
+void EstimateFeatureImpact();
+void GenerateDatasetFromUCIGames(std::string filename, std::string out_name = "eval_dataset.csv",
+                                 size_t reroll_pct = 0);
+#endif
 
 }
 

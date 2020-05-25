@@ -70,7 +70,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20051601;
+const int net_version = 20051601; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
@@ -88,9 +88,6 @@ Array3d<NetLayerType, 5, 5, 10> cnn_l1_filters;
 // the output of the convolutions on the constant inputs.
 CNNLayerType cnn_input_bias;
 
-// Array3d<NetLayerType, 3, 3, 16> cnn_l2_filters;
-// NetLayerType cnn_l2_bias(0);
-
 Array3d<NetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
 NetLayerType cnn_our_p_bias(0), cnn_our_k_bias(0), cnn_opp_p_bias(0), cnn_opp_k_bias(0);
 
@@ -104,17 +101,10 @@ NetLayerType bias_layer_one(0);
 std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
 NetLayerType bias_layer_two(0);
 
-//NetLayerType output_weights(0);
-//float output_bias;
-
 NetLayerType win_weights(0);
 float win_bias;
 NetLayerType win_draw_weights(0);
 float win_draw_bias;
-//NetLayerType draw_weights(0);
-//float draw_bias;
-//NetLayerType loss_weights(0);
-//float loss_bias;
 
 constexpr std::array<int, 64> kPSTindex = {
     0, 1, 2, 3, 3, 2, 1, 0,
@@ -170,14 +160,6 @@ const std::array<int, 15*15> relative_king_map = {
     8,  1,  2,  3,  4,  5,  6,  7,  6,  5,  4,  3,  2,  1, 0
 };
 
-//template<typename T>
-//std::vector<T> operator-(std::vector<T> v) {
-//  for (size_t i = 0; i < v.size(); i++) {
-//    v[i] *= (-1);
-//  }
-//  return v;
-//}
-
 template<typename T>
 T init() {
   return T(kTotalNumFeatures);
@@ -229,7 +211,8 @@ void AddFeaturePair<NetLayerType, kWhite>(NetLayerType &s, const int index, cons
 }
 
 template<> inline
-void AddFeaturePair<NetLayerType, kBlack>(NetLayerType &s, const int index, const int value_white, const int value_black) {
+void AddFeaturePair<NetLayerType, kBlack>(NetLayerType &s, const int index,
+                                          const int value_white, const int value_black) {
   s.FMA(net_input_weights[index], value_black);
   s.FMA(net_input_weights[index + kSideDependentFeatureCount], value_white);
 }
@@ -275,7 +258,8 @@ std::array<BitBoard, 2> get_p_forward(const std::array<BitBoard, 2> &pawn_bb, co
   return p_forward;
 }
 
-std::array<BitBoard, 2> get_passed(const std::array<BitBoard, 2> &p_fill_forward, const std::array<BitBoard, 2> &pawn_bb) {
+std::array<BitBoard, 2> get_passed(const std::array<BitBoard, 2> &p_fill_forward,
+                                   const std::array<BitBoard, 2> &pawn_bb) {
   BitBoard n_filled = bitops::NW(p_fill_forward[kWhite]) | bitops::NE(p_fill_forward[kWhite]) | p_fill_forward[kWhite];
   BitBoard s_filled = bitops::SW(p_fill_forward[kBlack]) | bitops::SE(p_fill_forward[kBlack]) | p_fill_forward[kBlack];
   return {
@@ -626,18 +610,6 @@ inline void ScoreKings(T &score, const Board &board,
   }
 }
 
-//template<typename T, Color our_color>
-//inline void AddKingPST(T &score, const Board &board) {
-//  constexpr Color opp_color = our_color ^ 0x1;
-//  constexpr size_t offset = kSideDependentFeatureCount;
-//
-//  Square our_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(our_color,kKing));
-//  AddFeature<T>(score, kKingPSTIdx + kPSTindex[our_king_square], 1);
-//
-//  Square opp_king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(opp_color,kKing));
-//  AddFeature<T>(score, offset + kKingPSTIdx + kPSTindex[opp_king_square], 1);
-//}
-
 template<typename T, Color our_color>
 inline void AddKingsToInput(T &score, const Board &board, CNNHelper &helper) {
   constexpr Color opp_color = our_color ^ 0x1;
@@ -826,70 +798,18 @@ NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
     out += opp_k_out[i] * cnn_dense_out[i + 3 * our_p_out.size()];
   }
 
-//  CNNLayerType cnn_layer_two;
-//
-//  // Bias add 2
-//  for (size_t h = 0; h < kBoardLength; ++h) {
-//    for (size_t w = 0; w < kBoardLength; ++w) {
-//      cnn_layer_two[h][w] = cnn_l2_bias;
-//    }
-//  }
-//
-//  // Convolution 2
-//  for (size_t i = 0; i < 3; ++i) {
-//    for (size_t j = 0; j < 3; ++j) {
-//      for (size_t h = 0; h < kBoardLength; ++h) {
-//        if (h+i == 0 || h+i > 8) {
-//          continue;
-//        }
-//
-//        for (size_t w = 0; w < kBoardLength; ++w) {
-//          if (w+j == 0 || w+j > 8) {
-//            continue;
-//          }
-//
-//          for (size_t c = 0; c < cnn_layer_one[0][0].size(); ++c) {
-//            cnn_layer_two[h][w] += cnn_layer_one[h+i-1][w+j-1][c] * cnn_l2_filters[i][j][c];
-//          }
-//        }
-//      }
-//    }
-//  }
-//
-//  // ReLU 2 and pooling
-//  NetLayerType pooled(0);
-//  for (size_t h = 0; h < kBoardLength; ++h) {
-//    for (size_t w = 0; w < kBoardLength; ++w) {
-//      cnn_layer_two[h][w].relu();
-//      pooled += cnn_layer_two[h][w];
-//    }
-//  }
-//  pooled /= kBoardSize;
-
-//  // Dense
-//  NetLayerType out(0);
-//  for (size_t i = 0; i < pooled.size(); ++i) {
-//    out += pooled[i] * cnn_dense_out[i];
-//  }
-
   return out;
 }
 
 Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   layer_one += bias_layer_one;
   layer_one.relu();
-//  layer_one.ns_prelu(net_hardcode::l1_activation_weights);
-//  layer_one.sigmoid();
-//  CReLULayerType layer_one_activated(layer_one);
 
   NetLayerType layer_two = bias_layer_two;
   for (size_t i = 0; i < layer_one.size(); ++i) {
     layer_two.FMA(second_layer_weights[i], layer_one[i]);
   }
   layer_two.relu();
-//  layer_two.ns_prelu(net_hardcode::l2_activation_weights);
-//  layer_two.sigmoid();
-//  CReLULayerType activated(layer_two);
 
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
@@ -925,9 +845,6 @@ Score ScoreBoard(const Board &board) {
   return NetForward(layer_one, contempt[board.get_turn()]);
 }
 
-// Array3d<NetLayerType, 3, 3, 16> cnn_l2_filters;
-// NetLayerType cnn_l2_bias(0);
-
 template<size_t size>
 void init_cnn_weights(Array3d<NetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
                       double multiplier = 1.0) {
@@ -954,7 +871,6 @@ void init_cnn_bias(NetLayerType &cnn_bias, const std::array<float, size> &bias_w
 
 void init_weights() {
   // Init cnn net weights
-
   Array3d<NetLayerType, 5, 5, 3> const_channel_filters;
 
   size_t idx = 0;
@@ -1009,22 +925,6 @@ void init_weights() {
       }
     }
   }
-
-//  idx = 0;
-//  for (size_t h = 0; h < cnn_l2_filters.size(); ++h) {
-//    for (size_t w = 0; w < cnn_l2_filters[0].size(); ++w) {
-//      for (size_t i = 0; i < cnn_l2_filters[0][0].size(); ++i) {
-//        for (size_t j = 0; j < cnn_l2_filters[0][0][0].size(); ++j) {
-//          cnn_l2_filters[h][w][i][j] = net_hardcode::cnn_l2_weights[idx++];
-//        }
-//      }
-//    }
-//  }
-//  assert(idx == net_hardcode::cnn_l2_weights.size());
-//
-//  for (size_t i = 0; i < net_hardcode::cnn_l1_bias.size() && i < cnn_input_bias_b.size(); ++i) {
-//    cnn_l2_bias[i] = net_hardcode::cnn_l2_bias[i];
-//  }
 
   constexpr size_t cnn_weights_size = net_hardcode::cnn_our_k_weights.size();
   init_cnn_weights<cnn_weights_size>(cnn_our_p_filters, net_hardcode::cnn_our_p_weights, 1.0 / 8);
@@ -1096,6 +996,7 @@ std::vector<int32_t> GetNetInputs(const Board &board) {
   return ScoreBoard<std::vector<int32_t>, kBlack>(board, ec);
 }
 
+#ifdef EVAL_TRAINING
 void AddHeader(std::ofstream &file, std::string feature_name_prefix, int feature_count) {
   file << feature_name_prefix << "0";
   for (int i = 1; i < feature_count; ++i) {
@@ -1435,6 +1336,7 @@ void EstimateFeatureImpact() {
 //    std::cout << std::endl;
 //  }
 }
+#endif
 
 void SetContempt(int value, Color color) {
   float f = (value + 100) * 0.005;

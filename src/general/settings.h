@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "0.7.6";
+const std::string engine_version = "0.8";
 const std::string engine_author = "Jonathan Rosenthal";
 
 #if defined(__BMI2__)
@@ -47,16 +47,6 @@ const std::string compile_arch = "SSE4.1";
 #else
 const std::string compile_arch = "";
 #endif
-
-const int kNumClusters = 4;
-
-const std::string kParamPath = "params/";
-const std::string kSampledMixtureFile = kParamPath + "v2Smixtures" + std::to_string(kNumClusters) + ".txt";
-
-const std::string kMixtureFile = kParamPath + "mixtures_noisy" + std::to_string(kNumClusters) + ".txt";
-const std::string kGMMParamsFile = kParamPath + "gmm_params_nfcm" + std::to_string(kNumClusters) + ".txt";
-
-const std::string kParamExplanationFile = kGMMParamsFile + ".info";
 
 const std::string kSearchParamPath = "search_params/";
 const std::string kSearchParamVersionExtension = "190516";

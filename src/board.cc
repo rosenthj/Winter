@@ -256,7 +256,8 @@ inline void AddPromotionMoves(const Square src, const Square des, std::vector<Mo
 
 template<int Quiescent, MoveGenType move_gen_type, Color point_of_view>
 inline void ConditionalAddPromotionMoves(const Square src, const Square des,
-                                         std::vector<Move> &moves, const MoveType move_type) {
+                                         std::vector<Move> &moves,
+                                         const MoveType move_type) {
   const int back_rank = point_of_view == kWhite ? 7 : 0;
   if (move_gen_type != MoveGenType::Fast || GetSquareY(des) != back_rank) {
     moves.emplace_back(GetMove(src, des, move_type));
@@ -267,7 +268,8 @@ inline void ConditionalAddPromotionMoves(const Square src, const Square des,
 }
 
 inline void AddNonPromotionMovesLoop(BitBoard des, const Square square_dif,
-                             std::vector<Move> &moves, const MoveType move_type) {
+                                     std::vector<Move> &moves,
+                                     const MoveType move_type) {
   for (; des; bitops::PopLSB(des)) {
     const Square destination = bitops::NumberOfTrailingZeros(des);
     moves.emplace_back(GetMove(destination - square_dif, destination, move_type));
@@ -276,7 +278,8 @@ inline void AddNonPromotionMovesLoop(BitBoard des, const Square square_dif,
 
 template<int Quiescent, MoveGenType move_gen_type, Color point_of_view>
 inline void AddPawnMovesLoop(BitBoard des, const Square square_dif,
-                             std::vector<Move> &moves, const MoveType move_type) {
+                             std::vector<Move> &moves,
+                             const MoveType move_type) {
   for (; des; bitops::PopLSB(des)) {
     const Square destination = bitops::NumberOfTrailingZeros(des);
     ConditionalAddPromotionMoves<Quiescent, move_gen_type, point_of_view>(
@@ -357,21 +360,21 @@ Board::Board() {
   en_passant = 0;
   fifty_move_count = 0;
   phase = 0;
-  for (int player = kWhite; player <= kBlack; player++) {
+  for (int player = kWhite; player <= kBlack; ++player) {
     color_bitboards[player] = 0;
-    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
       piece_counts[player][piece_type] = 0;
     }
   }
-  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
     pt_bitboards[piece_type] = 0;
   }
 
   for (Square square = parse::StringToSquare("a1");
-      square <= parse::StringToSquare("h8"); square++) {
+      square <= parse::StringToSquare("h8"); ++square) {
     pieces[square] = kNoPiece;
   }
-  for (Color color = kWhite; color <= kBlack; color++) {
+  for (Color color = kWhite; color <= kBlack; ++color) {
     AddPiece(parse::StringToSquare("a1") + (56*color), GetPiece(color, kRook));
     AddPiece(parse::StringToSquare("b1") + (56*color), GetPiece(color, kKnight));
     AddPiece(parse::StringToSquare("c1") + (56*color), GetPiece(color, kBishop));
@@ -380,7 +383,7 @@ Board::Board() {
     AddPiece(parse::StringToSquare("f1") + (56*color), GetPiece(color, kBishop));
     AddPiece(parse::StringToSquare("g1") + (56*color), GetPiece(color, kKnight));
     AddPiece(parse::StringToSquare("h1") + (56*color), GetPiece(color, kRook));
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < kBoardLength; ++i) {
       AddPiece(parse::StringToSquare("a2") + i + (40*color), GetPiece(color, kPawn));
     }
   }
@@ -391,9 +394,9 @@ Board::Board() {
 std::vector<std::string> Board::GetFen() const {
   std::vector<std::string> fen;
   std::string board_fen = "";
-  for (int row = 7; row >= 0; row--) {
+  for (int row = 7; row >= 0; --row) {
     int empty_in_a_row = 0;
-    for (int col = 0; col < 8; col++) {
+    for (int col = 0; col < 8; ++col) {
       Square square = GetSquare(col, row);
       if (get_piece(square) == kNoPiece) {
         empty_in_a_row++;
@@ -470,24 +473,24 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   en_passant = 0;
   fifty_move_count = 0;
   phase = 0;
-  for (int player = kWhite; player <= kBlack; player++) {
+  for (int player = kWhite; player <= kBlack; ++player) {
     color_bitboards[player] = 0;
-    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
       piece_counts[player][piece_type] = 0;
     }
   }
-  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
     pt_bitboards[piece_type] = 0;
   }
   for (Square square = parse::StringToSquare("a1");
-       square <= parse::StringToSquare("h8"); square++) {
+       square <= parse::StringToSquare("h8"); ++square) {
     pieces[square] = kNoPiece;
   }
 
   std::vector<std::string> fen_position_rows = parse::split(fen_tokens[0], '/');
   for (int row = 0; row < kBoardLength; row++) {
     Square square = GetSquare(0, 7 - row);
-    for (size_t char_idx = 0; char_idx < fen_position_rows[row].length(); char_idx++) {
+    for (size_t char_idx = 0; char_idx < fen_position_rows[row].length(); ++char_idx) {
       char c = fen_position_rows[row][char_idx];
       switch (c){
         case 'K': AddPiece(square, GetPiece(kWhite, kKing)); break;
@@ -547,7 +550,7 @@ void Board::evaluate_castling_rights(std::string fen_code){
   castling_rights = 0;
 
   int len = fen_code.length();
-  for(int i = 0; i < len; i++){
+  for(int i = 0; i < len; ++i){
     char c = fen_code[i];
     switch (c){
       case 'K': castling_rights |= kWSCastle; break;
@@ -580,11 +583,11 @@ void Board::SetToSamePosition(const Board &board) {
   phase = board.phase;
   for (int player = kWhite; player <= kBlack; player++) {
     color_bitboards[player] = board.color_bitboards[player];
-    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+    for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
       piece_counts[player][piece_type] = board.piece_counts[player][piece_type];
     }
   }
-  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; piece_type++) {
+  for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
     pt_bitboards[piece_type] = board.pt_bitboards[piece_type];
   }
   for (Square square = parse::StringToSquare("a1");
@@ -840,7 +843,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
   }
   if (!Quiescent) {
     // Add castling moves
-    for (int right = 0 + 2*get_turn(); right < 2+2*get_turn(); right++) {
+    for (int right = 0 + 2*get_turn(); right < 2+2*get_turn(); ++right) {
       if ((castling_rights & (0x1 << right))
           && !(castling_check_bbs[right] & in_check)
           && !(castling_empty_bbs[right] & all_pieces)) {
@@ -1014,15 +1017,6 @@ bool Board::MoveInListCanRepeat(const std::vector<Move> moves) {
     pre_hashes.emplace_back(previous_hashes[index]);
   }
 
-  /*for (int i = 0; i < potential_hashes.size(); i++) {
-    for (int j = 0; j < pre_hashes.size(); j++) {
-      if (potential_hashes[i] == pre_hashes[j]) {
-        std::cout << "found repetition" << std::endl;
-        return true;
-      }
-    }
-  }*/
-
   std::sort(pre_hashes.begin(), pre_hashes.end());
   std::sort(potential_hashes.begin(), potential_hashes.end());
 
@@ -1044,15 +1038,6 @@ bool Board::MoveInListCanRepeat(const std::vector<Move> moves) {
       return true;
     }
   }
-  /*for (i = 0; i < potential_hashes.size(); i++) {
-    std::cout << potential_hashes[i] << " ";
-  }
-  std::cout << std::endl;
-  for (i = 0; i < pre_hashes.size(); i++) {
-    std::cout << pre_hashes[i] << " ";
-  }
-  std::cout << std::endl;
-  std::cout << "checked all, no reps found" << std::endl;*/
   return false;
 }
 
@@ -1123,6 +1108,7 @@ bool Board::NonNegativeSEESquare(const Square target) const {
   attackers |= magic::GetAttackMap<kRook>(target, all_pieces) & (pt_bitboards[kRook] | pt_bitboards[kQueen]);
   attackers |= magic::GetAttackMap<kKing>(target, all_pieces) & (pt_bitboards[kKing]);
   attackers &= all_pieces;
+
   while ((attackers & color_bitboards[cturn]) && score <= 0) {
     if (cturn == turn && score == 0) {
       return true;

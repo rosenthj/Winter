@@ -178,10 +178,8 @@ inline Score get_valid_score(Score score) {
     if (score > kMaxScore) {
       return kMaxScore;
     }
-    if (score > kMaxStaticEval) {
-      return kMaxStaticEval;
-    }
-    assert(false); // Unreachable
+    assert(score > kMaxStaticEval);
+    return kMaxStaticEval;
   }
   return score;
 }

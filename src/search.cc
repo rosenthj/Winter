@@ -60,7 +60,9 @@ const int kSamplingSearchMode = 1;
 const int kSamplingEvalMode = 2;
 int kNodeCountSampleAt = 1000;
 //int kNodeCountSampleEvalAt = 5000;
+#ifdef SAMPLE_SEARCH
 const int kMaxDepthSampled = 32;
+#endif
 
 std::array<Score, 2> draw_score = { 0, 0 };
 int contempt = 0;
@@ -72,8 +74,10 @@ Depth rsearch_depth;
 
 Board sampled_board;
 Score sampled_alpha;
+#ifdef SEARCH_TRAINING
 NodeType sampled_node_type;
 Depth sampled_depth;
+#endif
 int skip_time_check = 0;
 
 Array2d<Depth, 64, 64> init_lmr_reductions(double div) {
@@ -173,13 +177,11 @@ inline bool finished(search::Thread &thread) {
   return search::Threads.end_search.load(std::memory_order_relaxed);
 }
 
-inline void end_search_time() {
-  end_time = now();
-}
-
+#ifdef SEARCH_TRAINING
 inline Time get_infinite_time() {
   return now()+std::chrono::hours(24);
 }
+#endif
 
 template<int Quiescent>
 MoveScore get_move_priority(const Move move, const Board &board, const Move best) {
@@ -447,28 +449,6 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
   return move_weight;
 }
 
-//SlidingCheckType GetSlidingCheckType(const Board &board) {
-//  const Square king_square = bitops::NumberOfTrailingZeros(board.get_piece_bitboard(board.get_turn(), kKing));
-//  const BitBoard all_pieces = board.get_all_pieces();
-//  const BitBoard diag_access = magic::GetAttackMap<kBishop>(king_square, all_pieces);
-//  if (diag_access & board.get_piece_bitboard(board.get_not_turn(), kBishop)) {
-//    return kBishopCheck;
-//  }
-//  else if (diag_access & board.get_piece_bitboard(board.get_not_turn(), kQueen)) {
-//    return kQueenDiagCheck;
-//  }
-//  else {
-//    const BitBoard vertical_or_horizontal_access = magic::GetAttackMap<kRook>(king_square, all_pieces);
-//    if (vertical_or_horizontal_access & board.get_piece_bitboard(board.get_not_turn(), kRook)) {
-//      return kRookCheck;
-//    }
-//    else if (vertical_or_horizontal_access & board.get_piece_bitboard(board.get_not_turn(), kQueen)) {
-//      return kQueenRooklikeCheck;
-//    }
-//  }
-//  return kNoSlideCheck;
-//}
-
 // Sorten moves according to weights given by some classifier
 void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_move = kNullMove) {
   MoveOrderInfo info(t.board, best_move);
@@ -529,6 +509,7 @@ inline bool is_null_move_allowed(const Board &board, const Depth depth) {
       //&& board.get_phase() > 1 * piece_phases[kQueen];// && !board.InCheck();
 }
 
+#ifdef UNUSED
 //This tested negative, may revisit in the future.
 inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score beta,
                                 const Depth depth, const std::vector<Move> &moves) {
@@ -549,6 +530,7 @@ inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score 
   }
   return false;
 }
+#endif
 
 }
 
@@ -582,7 +564,7 @@ Board get_sampled_board() {
   return sampled_board;
 }
 
-Score SQSearch(Board &board, Score alpha, Score beta) {
+Score SQSearch(Board &board, Score alpha, const Score beta) {
   if (!board.InCheck()) {
     Score static_eval = net_evaluation::ScoreBoard(board);
     if (static_eval >= beta) {
@@ -615,7 +597,7 @@ Score SQSearch(Board &board) {
 
 
 template<int Mode>
-Score QuiescentSearch(Thread &t, Score alpha, Score beta) {
+Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   t.nodes++;
   Score lower_bound_score = kMinScore + t.board.get_num_made_moves();
   //Update max ply reached in search
@@ -727,6 +709,11 @@ inline Score get_futility_margin(Depth depth, Score score, bool improving) {
   return kFutileMargin[depth] - 100 * depth * improving;
 }
 
+#ifdef SAMPLE_SEARCH
+inline void end_search_time() {
+  end_time = now();
+}
+
 Score sample_node_and_return_alpha(const Board &board, const Depth depth,
                                    const NodeType node_type, const Score alpha) {
   sampled_board.SetToSamePosition(board);
@@ -736,6 +723,7 @@ Score sample_node_and_return_alpha(const Board &board, const Depth depth,
   end_search_time();
   return alpha;
 }
+#endif
 
 inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
                             Depth depth, int move_number, int expected_node,
@@ -810,7 +798,7 @@ inline constexpr Score get_singular_beta(Score beta, Depth depth) {
 }
 
 template<NodeType node_type, int Mode>
-Score AlphaBeta(Thread &t, Score alpha, Score beta, Depth depth, bool expected_cut_node = false) {
+Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expected_cut_node = false) {
   assert(is_valid_score(alpha));
   assert(is_valid_score(beta));
   assert(beta > alpha);
@@ -1114,8 +1102,8 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
 }
 
 template<int Mode>
-Score RootSearchLoop(Thread &t, Score original_alpha, Score beta, Depth current_depth,
-                     std::vector<Move> &moves) {
+Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
+                     Depth current_depth, std::vector<Move> &moves) {
   assert(is_valid_score(original_alpha));
   assert(is_valid_score(beta));
   assert(original_alpha < beta);
@@ -1451,6 +1439,7 @@ void clear_killers_and_counter_moves() {
 // Alternatively predicting relative move orderings such as the probability of a move being greater or equal
 // to all previous moves in the list or better than the previous move in the move ordering performed worse.
 
+#ifdef SEARCH_TRAINING
 void TrainSearchParams(bool from_scratch) {
   const int scaling = 128;
   set_print_info(false);
@@ -1792,6 +1781,7 @@ void CreateSearchParamDataset() {
     }
   }
 }
+#endif
 
 Score QSearch(Board &board) {
   Threads.main_thread->board.SetToSamePosition(board);
@@ -1804,6 +1794,7 @@ Board SampleEval(Board board) {
   return sampled_board;
 }
 
+#ifdef SEARCH_TRAINING
 void SaveSearchVariables() {
   std::ofstream file(settings::kSearchParamFile);
   std::ofstream description_file(settings::kSearchParamExplanationFile);
@@ -1899,6 +1890,7 @@ void LoadSearchVariables() {
   }
   fileic.close();
 }
+#endif
 
 void LoadSearchVariablesHardCoded() {
   int c = 0;

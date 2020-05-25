@@ -33,12 +33,7 @@
 
 template <typename type, size_t length>
 struct Vec {
-  Vec() {
-//    std::cout << "Basic initialization detected" << std::endl;
-//    for (size_t i = 0; i < length; ++i) {
-//      values[i] = 0;
-//    }
-  }
+  Vec() {}
 
   Vec(type val) {
     for (size_t i = 0; i < length; ++i) {

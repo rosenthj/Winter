@@ -158,6 +158,7 @@ void Loop() {
       break;
     }
     else if (Equals(command, "gen_eval_csv")) {
+#ifdef EVAL_TRAINING
       if (tokens.size() < 2 || tokens.size() > 3) {
         std::cout << "invalid number of arguments, expected 1 or 2 got " << (tokens.size()-1) << std::endl;
       }
@@ -169,6 +170,9 @@ void Loop() {
         std::string out = tokens[index++];
         net_evaluation::GenerateDatasetFromUCIGames(filename, out);
       }
+#else
+      std::cout << "Command not supported in this build. Recompile with -DEVAL_TRAINING" << std::endl;
+#endif
     }
     else if (Equals(command, "isready")) {
       Reply(kEngineIsReady);
@@ -176,19 +180,9 @@ void Loop() {
     else if (Equals(command, "print")) {
       board.Print();
     }
-//    else if (Equals(command, "train_csv")) {
-//      if (tokens.size() != 2) {
-//        std::cout << "invalid number of arguments, expected 1 got " << (tokens.size()-1) << std::endl;
-//      }
-//      train::TrainCSV(tokens[index++]);
-//    }
     else if (Equals(command, "print_bitboards")) {
       board.PrintBitBoards();
     }
-//    else if (Equals(command, "print_features")) {
-//      TODO replace with function from net_eval
-//      evaluation::PrintFeatureValues(board);
-//    }
     else if (Equals(command, "isdraw")) {
       std::cout << board.IsDraw() << std::endl;
     }
@@ -372,12 +366,6 @@ void Loop() {
         debug::Error("Hash after perft function is changed!", false);
       }
     }
-//    else if (Equals(command, "estimate_variable_influence")) {
-//      evaluation::CheckVariableInfluence();
-//    }
-//    else if (Equals(command, "train_params")) {
-//      train::Train(false);
-//    }
     else if (Equals(command, "bookkeeping_reset")) {
       bookkeeping::reset_counters();
     }
