@@ -60,7 +60,8 @@ struct Entry {
 
   HashType hash;         // 8 bytes
 private:
-  Score score;           // 4 bytes
+  int16_t win;           // 2 bytes
+  int16_t win_draw;      // 2 bytes
   uint16_t best_move;    // 2 bytes
   uint8_t gen_and_bound; // 1 byte
 public:

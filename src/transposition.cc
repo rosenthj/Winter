@@ -30,26 +30,22 @@
 
 namespace {
 
-bool is_mate_score(const Score score) {
-  return (score < kMinScore + 2000) || (score > kMaxScore - 2000);
-}
-
-Score score_to_tt_score(const Score score, const size_t num_made_moves) {
-  if (is_mate_score(score)) {
-    if (score < 0) {
-      return score - num_made_moves;
+Score score_to_tt_score(const Score score, const int32_t num_made_moves) {
+  if (score.is_mate_score()) {
+    if (score.is_disadvantage()) {
+      return WDLScore{score.win - num_made_moves, score.win_draw - num_made_moves};
     }
-    return score + num_made_moves;
+    return WDLScore{score.win + num_made_moves, score.win_draw + num_made_moves};
   }
   return score;
 }
 
-Score tt_score_to_score(Score score, size_t num_made_moves) {
-  if (is_mate_score(score)) {
-    if (score < 0) {
-      return score + num_made_moves;
+Score tt_score_to_score(Score score, int32_t num_made_moves) {
+  if (score.is_mate_score()) {
+    if (score.is_disadvantage()) {
+      return WDLScore{score.win + num_made_moves, score.win_draw + num_made_moves};
     }
-    return score - num_made_moves;
+    return WDLScore{score.win - num_made_moves, score.win_draw - num_made_moves};
   }
   return score;
 }
@@ -148,6 +144,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   size_t index = GetIdxToReplace(hash); // HashFunction(hash);
 
   assert(index < table.size());
+  assert(score.is_valid());
 
   HashType best_move_cast = best_move;
   Entry entry;
@@ -194,10 +191,13 @@ void ClearTable() {
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {
-  score = score_to_tt_score(score_new, board.get_num_made_moves());
+  Score score = score_to_tt_score(score_new, board.get_num_made_moves());
+  win = score.win;
+  win_draw = score.win_draw;
 }
 
 Score Entry::get_score(const Board &board) const {
+  Score score = WDLScore{win, win_draw};
   return tt_score_to_score(score, board.get_num_made_moves());
 }
 

@@ -32,6 +32,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include "wdl_score.h"
 
 // A bitboard is a 64bit boolean feature representation of the board.
 using BitBoard = uint64_t;
@@ -52,7 +53,8 @@ using PieceType = Piece;
 using Color = Piece;
 // A score is a value assigned to a position which represents how good the position
 // for the player to move.
-using Score = int32_t;
+using Score = WDLScore;
+using NScore = int32_t;
 using Depth = int32_t;
 using Probability = double;
 using CastlingRights = int32_t;
@@ -106,83 +108,113 @@ constexpr CastlingRights kWLCastle = kWSCastle << 1;
 constexpr CastlingRights kBSCastle = kWSCastle << 2;
 constexpr CastlingRights kBLCastle = kWSCastle << 3;
 
-constexpr Score kRescale = 4000; // Used to transform wpct into Score.
-constexpr Score kMaxStaticEval = kRescale;
+constexpr NScore kRescale = 4000; // Used to transform wpct into Score.
+constexpr Score kMaxStaticEval = WDLScore::from_pct_truncated(1.0, 1.0);
 constexpr Score kMinStaticEval = -kMaxStaticEval;
 
-constexpr Score kMinMatingScore = kMaxStaticEval + 100;
+constexpr Score kMinMatingScore = WDLScore{kMaxStaticEval.win + 100, kMaxStaticEval.win_draw + 100};
 constexpr Score kMaxMatedScore = -kMinMatingScore;
-
-constexpr Score kNumMateInScores = 2000;
-constexpr Score kMaxScore = kMinMatingScore + kNumMateInScores;
+//
+constexpr int32_t kNumMateInScores = 2000;
+constexpr Score kMaxScore = WDLScore{kMinMatingScore.win + kNumMateInScores,
+                         kMinMatingScore.win_draw + kNumMateInScores};
 constexpr Score kMinScore = -kMaxScore;
-constexpr Score kNoScore = kMinScore-1;
+constexpr Score kNoScore = WDLScore{-1, WDLScore::scale + 1};
+constexpr Score kDrawScore = WDLScore::from_pct_truncated(0.0, 1.0);
 
-inline Score get_next_score(Score score) {
-  if (score == kMaxStaticEval) {
-    return kMinMatingScore;
-  }
-  if (score == kMaxMatedScore) {
-    return kMinStaticEval;
-  }
-  return score + 1;
+inline constexpr Score GetMatedOnMoveScore(int32_t ply) {
+  return WDLScore{kMinScore.win + ply, kMinScore.win_draw + ply};
 }
 
-inline Score get_previous_score(Score score) {
-  if (score == kMinMatingScore) {
-    return kMaxStaticEval;
-  }
-  if (score == kMinStaticEval) {
-    return kMaxMatedScore;
-  }
-  return score - 1;
+inline Score get_next_score(const Score score) {
+  return score.get_next_score();
 }
+
+inline Score get_previous_score(const Score score) {
+  return score.get_previous_score();
+}
+
+const NScore kMaxNScore = kRescale + kNumMateInScores + 100;
+const NScore kMinNScore = -kMaxNScore;
+
+//inline Score get_next_score(Score score) {
+//  if (score == kMaxStaticEval) {
+//    return kMinMatingScore;
+//  }
+//  if (score == kMaxMatedScore) {
+//    return kMinStaticEval;
+//  }
+//  return score + 1;
+//}
+
+//inline Score get_previous_score(Score score) {
+//  if (score == kMinMatingScore) {
+//    return kMaxStaticEval;
+//  }
+//  if (score == kMinStaticEval) {
+//    return kMaxMatedScore;
+//  }
+//  return score - 1;
+//}
 
 // Returns true for scores in range for static eval. This includes draw_score.
-inline constexpr bool is_static_eval(Score score) {
-  return (score >= kMinStaticEval) && (score <= kMaxStaticEval);
+//inline constexpr bool is_static_eval( score) {
+//  return (score >= kMinStaticEval) && (score <= kMaxStaticEval);
+//}
+
+//inline constexpr bool is_mate_score(Score score) {
+//  return (score <= kMaxMatedScore) || (score Score>= kMinMatingScore);
+//}
+
+//inline constexpr bool is_valid_score(Score score) {
+//  return score == kNoScore || (score >= kMinScore && score <= kMaxScore &&
+//      (is_static_eval(score) || is_mate_score(score)));
+//}
+
+//inline Score wpct_to_score(float x) {
+//  //return std::round(kRescale * (2*x - 1));
+//  return WDLScore(x,x);
+//}
+
+//inline constexpr float score_to_wpct(Score x) {
+//  return (((float)x / kRescale) + 1.0) / 2.0;
+//}
+
+inline float score_to_wpct(WDLScore score) {
+  return score.to_wpct();
 }
 
-inline constexpr bool is_mate_score(Score score) {
-  return (score <= kMaxMatedScore) || (score >= kMinMatingScore);
-}
+//// TODO remove this abomination once rest of code is ready.
+//inline WDLScore score_to_wdl_estimate(Score score) {
+//  return WDLScore::from_score(score);
+////  return WDLScore((score + kRescale) / 2);
+//  //float wpct = score_to_wpct(score);
+//  //return WDLScore(wpct, wpct);
+//}
 
-inline constexpr bool is_valid_score(Score score) {
-  return score == kNoScore || (score >= kMinScore && score <= kMaxScore &&
-      (is_static_eval(score) || is_mate_score(score)));
-}
-
-inline Score wpct_to_score(float x) {
-  return std::round(kRescale * (2*x - 1));
-}
-
-inline constexpr float score_to_wpct(Score x) {
-  return (((float)x / kRescale) + 1.0) / 2.0;
-}
-
-inline Score wpct_to_cp(float wpct) {
-  constexpr float kEpsilon = 0.000001;
-  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
-  return std::round(std::log(wpct / (1-wpct)) * 1024);
-}
+//inline NScore wpct_to_cp(float wpct) {
+//  constexpr float kEpsilon = 0.000001;
+//  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
+//  return std::round(std::log(wpct / (1-wpct)) * 1024);
+//}
 
 // Rounds score to next valid score
-inline Score get_valid_score(Score score) {
-  if (!is_valid_score(score) || score == kNoScore) {
-    if (score < kMinScore) {
-      return kMinScore;
-    }
-    if (score < kMinStaticEval) {
-      return kMinStaticEval;
-    }
-    if (score > kMaxScore) {
-      return kMaxScore;
-    }
-    assert(score > kMaxStaticEval);
-    return kMaxStaticEval;
-  }
-  return score;
-}
+//inline Score get_valid_score(Score score) {
+//  if (!is_valid_score(score) || score == kNoScore) {
+//    if (score < kMinScore) {
+//      return kMinScore;
+//    }
+//    if (score < kMinStaticEval) {
+//      return kMinStaticEval;
+//    }
+//    if (score > kMaxScore) {
+//      return kMaxScore;
+//    }
+//    assert(score > kMaxStaticEval);
+//    return kMaxStaticEval;
+//  }
+//  return score;
+//}
 
 constexpr int kLowerBound = 1;
 constexpr int kUpperBound = 2;

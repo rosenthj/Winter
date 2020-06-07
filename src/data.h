@@ -28,6 +28,7 @@
 #define DATA_H_
 
 #include "general/types.h"
+#include "general/wdl_score.h"
 #include "board.h"
 #include <vector>
 #include <string>
@@ -35,7 +36,7 @@
 struct Game{
   Board board;
   std::vector<Move> moves;
-  double result;
+  WDLScore result;
   void forward() {
     if (board.get_num_made_moves() < moves.size()) {
       board.Make(moves[board.get_num_made_moves()]);

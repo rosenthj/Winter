@@ -42,26 +42,36 @@
 
 namespace {
 
-double SigmoidCrossEntropyLossV2(double score, double target) {
-  return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
-}
-
-double SigmoidCrossEntropyLoss(Score score, double target) {
-  if (is_mate_score(score)) {
-    if (score < 0) {
-      score = kMinScore;
-    }
-    else {
-      score = kMaxScore;
-    }
+double ResultAbsLoss(Score x, Score y) {
+  if (y.is_draw()) {
+    return 0.5 * (1.0 - x.get_draw_probability());
   }
-  double prediction = score_to_wpct(score);
-  prediction = std::min(std::max(prediction, 0.0001), 0.9999);
-  return target * std::log(prediction) + (1 - target) * std::log(1 - prediction);
+  if (y.is_disadvantage()) {
+    return 1.0 * x.get_win_probability() + 0.5 * x.get_draw_probability();
+  }
+  return 1.0 * x.get_loss_probability() + 0.5 * x.get_draw_probability();
 }
 
-const double kMinLoss = SigmoidCrossEntropyLoss(kMinScore, 0);
-const double kMinDrawLoss = SigmoidCrossEntropyLoss(0, 0.5);
+//double SigmoidCrossEntropyLossV2(double score, double target) {
+//  return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
+//}
+
+//double SigmoidCrossEntropyLoss(Score score, double target) {
+//  if (is_mate_score(score)) {
+//    if (score < 0) {
+//      score = kMinScore;
+//    }
+//    else {
+//      score = kMaxScore;
+//    }
+//  }
+//  double prediction = score_to_wpct(score);
+//  prediction = std::min(std::max(prediction, 0.0001), 0.9999);
+//  return target * std::log(prediction) + (1 - target) * std::log(1 - prediction);
+//}
+//
+//const double kMinLoss = SigmoidCrossEntropyLoss(kMinScore, 0);
+//const double kMinDrawLoss = SigmoidCrossEntropyLoss(0, 0.5);
 
 struct PerftTestSet {
   Board board;
@@ -86,7 +96,7 @@ struct SymmetryTest {
   }
 };
 
-using EvaluationTest = std::tuple<Board, double>;
+using EvaluationTest = std::tuple<Board, WDLScore>;
 
 }
 
@@ -262,27 +272,26 @@ double EntropyLossTimedSuite(Milliseconds time_per_position) {
     int num_made_moves = games[idx].moves.size();
     games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
                                         / (games.size() + u_margin));
-    double target = games[idx].result;
-    if (target == 0.5) {
+    Score target = games[idx].result;
+    if (target.is_draw()) {
       draws++;
     }
     if (games[idx].board.get_turn() == kBlack) {
-      target = 1 - target;
+      target = -target;
     }
     table::ClearTable();
     search::TimeSearch(games[idx].board, time_per_position);
-    total_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
-    if (target == 0.5) {
+    total_error += ResultAbsLoss(search::get_last_search_score(), target);
+    if (target.is_draw()) {
       draw_error +=
-          SigmoidCrossEntropyLoss(search::get_last_search_score(), target) - kMinDrawLoss;
+          ResultAbsLoss(search::get_last_search_score(), target);
     }
     else {
-      decisive_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
+      decisive_error += ResultAbsLoss(search::get_last_search_score(), target);
     }
     if ((idx + 1) % 100 == 0) {
       std::cout << (idx + 1) << std::endl
-          << "Total Error: " << ((total_error - kMinLoss * (idx + 1 - draws)
-              - kMinDrawLoss * draws) / (idx + 1)) << std::endl;
+          << "Total Error: " << (total_error / (idx + 1)) << std::endl;
       if (idx + 1 > draws) {
         std::cout << "Decisive Error: " << ((decisive_error) / (idx + 1 - draws)) << std::endl;
       }
@@ -292,10 +301,8 @@ double EntropyLossTimedSuite(Milliseconds time_per_position) {
     }
   }
   search::set_print_info(true);
-  std::cout << "Final Avg Error: " << ((total_error - kMinLoss * (games.size() - draws)
-      - kMinDrawLoss * draws) / games.size()) << std::endl;
-  return (total_error - kMinLoss * (games.size() - draws)
-                     - kMinDrawLoss * draws) / games.size();
+  std::cout << "Final Avg Error: " << (total_error / games.size()) << std::endl;
+  return total_error / games.size();
 }
 
 double EntropyLossNodeSuite(size_t nodes_per_position) {
@@ -312,27 +319,26 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
     int num_made_moves = games[idx].moves.size();
     games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
                                         / (games.size() + u_margin));
-    double target = games[idx].result;
-    if (target == 0.5) {
+    Score target = games[idx].result;
+    if (target.is_draw()) {
       draws++;
     }
     if (games[idx].board.get_turn() == kBlack) {
-      target = 1 - target;
+      target = -target;
     }
     table::ClearTable();
     search::NodeSearch(games[idx].board, nodes_per_position);
-    total_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
-    if (target == 0.5) {
+    total_error += ResultAbsLoss(search::get_last_search_score(), target);
+    if (target.is_draw()) {
       draw_error +=
-          SigmoidCrossEntropyLoss(search::get_last_search_score(), target) - kMinDrawLoss;
+          ResultAbsLoss(search::get_last_search_score(), target);
     }
     else {
-      decisive_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
+      decisive_error += ResultAbsLoss(search::get_last_search_score(), target);
     }
     if ((idx + 1) % 100 == 0) {
       std::cout << (idx + 1) << std::endl
-          << "Total Error: " << ((total_error - kMinLoss * (idx + 1 - draws)
-              - kMinDrawLoss * draws) / (idx + 1)) << std::endl;
+          << "Total Error: " << (total_error / (idx + 1)) << std::endl;
       if (idx + 1 > draws) {
         std::cout << "Decisive Error: " << ((decisive_error) / (idx + 1 - draws)) << std::endl;
       }
@@ -342,77 +348,17 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
     }
   }
   search::set_print_info(true);
-  std::cout << "Final Avg Error: " << ((total_error - kMinLoss * (games.size() - draws)
-      - kMinDrawLoss * draws) / games.size()) << std::endl;
-  return (total_error - kMinLoss * (games.size() - draws)
-                     - kMinDrawLoss * draws) / games.size();
+  std::cout << "Final Avg Error: " << (total_error / games.size()) << std::endl;
+  return total_error / games.size();
 }
 
-//void GenerateDatasetFromEPD() {
-//  std::string line;
-//  std::ifstream file("quiet-labeled.epd");
-//  std::ofstream dfile("zurichess_epd_data.csv");
-//  size_t samples = 0;
-//  while(std::getline(file, line)) {
-//    std::vector<std::string> tokens = parse::split(line, ' ');
-//    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
-//    Board board(fen);
-//    double result = -1;
-//    if (tokens[5].compare("\"1-0\";") == 0) {
-//      result = 1;
-//    }
-//    else if (tokens[5].compare("\"0-1\";") == 0) {
-//      result = 0;
-//    }
-//    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
-//      result = 0.5;
-//    }
-//    else {
-//      std::cout << "Error detected! Line:" << std::endl;
-//      std::cout << line << std::endl;
-//      file.close();
-//      return;
-//    }
-//    if (board.get_turn() == kBlack) {
-//      result = 1 - result;
-//    }
-//    std::vector<int> features = evaluation::ScoreBoard<std::vector<int> >(board);
-//    Vec<double, settings::kNumClusters> component_probs = evaluation::BoardMixtureProbability(board);
-//    if (samples == 0) {
-//      dfile << "res";
-//      for (size_t i = 0; i < component_probs.size(); i++) {
-//        dfile << ", cp" << i;
-//      }
-//      for (size_t i = 0; i < features.size(); i++) {
-//        dfile << ", fe" << i;
-//      }
-//      dfile << std::endl;
-//    }
-//    dfile << result;
-//    for (size_t i = 0; i < component_probs.size(); i++) {
-//      dfile << ", " << component_probs[i];
-//    }
-//    for (int feature : features) {
-//      dfile << ", " << feature;
-//    }
-//    dfile << std::endl;
-//    samples++;
-//    if (samples % 10000 == 0) {
-//      std::cout << "Processed " << samples << " samples!" << std::endl;
-//    }
-//  }
-//  file.close();
-//  dfile.flush();
-//  dfile.close();
-//}
-
-double RunEvalTestSet(const std::vector<EvaluationTest> &test_set, double div) {
+double RunEvalTestSet(const std::vector<EvaluationTest> &test_set) {
   double error_sum = 0;
   for (const EvaluationTest sample : test_set) {
     Score score = net_evaluation::ScoreBoard(std::get<0>(sample));
-    double target = std::get<1>(sample);
+    Score target = std::get<1>(sample);
     //error_sum += std::abs(Sigmoid(evaluation::ScoreBoard(std::get<0>(sample)) / div)-std::get<1>(sample));
-    error_sum += SigmoidCrossEntropyLossV2(score / div, target);
+    error_sum += ResultAbsLoss(score, target);
   }
   return error_sum / test_set.size();
 }
@@ -428,15 +374,15 @@ double ZuriChessDatasetLoss() {
     if (board.InCheck()) {
       continue;
     }
-    double result = -1;
+    WDLScore result;;
     if (tokens[5].compare("\"1-0\";") == 0) {
-      result = 1;
+      result = WDLScore::from_pct(1.0, 1.0);
     }
     else if (tokens[5].compare("\"0-1\";") == 0) {
-      result = 0;
+      result = WDLScore::from_pct(0.0, 0.0);
     }
     else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
-      result = 0.5;
+      result = WDLScore::from_pct(0.0, 1.0);
     }
     else {
       std::cout << "Error detected! Line:" << std::endl;
@@ -444,8 +390,9 @@ double ZuriChessDatasetLoss() {
       file.close();
       return 0;
     }
+    assert(result.is_valid());
     if (board.get_turn() == kBlack) {
-      result = 1 - result;
+      result = -result;
     }
     eval_test_set.emplace_back(board, result);
 
@@ -455,15 +402,8 @@ double ZuriChessDatasetLoss() {
   }
   file.close();
   std::cout << "Processed " << (eval_test_set.size()) << " samples!" << std::endl;
-  for (double div = 0.2; div < 1; div += 0.05) {
-    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
-  }
-  for (double div = 1; div < 32; div *= 2) {
-    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
-  }
-  for (double div = 24; div <= 1524; div += 50) {
-    std::cout << "Error with div=" << div << ": " << RunEvalTestSet(eval_test_set, div) << std::endl;
-  }
+  double error = RunEvalTestSet(eval_test_set);
+  std::cout << "Error: " << error << std::endl;
   return 0;
 }
 

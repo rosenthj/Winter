@@ -360,8 +360,8 @@ template Vec<double, kPhaseVecLength>
         const Vec<double, kPhaseVecLength> &other) const;
 
 template Vec<double, kPhaseVecLength>
-    SqMatrix<double, kPhaseVecLength>::dot<Score>(
-        const Vec<Score, kPhaseVecLength> &other) const;
+    SqMatrix<double, kPhaseVecLength>::dot<NScore>(
+        const Vec<NScore, kPhaseVecLength> &other) const;
 
 template<typename type, size_t length>
 struct DeterminantHelper {

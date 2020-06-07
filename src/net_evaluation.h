@@ -43,10 +43,6 @@ Score ScoreBoard(const Board &board);
 std::vector<int32_t> GetNetInputs(const Board &board);
 void init_weights();
 
-void SetContempt(int value, Color color);
-std::array<Score, 2> GetDrawArray();
-Score GetUnbiasedScore(Score score, Color color);
-
 void SetPHashSize(const size_t bytes);
 
 #ifdef EVAL_TRAINING

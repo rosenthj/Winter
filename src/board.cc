@@ -154,7 +154,7 @@ inline bool clearly_drawn_pawn_ending(const BitBoard pawn_bb, const BitBoard kin
 
 namespace {
 
-constexpr std::array<Score, 7> see_values = { 100, 300, 300, 450, 900, 10000, 0 };
+constexpr std::array<NScore, 7> see_values = { 100, 300, 300, 450, 900, 10000, 0 };
 
 constexpr std::array<BitBoard, 4> castling_relevant_bbs = {
     bitops::e1_bitboard | bitops::h1_bitboard,
@@ -1097,8 +1097,8 @@ PieceType Board::next_see_attacker<kNoPiece>(const Color color, const Square tar
 bool Board::NonNegativeSEESquare(const Square target) const {
   Color cturn = turn^0x1;
   BitBoard all_pieces = get_all_pieces();
-  Score score = 0;
-  Score victim = see_values[GetPieceType(get_piece(target))];
+  NScore score = 0;
+  NScore victim = see_values[GetPieceType(get_piece(target))];
 
   BitBoard targetBB = GetSquareBitBoard(target);
   BitBoard attackers = (bitops::SE(targetBB) | bitops::SW(targetBB)) & get_piece_bitboard(kWhite, kPawn);
@@ -1126,8 +1126,8 @@ bool Board::NonNegativeSEE(const Move move) const {
   Color cturn = turn^0x1;
   Square target = GetMoveDestination(move);
   BitBoard all_pieces = get_all_pieces();
-  Score score = -see_values[GetPieceType(get_piece(target))];
-  Score victim = see_values[GetPieceType(get_piece(GetMoveSource(move)))];
+  NScore score = -see_values[GetPieceType(get_piece(target))];
+  NScore victim = see_values[GetPieceType(get_piece(GetMoveSource(move)))];
   all_pieces ^= GetSquareBitBoard(GetMoveSource(move));
 
   BitBoard targetBB = GetSquareBitBoard(target);

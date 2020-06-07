@@ -64,7 +64,6 @@ int kNodeCountSampleAt = 1000;
 const int kMaxDepthSampled = 32;
 #endif
 
-std::array<Score, 2> draw_score = { 0, 0 };
 int contempt = 0;
 bool armageddon = false;
 
@@ -91,8 +90,8 @@ Array2d<Depth, 64, 64> init_lmr_reductions(double div) {
   return lmr_reductions;
 }
 
-Vec<Score, 4> init_futility_margins(Score s) {
-  Vec<Score, 4> kFutilityMargins(0);
+Vec<NScore, 4> init_futility_margins(NScore s) {
+  Vec<NScore, 4> kFutilityMargins(0);
   for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
     kFutilityMargins[i] = s * i;
   }
@@ -100,17 +99,17 @@ Vec<Score, 4> init_futility_margins(Score s) {
 }
 
 #ifdef TUNE
-Score kInitialAspirationDelta = 120;
-Score kSNMPMargin = 588;// 587
+NScore kInitialAspirationDelta = 60;
+NScore kSNMPMargin = 588;// 587
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
-Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
+Vec<NScore, 4> kFutileMargin = init_futility_margins(1274);//900
 std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 #else
-constexpr Score kInitialAspirationDelta = 120;
-constexpr Score kSNMPMargin = 588;// 587
+constexpr NScore kInitialAspirationDelta = 60;
+constexpr NScore kSNMPMargin = 588;// 587
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
-const Vec<Score, 4> kFutileMargin = init_futility_margins(1274);//900
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(1274);//900
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
@@ -126,7 +125,7 @@ const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
 std::vector<MoveScore> search_weights(kNumMoveProbabilityFeatures);
 std::vector<MoveScore> search_weights_in_check(kNumMoveProbabilityFeatures);
 
-Score last_search_score = 0;
+Score last_search_score;
 
 bool print_info = true;
 
@@ -574,7 +573,7 @@ Score SQSearch(Board &board, Score alpha, const Score beta) {
   }
   std::vector<Move> moves = board.GetMoves<kQuiescent>();
   if (board.InCheck() && moves.size() == 0) {
-    return kMinScore+board.get_num_made_moves();
+    return GetMatedOnMoveScore(board.get_num_made_moves());
   }
   SortMoves<kQuiescent>(moves, board, 0);
 
@@ -598,8 +597,9 @@ Score SQSearch(Board &board) {
 
 template<int Mode>
 Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
+  assert(beta > alpha);
   t.nodes++;
-  Score lower_bound_score = kMinScore + t.board.get_num_made_moves();
+  Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
   //Update max ply reached in search
   if (t.max_depth < t.board.get_num_made_moves()) {
     t.max_depth = t.board.get_num_made_moves();
@@ -607,7 +607,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
   //End search immediately if trivial draw is reached
   if (t.board.IsTriviallyDrawnEnding()) {
-    return draw_score[t.board.get_turn()];;
+    return kDrawScore;
   }
 
   //TT probe
@@ -636,6 +636,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 //    }
 
     static_eval = net_evaluation::ScoreBoard(t.board);
+//    std::cout << "QS Eval return: (w:" << static_eval.win << ", wd:" << static_eval.win_draw << ")" << std::endl;
     if (valid_hash && entry.get_bound() == kLowerBound && static_eval < entry.get_score(t.board)) {
       static_eval = entry.get_score(t.board);
     }
@@ -658,7 +659,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   if (moves.size() == 0) {
     if (in_check) {
       //In check all moves are generated, so if we have no moves in check it is mate.
-      return kMinScore+t.board.get_num_made_moves();
+      return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
     return lower_bound_score;
   }
@@ -705,7 +706,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   return lower_bound_score;
 }
 
-inline Score get_futility_margin(Depth depth, Score score, bool improving) {
+inline NScore get_futility_margin(Depth depth, const Score score, bool improving) {
   return kFutileMargin[depth] - 100 * depth * improving;
 }
 
@@ -793,29 +794,34 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
 }
 
-inline constexpr Score get_singular_beta(Score beta, Depth depth) {
-  return beta - 4*depth;
+inline const Score get_singular_beta(Score beta, Depth depth) {
+  //return beta - 4*depth;
+  WDLScore result = WDLScore{beta.win - 2*depth, beta.win_draw - 2*depth};
+  if (result.win < 0) {
+    result.win_draw += result.win;
+    result.win = 0;
+  }
+  return result;
 }
 
 template<NodeType node_type, int Mode>
 Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expected_cut_node = false) {
-  assert(is_valid_score(alpha));
-  assert(is_valid_score(beta));
+  assert(alpha.is_valid());
+  assert(beta.is_valid());
   assert(beta > alpha);
-  assert(beta == get_next_score(alpha) || node_type != NodeType::kNW);
+  assert(beta.value() == get_next_score(alpha).value() || node_type != NodeType::kNW);
   assert(node_type != NodeType::kPV || !expected_cut_node);
 
   const Score original_alpha = alpha;
-  const Score score_draw = draw_score[t.board.get_turn()];
-  Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
+//  Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
 
   //Immediately return 0 if we detect a draw.
   if (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2)) {
     t.nodes++;
     if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kNonQuiescent>().empty()) {
-      return kMinScore+t.board.get_num_made_moves();
+      return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
-    return score_draw;
+    return kDrawScore;
   }
 
   //We drop to QSearch if we run out of depth.
@@ -825,6 +831,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       return net_evaluation::ScoreBoard(t.board);
     }
     return QuiescentSearch<Mode>(t, alpha, beta);
+//    t.board.Print();
+//    Score score = QuiescentSearch<Mode>(t, alpha, beta);
+//    std::cout << "AB QSearch return: (w:" << score.win << ", wd:" << score.win_draw << ")" << std::endl;
+//    return score;
   }
 
   // To avoid counting nodes twice if all we do is fall through to QSearch,
@@ -848,7 +858,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   bool strict_worsening = false;
 
   //Speculative pruning methods
-  if (node_type == NodeType::kNW && is_static_eval(beta) && !in_check) {
+  if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
 
     //Set static eval from board and TT entry.
     if (valid_entry) {
@@ -871,8 +881,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
-      Score margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
-      if (settings::kUseScoreBasedPruning && static_eval > beta + margin
+      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
+      if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
       }
@@ -896,9 +906,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   std::vector<Move> moves = t.board.GetMoves<kNonQuiescent>();
   if (moves.size() == 0) {
     if (in_check) {
-      return kMinScore+t.board.get_num_made_moves();
+      return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
-    return score_draw;
+    return kDrawScore;
   }
 
 //  if (Mode == kSamplingSearchMode && node_type == NodeType::kNW && depth <= kMaxDepthSampled) {
@@ -935,8 +945,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   //Ie no checks from special moves or discovered checks.
   Vec<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
+  Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
   std::vector<Move> quiets;
-  Score alpha_nw = get_next_score(alpha);
+  Score alpha_nw = alpha.get_next_score();
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
     if (i == 1 && !moves_sorted) {
@@ -948,8 +959,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
     Depth e = 0;// Extensions
     if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
         && entry.depth >= depth - 3 && !(node_type == NodeType::kPV && moves.size() == 1)
-        && entry.get_bound() != kUpperBound && is_static_eval(entry.get_score(t.board))
-        && is_static_eval(get_singular_beta(entry.get_score(t.board), depth)-1)) {
+        && entry.get_bound() != kUpperBound && entry.get_score(t.board).is_static_eval()
+        && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
       auto is_singular = move_is_singular(t, depth, moves, entry, expected_cut_node);
@@ -985,7 +996,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval < (alpha - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -1013,7 +1024,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
         score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e, false);
       }
     }
-    assert(is_valid_score(score));
+    assert(score.is_valid());
     t.board.UnMake();
 
     //Ensure we still have time and our score was not prematurely terminated
@@ -1083,9 +1094,9 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   const Score rBeta = get_singular_beta(beta, depth);
   const Score rAlpha = get_previous_score(rBeta);
   const Depth rDepth = (depth - 3) / 2;
-  assert(is_static_eval(beta));
-  assert(is_static_eval(rBeta));
-  assert(is_static_eval(rAlpha));
+  assert(beta.is_static_eval());
+  assert(rBeta.is_static_eval());
+  assert(rAlpha.is_static_eval());
   assert(entry.get_best_move() == moves[0]);
   assert(entry.get_bound() != kUpperBound);
 
@@ -1104,19 +1115,18 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
 template<int Mode>
 Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
                      Depth current_depth, std::vector<Move> &moves) {
-  assert(is_valid_score(original_alpha));
-  assert(is_valid_score(beta));
+  assert(original_alpha.is_valid());
+  assert(beta.is_valid());
   assert(original_alpha < beta);
 
   Score alpha = original_alpha;
   Score lower_bound_score = kMinScore;
-  const Score score_draw = draw_score[t.board.get_turn()];
   //const bool in_check = board.InCheck();
-  if (settings::kRepsForDraw == 3 && alpha < score_draw-1 && t.board.MoveInListCanRepeat(moves)) {
-    if (beta <= score_draw) {
-      return score_draw;
+  if (settings::kRepsForDraw == 3 && alpha < kDrawScore.get_previous_score() && t.board.MoveInListCanRepeat(moves)) {
+    if (beta <= kDrawScore) {
+      return kDrawScore;
     }
-    alpha = score_draw-1;
+    alpha = kDrawScore.get_previous_score();
   }
   const bool in_check = t.board.InCheck();
   for (size_t i = 0; i < moves.size(); ++i) {
@@ -1124,9 +1134,9 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
     t.board.Make(moves[i]);
     if (i == 0) {
       Score score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
-      assert(is_valid_score(score));
-      if (settings::kRepsForDraw == 3 && score < score_draw && t.board.CountRepetitions() >= 2) {
-        score = score_draw;
+      assert(score.is_valid());
+      if (settings::kRepsForDraw == 3 && score < kDrawScore && t.board.CountRepetitions() >= 2) {
+        score = kDrawScore;
       }
       t.board.UnMake();
       if (score >= beta) {
@@ -1149,8 +1159,8 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
       if (score > alpha) {
         score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
       }
-      if (settings::kRepsForDraw == 3 && score < score_draw && t.board.CountRepetitions() >= 2) {
-        score = score_draw;
+      if (settings::kRepsForDraw == 3 && score < kDrawScore && t.board.CountRepetitions() >= 2) {
+        score = kDrawScore;
       }
       lower_bound_score = std::max(score, lower_bound_score);
       t.board.UnMake();
@@ -1184,35 +1194,37 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score delta = kInitialAspirationDelta;
-    Score alpha = get_valid_score(score-delta);
-    Score beta = get_valid_score(score+delta);
+    Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
+    Score alpha = (score-delta).get_valid_score();
+    Score beta = (score+delta).get_valid_score();
     SortMovesML(moves, t, moves[0]);
-    assert(is_valid_score(alpha));
-    assert(is_valid_score(beta));
+//    assert(is_valid_score(alpha));
+//    assert(is_valid_score(beta));
     score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
     while (!finished(t) && (score <= alpha || score >= beta)) {
-      assert(delta > 0);
+      assert(delta.win > 0 && delta.win_draw > 0);
       if (score <= alpha) {
-        if (is_static_eval(beta)) {
-          beta = (std::max(score, kMinStaticEval) + (3 * beta)) / 4;
+        if (beta.is_static_eval()) {
+          beta = (std::max(score, kMinStaticEval) + (beta * 3)) / 4;
+          assert(beta.is_valid());
         }
-        alpha = get_valid_score(score - delta);
+        alpha = (score-delta).get_valid_score();
         if (alpha == score) {
           alpha = get_previous_score(score);
         }
       }
       else if (score >= beta) {
-        if (is_static_eval(alpha)) {
-          alpha = ((3 * alpha) + std::min(kMaxStaticEval, score)) / 4;
+        if (alpha.is_static_eval()) {
+          alpha = ((alpha * 3) + std::min(kMaxStaticEval, score)) / 4;
+          assert(alpha.is_valid());
         }
-        beta = get_valid_score(score + delta);
+        beta = (score + delta).get_valid_score();
         if (beta == score) {
           beta = get_next_score(score);
         }
       }
-      assert(is_valid_score(alpha));
-      assert(is_valid_score(beta));
+//      assert(is_valid_score(alpha));
+//      assert(is_valid_score(beta));
       assert(score > alpha && score < beta);
       score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
       delta *= 2;
@@ -1288,25 +1300,28 @@ void Thread::search() {
             << " seldepth " << (Threads.get_max_depth() - board.get_num_made_moves())
             << " time " << time_used.count()
             << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
-        if (!is_mate_score(score)) {
+        if (!score.is_mate_score()) {
           std::cout << " score cp ";
           if (armageddon) {
-            std::cout << (score / 8);
+            // TODO change this to reflect armageddon odds.
+            std::cout << (score.to_cp() / 8);
           }
           else {
-            std::cout << (net_evaluation::GetUnbiasedScore(score, board.get_turn()) / 8);
+            std::cout << (score.to_cp() / 8);
           }
+          std::cout << " " << score.get_uci_string();
+
         }
         else {
-          Score m_score = board.get_num_made_moves();
-          if (score < 0) {
-            m_score = -(score - kMinScore - m_score) / 2;
-            std::cout << " score mate " << m_score;
+          if (score.is_disadvantage()) {
+            NScore n_score = -(score.win - kMinScore.win - (int32_t)board.get_num_made_moves()) / 2;
+            std::cout << " score mate " << n_score;
           }
           else {
-            m_score = (kMaxScore - score - m_score + 2) / 2;
-            std::cout << " score mate " << m_score;
+            NScore n_score = (kMaxScore.win - score.win - (int32_t)board.get_num_made_moves() + 2) / 2;
+            std::cout << " score mate " << n_score;
           }
+          //std::cout << " w:" << score.win << " wd:" << score.win_draw;
         }
         std::cout << " pv";
         for (Move move : pv) {
@@ -1334,13 +1349,14 @@ void Thread::search() {
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
   table::UpdateGeneration();
-  if (armageddon) {
-    net_evaluation::SetContempt(60, kWhite);
-  }
-  else {
-    net_evaluation::SetContempt(contempt, board.get_turn());
-  }
-  draw_score = net_evaluation::GetDrawArray();
+  // TODO fix contempt and armageddon.
+//  if (armageddon) {
+//    net_evaluation::SetContempt(60, kWhite);
+//  }
+//  else {
+//    net_evaluation::SetContempt(contempt, board.get_turn());
+//  }
+//  draw_score = net_evaluation::GetDrawArray();
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
@@ -1932,7 +1948,7 @@ void EvaluateScoreDistributions(const int focus) {
       continue;
     }
     Score score = net_evaluation::ScoreBoard(sampled_board);
-    Score score_bin_idx = score;
+    NScore score_bin_idx = score.to_nscore();
     score_bin_idx += score_bin_size / 2;
     score_bin_idx /= score_bin_size;
     score_bin_idx += n_score_bins / 2;
@@ -1942,7 +1958,7 @@ void EvaluateScoreDistributions(const int focus) {
       for (Depth depth = 1; depth <= max_depth; ++depth) {
         DepthSearch(sampled_board, depth);
         Score ab_score = get_last_search_score();
-        Score dif = ab_score - score;
+        NScore dif = ab_score.to_nscore() - score.to_nscore();
         dif /= dif_bin_size;
         dif += n_dif_bins / 2;
         dif = std::max(0, (int)dif);
@@ -1962,17 +1978,17 @@ void EvaluateScoreDistributions(const int focus) {
             sampled_board.UnMake();
             continue;
           }
-          Score ab_score = 0;
+          NScore ab_score = 0;
           if (depth == 1) {
-            ab_score = -QSearch(sampled_board);
+            ab_score = -QSearch(sampled_board).to_nscore();
           }
           else {
             DepthSearch(sampled_board, depth - 1);
-            ab_score = -get_last_search_score();
+            ab_score = -get_last_search_score().to_nscore();
           }
           sampled_board.UnMake();
 
-          Score dif = ab_score - score;
+          NScore dif = ab_score - score.to_nscore();
           dif /= dif_bin_size;
           dif += n_dif_bins / 2;
           dif = std::max(0, (int)dif);
@@ -1984,8 +2000,8 @@ void EvaluateScoreDistributions(const int focus) {
     else if (focus == 2) {
       std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
       for (Depth depth = 1; depth <= max_depth; ++depth) {
-        Score max_dif = kMinScore;
-        Score max_forcing_dif = kMinScore;
+        NScore max_dif = kMinScore.to_nscore();
+        NScore max_forcing_dif = kMinScore.to_nscore();
         for (Move move : moves) {
           bool forcing = false;
           if (GetMoveType(move) >= kEnPassant) {
@@ -1995,21 +2011,21 @@ void EvaluateScoreDistributions(const int focus) {
           if (sampled_board.InCheck()) {
             forcing = true;
           }
-          Score ab_score = 0;
+          NScore ab_score = 0;
           if (depth == 1) {
-            ab_score = -QSearch(sampled_board);
+            ab_score = -QSearch(sampled_board).to_nscore();
           }
           else {
             DepthSearch(sampled_board, depth - 1);
-            ab_score = -get_last_search_score();
+            ab_score = -get_last_search_score().to_nscore();
           }
           sampled_board.UnMake();
 
           if (forcing) {
-            max_forcing_dif = std::max(ab_score - score, max_forcing_dif);
+            max_forcing_dif = std::max(ab_score - score.to_nscore(), max_forcing_dif);
           }
           else {
-            max_dif = std::max(ab_score - score, max_dif);
+            max_dif = std::max(ab_score - score.to_nscore(), max_dif);
 
           }
         }
@@ -2091,7 +2107,7 @@ void EvaluateCaptureMoveValue(int n) {
   }
   for (int j = 0; j < 6; ++j) {
     for (int i = 1; i < n; ++i) {
-      std::cout << i << ":" << move_scores[j][move_scores[j].size() * i / (n)] << " ";
+      std::cout << i << ":" << move_scores[j][move_scores[j].size() * i / (n)].to_nscore() << " ";
     }
     std::cout << std::endl << std::endl;
   }
@@ -2121,7 +2137,7 @@ std::vector<Board> GenerateEvalSampleSet(std::string filename) {
 }
 
 void SetContempt(int contempt_) {
-  contempt = contempt_;
+  contempt = (contempt_ + 100) / 2;
 }
 
 void SetArmageddon(bool armageddon_) {
@@ -2129,15 +2145,15 @@ void SetArmageddon(bool armageddon_) {
 }
 
 #ifdef TUNE
-void SetInitialAspirationDelta(Score delta) {
+void SetInitialAspirationDelta(NScore delta) {
   kInitialAspirationDelta = delta;
 }
 
-void SetFutilityMargin(Score score) {
+void SetFutilityMargin(NScore score) {
   kFutileMargin = init_futility_margins(score);
 }
 
-void SetSNMPMargin(Score score) {
+void SetSNMPMargin(NScore score) {
   kSNMPMargin = score;
 }
 

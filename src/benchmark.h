@@ -37,7 +37,6 @@ double EntropyLossTimedSuite(Milliseconds time_per_position);
 double EntropyLossNodeSuite(size_t nodes_per_position);
 void PerftSuite();
 void SymmetrySuite();
-void GenerateDatasetFromEPD();
 double ZuriChessDatasetLoss();
 
 }

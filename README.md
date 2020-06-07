@@ -20,6 +20,8 @@ Winter versions 0.7 and later have support for contempt settings. In most engine
 
 Winter uses a novel contempt implementation that utilizes the fact that Winter calculates win, draw and loss probabilities. Increasing contempt in Winter reduces how much it values draws for itself and increases how much it believes the opponent values draws.
 
+As of version v0.8.1 disabled. If I don't remember to add this again before v0.9, please pester me with an issue on github!
+
 #### Centipawn output recalibration
 
 Internally Winter actually tends to have a negative score for positive contempt and vice versa. This is natural as positive contempt is reducing the value of a draw for the side to move, so the score will be negatively biased.
@@ -34,6 +36,8 @@ An increasingly popular format in human chess is Armageddon. Winter is the first
 At the moment contempt is not set to the maximum in Armageddon mode. In the limited testing done this proved to perform more consistently. This may change in the future.
 
 In Armageddon mode score recalibration is not performed. The score recalibration formula for regular contempt assumes the contempt pushes the score away from the true symmetrical evaluation. In Armageddon the true eval is not symmetric.
+
+As of version v0.8.1 disabled. If I don't remember to add this again before v0.9, please pester me with an issue on github!
 
 ## Training Your Own Winter Flavor
 

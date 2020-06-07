@@ -60,18 +60,19 @@ std::vector<Game> LoadGames(size_t max_games, std::string game_file) {
       }
     }
     if (tokens[tokens.size()-1].compare("1-0") == 0) {
-      game.result = 1;
+      game.result = WDLScore::from_pct(1.0, 1.0);
     }
     else if (tokens[tokens.size()-1].compare("0-1") == 0) {
-      game.result = 0;
+      game.result = WDLScore::from_pct(0.0, 0.0);
     }
     else if (tokens[tokens.size()-1].compare("1/2-1/2") == 0) {
-      game.result = 0.5;
+      game.result = WDLScore::from_pct(0.0, 1.0);
     }
     else {
       std::cout << "read error: result!" << std::endl;
-      game.result = 0.5;
+      exit(1);
     }
+    assert(game.result.is_valid());
     games.emplace_back(game);
     if (games.size() % 10000 == 0) {
       std::cout << "\rloaded " << games.size() << " games!" << std::flush;

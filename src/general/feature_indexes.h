@@ -42,14 +42,14 @@ const int kPSTindex[64] = {
 };
 
 struct FeatureInfo {
-  FeatureInfo(std::string info_, int idx_, Score min = kMinScore,
-              Score max = kMaxScore, int encoded_info_ = 0) :
+  FeatureInfo(std::string info_, int idx_, NScore min = kMinNScore,
+              NScore max = kMaxNScore, int encoded_info_ = 0) :
     info(info_), idx(idx_), min_value(min),
     max_value(max), encoded_info(encoded_info_){ };
   const std::string info;
   const size_t idx;
-  const Score min_value;
-  const Score max_value;
+  const NScore min_value;
+  const NScore max_value;
   const int encoded_info;
 };
 
@@ -102,31 +102,31 @@ const size_t kNumFeatures = kUncoveredPassedPawn + (2 * 2 * 6);
 
 const std::array<FeatureInfo, 33> kFeatureInfos = {{
     FeatureInfo("King Piece Square Table", kKingPSTIndex),
-    FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxScore),
-    FeatureInfo("Piece Base Value", kBaseValueIndex, kMinScore, kMaxScore),
-    FeatureInfo("Bishop Pair", kBishopPairIndex, 0, kMaxScore),
-    FeatureInfo("Piece Activity Bonus", kActivityBonusIndex, 0, kMaxScore),
-    FeatureInfo("Abstract Piece Activity Bonus", kAbstractActivityIndex, 0, kMaxScore),
-    FeatureInfo("Passed Pawn Bonus", kPassedPawnBonusIndex, 0, kMaxScore),
+    FeatureInfo("Knight Piece Square Table", kKnightPSTIndex, 0, kMaxNScore),
+    FeatureInfo("Piece Base Value", kBaseValueIndex, kMinNScore, kMaxNScore),
+    FeatureInfo("Bishop Pair", kBishopPairIndex, 0, kMaxNScore),
+    FeatureInfo("Piece Activity Bonus", kActivityBonusIndex, 0, kMaxNScore),
+    FeatureInfo("Abstract Piece Activity Bonus", kAbstractActivityIndex, 0, kMaxNScore),
+    FeatureInfo("Passed Pawn Bonus", kPassedPawnBonusIndex, 0, kMaxNScore),
     //FeatureInfo("Passed Pawn Unblocked", kPassedPawnUnblocked),
-    //FeatureInfo("Rook Behind Passed Pawn Bonus", kRookBehindPasser, -5, kMaxScore),
-    FeatureInfo("Double Pawn Penalty", kDoublePawnPenaltyIndex, kMinScore, 0),
-    FeatureInfo("Isolated Pawn", kIsolatedPawnIndex, kMinScore, 0),
-    FeatureInfo("Tempo Bonus", kTempoBonusIndex, 0, kMaxScore),
+    //FeatureInfo("Rook Behind Passed Pawn Bonus", kRookBehindPasser, -5, kMaxNScore),
+    FeatureInfo("Double Pawn Penalty", kDoublePawnPenaltyIndex, kMinNScore, 0),
+    FeatureInfo("Isolated Pawn", kIsolatedPawnIndex, kMinNScore, 0),
+    FeatureInfo("Tempo Bonus", kTempoBonusIndex, 0, kMaxNScore),
     FeatureInfo("Direct Pawn Shield Bonus", kDirectPawnShieldBonus),
     FeatureInfo("King Vector Exposure", kKingVectorExposure),
     FeatureInfo("Knight Outpost", kKnightOutpost),
-    FeatureInfo("Castling Right", kCastlingRight, 0, kMaxScore),
-    FeatureInfo("Pawn Attack", kPawnAttackIndex, 0, kMaxScore),
-    FeatureInfo("Minor Attack", kMinorAttackIndex, 0, kMaxScore),
+    FeatureInfo("Castling Right", kCastlingRight, 0, kMaxNScore),
+    FeatureInfo("Pawn Attack", kPawnAttackIndex, 0, kMaxNScore),
+    FeatureInfo("Minor Attack", kMinorAttackIndex, 0, kMaxNScore),
     FeatureInfo("King Defence Distance", kKingDefenceDistance),
-    FeatureInfo("King Attack Distance", kKingAttackDistance, kMinScore, 0),
-    FeatureInfo("King Attack Danger", kKingAttack, 0, kMaxScore),
-    FeatureInfo("Safe Knight Square Count", kKnightSquaresIndex, kMinScore, kMaxScore, 1),
-    FeatureInfo("Bishop Mobility", kBishopMobility, kMinScore, kMaxScore, 1),
-    FeatureInfo("Rook Mobility", kRookMobility, kMinScore, kMaxScore, 1),
-    FeatureInfo("Rook on Open File", kRookOpenFile, 0, kMaxScore),
-    FeatureInfo("Queen Mobility", kQueenMobility, kMinScore, kMaxScore, 1),
+    FeatureInfo("King Attack Distance", kKingAttackDistance, kMinNScore, 0),
+    FeatureInfo("King Attack Danger", kKingAttack, 0, kMaxNScore),
+    FeatureInfo("Safe Knight Square Count", kKnightSquaresIndex, kMinNScore, kMaxNScore, 1),
+    FeatureInfo("Bishop Mobility", kBishopMobility, kMinNScore, kMaxNScore, 1),
+    FeatureInfo("Rook Mobility", kRookMobility, kMinNScore, kMaxNScore, 1),
+    FeatureInfo("Rook on Open File", kRookOpenFile, 0, kMaxNScore),
+    FeatureInfo("Queen Mobility", kQueenMobility, kMinNScore, kMaxNScore, 1),
     FeatureInfo("Safe Checks", kSafeChecks),
     FeatureInfo("Unsafe Checks", kUnSafeChecks),
     FeatureInfo("Unprotected Pieces", kUnprotectedPieces),

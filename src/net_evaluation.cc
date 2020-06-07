@@ -814,9 +814,10 @@ Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
 
-  float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
+  //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
 
-  return wpct_to_score(wpct);
+  //return wpct_to_score(wpct);
+  return WDLScore::from_pct(sigmoid(win), sigmoid(win_draw));
 }
 
 Score ScoreBoard(const Board &board) {
@@ -1007,21 +1008,12 @@ void AddHeader(std::ofstream &file, std::string feature_name_prefix, int feature
 
 void AddGame(const Game &game, std::ofstream &res_file, std::ofstream &dynamic_features_file,
              std::ofstream &static_features_file) {
-  int win = 0;
-  int loss = 0;
-  if (game.result == 1) {
-    win = 1;
-  }
-  else if (game.result == 0) {
-    loss = 1;
-  }
-  else {
-    assert(game.result == 0.5);
-  }
+  WDLScore result = game.result;
   if (game.board.get_turn() == kBlack) {
-    std::swap(win, loss);
+    result = -result;
   }
-  res_file << win << "," << (1-loss) << std::endl;
+  res_file << result.get_win_probability() << ","
+      << result.get_win_draw_probability() << std::endl;
 
   std::vector<int> dynamic_features = GetNetInputs(game.board);
   dynamic_features_file << dynamic_features[0];
@@ -1048,7 +1040,7 @@ void StoreEvalDataset(const std::vector<Game> &games, std::string out_file_name)
 
   Game game_start;
   game_start.board.SetStartBoard();
-  game_start.result = 0.5;
+  game_start.result = WDLScore::from_pct(0.0, 1.0);
   AddGame(game_start, res_file, dynamic_features_file, static_features_file);
 
   size_t samples = 1;
@@ -1091,19 +1083,9 @@ void StoreEvalDatasetOld(const std::vector<Game> &games, std::string out_file_na
   }
 
   for (Game game : games) {
-    int win = 0;
-    int loss = 0;
-    if (game.result == 1) {
-      win = 1;
-    }
-    else if (game.result == 0) {
-      loss = 1;
-    }
-    else {
-      assert(game.result == 0.5);
-    }
+    WDLScore result = game.result;
     if (game.board.get_turn() == kBlack) {
-      std::swap(win, loss);
+      result = -result;
     }
     std::vector<int> features = GetNetInputs(game.board);
     if (samples == 0) {
@@ -1113,7 +1095,7 @@ void StoreEvalDatasetOld(const std::vector<Game> &games, std::string out_file_na
       }
       dfile << std::endl;
     }
-    dfile << win << ", " << (1-loss);
+    dfile << result.get_win_probability() << ", " << result.get_win_draw_probability();
     for (int feature : features) {
       dfile << ", " << feature;
     }
@@ -1199,13 +1181,13 @@ void AddArasanEPDs(std::vector<Game> &games) {
     Game game;
     game.board = board;
     if (tokens[8].compare("\"1.000\";") == 0) {
-      game.result = 1;
+      game.result = WDLScore::from_pct(1.0, 1.0);
     }
     else if (tokens[8].compare("\"0.000\";") == 0) {
-      game.result = 0;
+      game.result = WDLScore::from_pct(0.0, 0.0);
     }
     else if (tokens[8].compare("\"0.500\";") == 0) {
-      game.result = 0.5;
+      game.result = WDLScore::from_pct(0.0, 1.0);
     }
     else {
       std::cout << "Error detected! Line:" << std::endl;
@@ -1235,13 +1217,13 @@ void AddZCEPDs(std::vector<Game> &games) {
     Game game;
     game.board = board;
     if (tokens[5].compare("\"1-0\";") == 0) {
-      game.result = 1;
+      game.result = WDLScore::from_pct(1.0, 1.0);
     }
     else if (tokens[5].compare("\"0-1\";") == 0) {
-      game.result = 0;
+      game.result = WDLScore::from_pct(0.0, 0.0);
     }
     else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
-      game.result = 0.5;
+      game.result = WDLScore::from_pct(0.0, 1.0);
     }
     else {
       std::cout << "Error detected! Line:" << std::endl;
@@ -1337,37 +1319,5 @@ void EstimateFeatureImpact() {
 //  }
 }
 #endif
-
-void SetContempt(int value, Color color) {
-  float f = (value + 100) * 0.005;
-  contempt[color] = f;
-  contempt[color ^ 0x1] = 1-f;
-}
-
-std::array<Score, 2> GetDrawArray() {
-  Score score = wpct_to_score(contempt[0]);
-  std::array<Score, 2> result = { -score, score };
-  return result;
-}
-
-Score GetUnbiasedScore(Score score, Color color) {
-  Color not_color = color ^ 0x1;
-  constexpr float kEpsilon = 0.000001;
-  float wpct = score_to_wpct(score);
-  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
-  float w, wd;
-  if (wpct == contempt[not_color]) {
-    return 0;
-  }
-  else if (wpct > contempt[not_color]) {
-    w = (wpct - contempt[not_color]) / contempt[color];
-    wd = 1.0;
-  }
-  else {
-    w = 0.0;
-    wd = wpct / contempt[not_color];
-  }
-  return wpct_to_cp((w + wd) / 2);
-}
 
 }

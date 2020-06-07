@@ -65,12 +65,15 @@ const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 const std::string kUCIHashOptionString =
     "option name Hash type spin default 32 min 1 max 104576"
-    "\noption name Threads type spin default 1 min 1 max 256"
-    "\noption name Contempt type spin default 0 min -100 max 100"
+//    "\noption name Contempt type spin default 0 min -100 max 100"
+//#ifndef TUNE
+//    "\noption name Armageddon type check default false";
+//#else
+//    "\noption name Armageddon type check default false"
 #ifndef TUNE
-    "\noption name Armageddon type check default false";
+    "\noption name Threads type spin default 1 min 1 max 256";
 #else
-    "\noption name Armageddon type check default false"
+    "\noption name Threads type spin default 1 min 1 max 256"
     "\noption name AspirationDelta type spin default 120 min 10 max 800"
     "\noption name Futility type spin default 1274 min 400 max 1500"
     "\noption name SNMPMargin type spin default 588 min 0 max 2000"
@@ -133,9 +136,9 @@ void Reply(std::string message) {
   std::cout << message << std::endl;
 }
 
-bool IsTrue(std::string s) {
-  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
-}
+//bool IsTrue(std::string s) {
+//  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
+//}
 
 
 }
@@ -187,7 +190,7 @@ void Loop() {
       std::cout << board.IsDraw() << std::endl;
     }
     else if (Equals(command, "evaluate")) {
-      std::cout << net_evaluation::ScoreBoard(board) << std::endl;
+      std::cout << net_evaluation::ScoreBoard(board).to_nscore() << std::endl;
     }
     else if (Equals(command, "uci")) {
       Reply(kEngineNamePrefix + settings::engine_name + " "
@@ -215,16 +218,17 @@ void Loop() {
         int num_threads = atoi(tokens[index++].c_str());
         search::Threads.set_num_threads(num_threads);
       }
-      if (Equals(command, "Contempt")) {
-        index++;
-        int contempt = atoi(tokens[index++].c_str());
-        search::SetContempt(contempt);
-      }
-      if (Equals(command, "Armageddon")) {
-        index++;
-        bool armageddon_setting = IsTrue(tokens[index++]);
-        search::SetArmageddon(armageddon_setting);
-      }
+      // TODO re-add contempt
+//      if (Equals(command, "Contempt")) {
+//        index++;
+//        int contempt = atoi(tokens[index++].c_str());
+//        search::SetContempt(contempt);
+//      }
+//      if (Equals(command, "Armageddon")) {
+//        index++;
+//        bool armageddon_setting = IsTrue(tokens[index++]);
+//        search::SetArmageddon(armageddon_setting);
+//      }
 #ifdef TUNE
       if (Equals(command, "AspirationDelta")) {
         index++;

@@ -40,7 +40,7 @@
  */
 typedef int32_t MoveHistoryInformation;
 
-class Board{
+class Board {
 public:
   //Board constructor initializes the board to the starting position.
   Board();
