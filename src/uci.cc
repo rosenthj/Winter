@@ -74,9 +74,9 @@ const std::string kUCIHashOptionString =
     "\noption name Threads type spin default 1 min 1 max 256";
 #else
     "\noption name Threads type spin default 1 min 1 max 256"
-    "\noption name AspirationDelta type spin default 120 min 10 max 800"
+    "\noption name AspirationDelta type spin default 40 min 10 max 800"
     "\noption name Futility type spin default 1274 min 400 max 1500"
-    "\noption name SNMPMargin type spin default 588 min 0 max 2000"
+    "\noption name SNMPMargin type spin default 640 min 0 max 2000"
     "\noption name LMRDivisor type spin default 134 min 60 max 250";
 #endif
 
@@ -232,17 +232,17 @@ void Loop() {
 #ifdef TUNE
       if (Equals(command, "AspirationDelta")) {
         index++;
-        Score delta = atoi(tokens[index++].c_str());
+        NScore delta = atoi(tokens[index++].c_str());
         search::SetInitialAspirationDelta(delta);
       }
       if (Equals(command, "Futility")) {
         index++;
-        int futility = atoi(tokens[index++].c_str());
+        NScore futility = atoi(tokens[index++].c_str());
         search::SetFutilityMargin(futility);
       }
       if (Equals(command, "SNMPMargin")) {
         index++;
-        int margin = atoi(tokens[index++].c_str());
+        NScore margin = atoi(tokens[index++].c_str());
         search::SetSNMPMargin(margin);
       }
       if (Equals(command, "LMRDivisor")) {

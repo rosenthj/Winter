@@ -99,15 +99,15 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 }
 
 #ifdef TUNE
-NScore kInitialAspirationDelta = 60;
-NScore kSNMPMargin = 588;// 587
+NScore kInitialAspirationDelta = 40;
+NScore kSNMPMargin = 640;
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 Vec<NScore, 4> kFutileMargin = init_futility_margins(1274);//900
 std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 #else
-constexpr NScore kInitialAspirationDelta = 60;
-constexpr NScore kSNMPMargin = 588;// 587
+constexpr NScore kInitialAspirationDelta = 40;
+constexpr NScore kSNMPMargin = 640;
 Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(1274);//900
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
