@@ -471,10 +471,20 @@ void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_mo
 }
 
 // Recursively build PV from TT up to param depth
-void build_pv(Board &board, std::vector<Move> &pv, const Depth depth) {
-  if (depth == 0) {
-    return;
+void build_pv(Board &board, std::vector<Move> &pv);
+
+void build_pv(Board &board, std::vector<Move> &pv, Move legal_move) {
+  constexpr size_t kMaxPvLength = 100;
+  pv.emplace_back(legal_move);
+  board.Make(legal_move);
+  if (!board.IsDraw() && board.CountRepetitions(min_ply) <= 2
+      && pv.size() < kMaxPvLength) {
+    build_pv(board, pv);
   }
+  board.UnMake();
+}
+
+void build_pv(Board &board, std::vector<Move> &pv) {
   table::Entry entry = table::GetEntry(board.get_hash());
   bool entry_verified = table::ValidateHash(entry, board.get_hash());
 
@@ -482,11 +492,7 @@ void build_pv(Board &board, std::vector<Move> &pv, const Depth depth) {
     std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
     for (Move move : moves) {
       if ((move == entry.get_best_move() && entry_verified)) {
-        pv.emplace_back(move);
-        board.Make(move);
-        build_pv(board, pv, depth-1);
-        board.UnMake();
-        return;
+        return build_pv(board, pv, move);
       }
     }
   }
@@ -1233,6 +1239,55 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
 }
 
+void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
+                        const Time &end, const Score &score, const Move best_move) {
+  std::vector<Move> pv;
+  build_pv(t.board, pv, best_move);
+  size_t node_count = Threads.get_node_count();
+  auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
+  if (print_info) {
+    std::cout << "info "  << " depth " << depth
+        << " seldepth " << (Threads.get_max_depth() - t.board.get_num_made_moves())
+        << " time " << time_used.count()
+        << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
+
+    // Limiting to hashfull above 1 second reduces my anxiety about hashfull impacting performance.
+    // This is also found in SF.
+    if (time_used.count() > 1000) {
+      std::cout << " hashfull " << table::GetHashfull();
+    }
+
+    if (!score.is_mate_score()) {
+      std::cout << " score cp ";
+      if (armageddon) {
+        // TODO change this to reflect armageddon odds.
+        std::cout << (score.to_cp() / 8);
+      }
+      else {
+        std::cout << (score.to_cp() / 8);
+      }
+      std::cout << " " << score.get_uci_string();
+
+    }
+    else {
+      if (score.is_disadvantage()) {
+        NScore n_score = -(score.win - kMinScore.win - (int32_t)t.board.get_num_made_moves()) / 2;
+        std::cout << " score mate " << n_score;
+      }
+      else {
+        NScore n_score = (kMaxScore.win - score.win - (int32_t)t.board.get_num_made_moves() + 2) / 2;
+        std::cout << " score mate " << n_score;
+      }
+      //std::cout << " w:" << score.win << " wd:" << score.win_draw;
+    }
+    std::cout << " pv";
+    for (Move move : pv) {
+      std::cout << " " << parse::MoveToString(move);
+    }
+    std::cout << std::endl;
+  }
+}
+
 void Thread::search() {
   const Time begin = now();
   double time_factor = 1.0;
@@ -1290,45 +1345,11 @@ void Thread::search() {
       if (id != 0) {
         continue;
       }
-      std::vector<Move> pv;
-      build_pv(board, pv, current_depth);
-      size_t node_count = Threads.get_node_count();
       Time end = now();
-      auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
-      if (print_info) {
-        std::cout << "info "  << " depth " << current_depth
-            << " seldepth " << (Threads.get_max_depth() - board.get_num_made_moves())
-            << " time " << time_used.count()
-            << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
-        if (!score.is_mate_score()) {
-          std::cout << " score cp ";
-          if (armageddon) {
-            // TODO change this to reflect armageddon odds.
-            std::cout << (score.to_cp() / 8);
-          }
-          else {
-            std::cout << (score.to_cp() / 8);
-          }
-          std::cout << " " << score.get_uci_string();
 
-        }
-        else {
-          if (score.is_disadvantage()) {
-            NScore n_score = -(score.win - kMinScore.win - (int32_t)board.get_num_made_moves()) / 2;
-            std::cout << " score mate " << n_score;
-          }
-          else {
-            NScore n_score = (kMaxScore.win - score.win - (int32_t)board.get_num_made_moves() + 2) / 2;
-            std::cout << " score mate " << n_score;
-          }
-          //std::cout << " w:" << score.win << " wd:" << score.win_draw;
-        }
-        std::cout << " pv";
-        for (Move move : pv) {
-          std::cout << " " << parse::MoveToString(move);
-        }
-        std::cout << std::endl;
-      }
+      PrintUCIInfoString(*this, current_depth, begin, end, score, moves[0]);
+
+      auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (!fixed_search_time) {
         if (last_best == moves[0]) {
           time_factor = std::max(time_factor * 0.9, 0.5);
@@ -1365,7 +1386,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_mode = Mode;
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   assert(moves.size() != 0);
-  if (moves.size() == 1) {
+  if (moves.size() == 1 && !fixed_search_time) {
     return moves[0];
   }
   table::Entry entry = table::GetEntry(board.get_hash());

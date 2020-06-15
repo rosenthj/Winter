@@ -152,6 +152,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   entry.set_score(score, board);
   entry.set_best_move(best_move);
   entry.set_gen_and_bound(bound);
+  assert(entry.get_generation() == current_generation);
   entry.depth = depth;
   table[index] = entry;
 }
@@ -207,6 +208,14 @@ void Entry::set_gen() {
 
 void Entry::set_gen_and_bound(uint8_t bound) {
   gen_and_bound = current_generation | bound;
+}
+
+size_t GetHashfull() {
+  size_t result;
+  for (size_t i = 0; i < 1000; ++i) {
+    result += (table[i].get_generation() == current_generation);
+  }
+  return result;
 }
 
 }

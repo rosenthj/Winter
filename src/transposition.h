@@ -79,6 +79,8 @@ bool ValidateHash(const Entry &entry, const HashType hash);
 void UpdateGeneration();
 void ClearTable();
 
+size_t GetHashfull();
+
 }
 
 #endif /* TRANSPOSITION_H_ */

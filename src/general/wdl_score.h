@@ -28,7 +28,7 @@ struct WDLScore {
   constexpr float get_win_draw_probability() const { return win_draw / static_cast<float>(scale); }
   constexpr float get_loss_probability() const { return 1.0 - get_win_draw_probability(); }
 
-  std::string get_uci_string() {
+  std::string get_uci_string() const {
     std::string output = "wdl";
     output += " " + std::to_string(win / 4);
     output += " " + std::to_string((win_draw - win) / 4);
