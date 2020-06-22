@@ -27,9 +27,12 @@
 #include "magic.h"
 #include "bit_operations.h"
 #include "types.h"
-#include <immintrin.h>
 #include <cassert>
 #include <array>
+
+#if defined(__BMI2__)
+#include <immintrin.h>
+#endif
 
 
 namespace {
