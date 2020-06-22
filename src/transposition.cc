@@ -211,7 +211,7 @@ void Entry::set_gen_and_bound(uint8_t bound) {
 }
 
 size_t GetHashfull() {
-  size_t result;
+  size_t result = 0;
   for (size_t i = 0; i < 1000; ++i) {
     result += (table[i].get_generation() == current_generation);
   }
