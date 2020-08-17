@@ -1060,55 +1060,6 @@ void StoreEvalDataset(const std::vector<Game> &games, std::string out_file_name)
   static_features_file.close();
 }
 
-
-void StoreEvalDatasetOld(const std::vector<Game> &games, std::string out_file_name) {
-  std::ofstream dfile(out_file_name);
-  size_t samples = 0;
-  if (true) {
-    Board board;
-    std::vector<int> features = GetNetInputs(board);
-    if (samples == 0) {
-      dfile << "win,windraw";
-      for (size_t i = 0; i < features.size(); i++) {
-        dfile << ",fe" << i;
-      }
-      dfile << std::endl;
-    }
-    dfile << "0, 1";
-    for (int feature : features) {
-      dfile << ", " << feature;
-    }
-    dfile << std::endl;
-    samples++;
-  }
-
-  for (Game game : games) {
-    WDLScore result = game.result;
-    if (game.board.get_turn() == kBlack) {
-      result = -result;
-    }
-    std::vector<int> features = GetNetInputs(game.board);
-    if (samples == 0) {
-      dfile << "win,windraw";
-      for (size_t i = 0; i < features.size(); i++) {
-        dfile << ",fe" << i;
-      }
-      dfile << std::endl;
-    }
-    dfile << result.get_win_probability() << ", " << result.get_win_draw_probability();
-    for (int feature : features) {
-      dfile << ", " << feature;
-    }
-    dfile << std::endl;
-    samples++;
-    if (samples % 10000 == 0) {
-      std::cout << "Processed " << samples << " samples!" << std::endl;
-    }
-  }
-  dfile.flush();
-  dfile.close();
-}
-
 void RerollCommonFeatureGames(std::vector<Game> &games, size_t reroll_pct) {
   reroll_pct = reroll_pct % 100;
   if (reroll_pct > 0) {
@@ -1203,9 +1154,9 @@ void AddArasanEPDs(std::vector<Game> &games) {
   file.close();
 }
 
-void AddZCEPDs(std::vector<Game> &games) {
+void AddEPDPositions(std::vector<Game> &games, std::string filename) {
   std::string line;
-  std::ifstream file("quiet-labeled.epd");
+  std::ifstream file(filename);
 
   while(std::getline(file, line)) {
     std::vector<std::string> tokens = parse::split(line, ' ');
@@ -1239,8 +1190,44 @@ void AddZCEPDs(std::vector<Game> &games) {
   file.close();
 }
 
-void GenerateDatasetFromEPD() {
+void AddZCEPDs(std::vector<Game> &games) {
+  AddEPDPositions(games, "quiet-labeled.epd");
+}
 
+void AddEPD(const Game &game, std::ofstream &res_file) {
+  const std::vector<std::string> fen = game.board.GetFen();
+  for (std::string token : fen) {
+    res_file << token << " ";
+  }
+  if (game.result.get_win_probability() > 0.999) {
+    res_file << "c9 \"1-0\";" << std::endl;
+  }
+  else if (game.result.get_draw_probability() > 0.999) {
+    res_file << "c9 \"1/2-1/2\";" << std::endl;
+  }
+  else {
+    assert(game.result.get_loss_probability() > 0.999);
+    res_file << "c9 \"0-1\";" << std::endl;
+  }
+}
+
+void StoreToEPD(std::vector<Game> &games, std::string out_file_name) {
+  std::ofstream res_file(out_file_name + ".epd");
+
+  size_t samples = 0;
+  for (Game game : games) {
+    AddEPD(game, res_file);
+    samples++;
+    if (samples % 10000 == 0) {
+      std::cout << "Processed " << samples << " samples!" << std::endl;
+    }
+  }
+
+  res_file.flush();
+  res_file.close();
+}
+
+void GenerateEPD() {
   std::vector<Game> games = LoadTrainingGamesForTraining("Games.ucig", 3000000);
   std::cout << "Added positions from Games.ucig: " << games.size() << std::endl;
   AddZCEPDs(games);
@@ -1252,6 +1239,12 @@ void GenerateDatasetFromEPD() {
   std::mt19937 g(rd());
   std::shuffle(games.begin(), games.end(), g);
 
+  StoreToEPD(games, "eval_dataset");
+}
+
+void GenerateDatasetFromEPD() {
+  std::vector<Game> games;
+  AddEPDPositions(games, "eval_dataset.epd");
   StoreEvalDataset(games, "eval_dataset");
 }
 
