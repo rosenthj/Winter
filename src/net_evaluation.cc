@@ -70,7 +70,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20051601; // Unused warning is expected.
+const int net_version = 20082200; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
@@ -872,7 +872,6 @@ void init_cnn_bias(NetLayerType &cnn_bias, const std::array<float, size> &bias_w
 
 void init_weights() {
   // Init cnn net weights
-  Array3d<NetLayerType, 5, 5, 3> const_channel_filters;
 
   size_t idx = 0;
   for (size_t h = 0; h < cnn_l1_filters.size(); ++h) {
@@ -882,47 +881,14 @@ void init_weights() {
           cnn_l1_filters[h][w][i][j] = net_hardcode::cnn_l1_weights[idx++];
         }
       }
-      for (size_t i = 0; i < const_channel_filters[0][0].size(); ++i) {
-        for (size_t j = 0; j < const_channel_filters[0][0][0].size(); ++j) {
-          const_channel_filters[h][w][i][j] = net_hardcode::cnn_l1_weights[idx++];
-        }
-      }
     }
   }
 
-  NetLayerType cnn_input_bias_b(0);
-  for (size_t i = 0; i < net_hardcode::cnn_l1_bias.size() && i < cnn_input_bias_b.size(); ++i) {
-    cnn_input_bias_b[i] = net_hardcode::cnn_l1_bias[i];
-  }
-
-  Array3d<float, 8, 8, 3> const_channel_inputs;
-  for (size_t i = 0; i < 8; ++i) {
-    for (size_t j = 0; j < 8; ++j) {
-      cnn_input_bias[i][j] = cnn_input_bias_b;
-      const_channel_inputs[i][j][0] = 1;
-      const_channel_inputs[i][j][1] = i / 7.0;
-      const_channel_inputs[i][j][2] = j / 3.0;
-      if (j >= 4) {
-        const_channel_inputs[i][j][2] = (7-j) / 3.0;
-      }
-    }
-  }
-
-  for (size_t h = 0; h < cnn_input_bias.size(); ++h) {
-    for (size_t w = 0; w < cnn_input_bias[0].size(); ++w) {
-      for (size_t i = 0; i < 5; ++i) {
-        if (h+i <= 1 || h+i >= 10) {
-          continue;
-        }
-        for (size_t j = 0; j < 5; ++j) {
-          if (w+j <= 1 || w+j >= 10) {
-            continue;
-          }
-          for (size_t c = 0; c < const_channel_filters[i][j].size(); ++c) {
-            cnn_input_bias[h][w] += const_channel_inputs[h+i-2][w+j-2][c]
-                                            * const_channel_filters[i][j][c];
-          }
-        }
+  idx = 0;
+  for (size_t i = 0; i < cnn_input_bias.size(); ++i) {
+    for (size_t j = 0; j < cnn_input_bias[0].size(); ++j) {
+      for (size_t k = 0; k < cnn_input_bias[0][0].size(); ++k) {
+        cnn_input_bias[i][j][k] = net_hardcode::cnn_l1_bias[idx++];
       }
     }
   }
