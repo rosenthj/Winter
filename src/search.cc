@@ -909,10 +909,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   }
 
   if (node_type == NodeType::kPV && depth >= 5 && !valid_entry) {
-    depth--;
-     if (depth >= 5) {
-       depth--;
-     }
+    depth -= 1 + (depth >= 6);
   }
 
   //Get move list and return result if there are no legal moves
