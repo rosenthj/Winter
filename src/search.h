@@ -45,6 +45,7 @@ Board SampleEval(Board board);
 Score QSearch(Board &board);
 Score SQSearch(Board &board);
 Score get_last_search_score();
+size_t get_num_nodes();
 void set_print_info(bool print_info);
 void end_search();
 Board get_sampled_board();

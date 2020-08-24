@@ -1440,6 +1440,10 @@ Score get_last_search_score() {
   return last_search_score;
 }
 
+size_t get_num_nodes() {
+  return Threads.get_node_count();
+}
+
 Move DepthSearch(Board board, Depth depth) {
   fixed_search_time = true;
   max_nodes = kInfiniteNodes;
