@@ -908,6 +908,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
     }
   }
 
+  // idea from http://talkchess.com/forum3/viewtopic.php?f=7&t=74769
+  // ELO | 4.67 +- 3.56
   if (node_type == NodeType::kPV && depth >= 5 && !valid_entry) {
     depth--;
   }
