@@ -908,6 +908,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
     }
   }
 
+  // idea from http://talkchess.com/forum3/viewtopic.php?f=7&t=74769
+  // ELO | 4.67 +- 3.56
+  if (node_type == NodeType::kPV && depth >= 5 && !valid_entry) {
+    depth--;
+  }
+
   //Get move list and return result if there are no legal moves
   std::vector<Move> moves = t.board.GetMoves<kNonQuiescent>();
   if (moves.size() == 0) {
@@ -1438,6 +1444,10 @@ void set_print_info(bool print_info_) {
 
 Score get_last_search_score() {
   return last_search_score;
+}
+
+size_t get_num_nodes() {
+  return Threads.get_node_count();
 }
 
 Move DepthSearch(Board board, Depth depth) {

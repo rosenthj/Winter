@@ -39,6 +39,8 @@ void PerftSuite();
 void SymmetrySuite();
 double ZuriChessDatasetLoss();
 
+void RunBenchCommand(int argc, char **argv);
+
 }
 
 #endif /* BENCHMARK_H_ */

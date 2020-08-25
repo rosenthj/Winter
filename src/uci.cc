@@ -148,9 +148,8 @@ namespace uci {
 void Loop() {
   debug::EnterFunction(debug::kUci, "uci::Loop", "");
   Board board;
-  while (true) {
-    std::string in;
-    std::getline(std::cin, in);
+  std::string in;
+  while (std::getline(std::cin, in)) {
     std::vector<std::string> tokens = split(in, ' ');
     unsigned int index = 0;
     std::string command = tokens[index++];
