@@ -369,6 +369,7 @@ void Loop() {
         debug::Error("Hash after perft function is changed!", false);
       }
     }
+#ifdef BOOKKEEPING
     else if (Equals(command, "bookkeeping_reset")) {
       bookkeeping::reset_counters();
     }
@@ -378,6 +379,7 @@ void Loop() {
     else if (Equals(command, "bookkeeping_relative")) {
       bookkeeping::print_relative_counters();
     }
+#endif
     else if (Equals(command, "perft_test")) {
       benchmark::PerftSuite();
     }

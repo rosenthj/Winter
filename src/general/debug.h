@@ -111,15 +111,6 @@ inline void ExitFunction(const bool active = true) {
 
 void Error(const std::string message, bool exit=true);
 
-inline void Assertion(const bool condition, const std::string msg = "No message specified!") {
-  if (kAssertions) {
-    if (!condition) {
-      std::cout << "Assertion Failure! " << msg  << std::endl;
-      std::exit(1);
-    }
-  }
-}
-
 }
 
 

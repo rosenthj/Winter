@@ -9,27 +9,6 @@
 #include "wdl_score.h"
 #include "types.h"
 
-//WDLScore WDLScore::from_score(int32_t score) {
-//  WDLScore result(0,0);
-//  if ((score <= kMaxMatedScore) || (score >= kMinMatingScore)) {
-//    if (score < 0) {
-//      score += kRescale;
-//    }
-//    result.win = score;
-//    result.win_draw = score;
-//  }
-//  else {
-//    score += kRescale;
-//    score /= 2;
-//  }
-//  result.win = score;
-//  result.win_draw = score;
-//  return result;
-//}
-
-// Assuming score is valid, returns next higher valid score.
-// Assumes zero contempt.
-// TODO Add contempt
 WDLScore WDLScore::get_next_score() const {
   if (win == scale && win_draw == scale) {
     return kMinMatingScore;
@@ -47,9 +26,6 @@ WDLScore WDLScore::get_next_score() const {
   return WDLScore{win, win_draw + 1};
 }
 
-// Assuming score is valid, returns next lower valid score.
-// Assumes zero contempt.
-// TODO Add contempt
 WDLScore WDLScore::get_previous_score() const {
   if (win == kMinMatingScore.win) {
     assert(win == win_draw);

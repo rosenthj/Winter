@@ -95,11 +95,14 @@ constexpr MoveType kCastle = 1;
 constexpr MoveType kDoublePawnMove = 2;
 constexpr MoveType kEnPassant = 3;
 constexpr MoveType kCapture = 4;
-//To get promotion piece we can subtract (kKnightPromotion - kKnight) from the movetype
 constexpr MoveType kKnightPromotion = 5;
 constexpr MoveType kBishopPromotion = 6;
 constexpr MoveType kRookPromotion = 7;
 constexpr MoveType kQueenPromotion = 8;
+
+inline constexpr PieceType GetPromotionPieceType(const MoveType promotion_move) {
+  return promotion_move - (kKnightPromotion - kKnight);
+}
 
 constexpr Move kNullMove = 0;
 
@@ -126,95 +129,12 @@ inline constexpr Score GetMatedOnMoveScore(int32_t ply) {
   return WDLScore{kMinScore.win + ply, kMinScore.win_draw + ply};
 }
 
-inline Score get_next_score(const Score score) {
-  return score.get_next_score();
-}
-
-inline Score get_previous_score(const Score score) {
-  return score.get_previous_score();
-}
-
 const NScore kMaxNScore = kRescale + kNumMateInScores + 100;
 const NScore kMinNScore = -kMaxNScore;
-
-//inline Score get_next_score(Score score) {
-//  if (score == kMaxStaticEval) {
-//    return kMinMatingScore;
-//  }
-//  if (score == kMaxMatedScore) {
-//    return kMinStaticEval;
-//  }
-//  return score + 1;
-//}
-
-//inline Score get_previous_score(Score score) {
-//  if (score == kMinMatingScore) {
-//    return kMaxStaticEval;
-//  }
-//  if (score == kMinStaticEval) {
-//    return kMaxMatedScore;
-//  }
-//  return score - 1;
-//}
-
-// Returns true for scores in range for static eval. This includes draw_score.
-//inline constexpr bool is_static_eval( score) {
-//  return (score >= kMinStaticEval) && (score <= kMaxStaticEval);
-//}
-
-//inline constexpr bool is_mate_score(Score score) {
-//  return (score <= kMaxMatedScore) || (score Score>= kMinMatingScore);
-//}
-
-//inline constexpr bool is_valid_score(Score score) {
-//  return score == kNoScore || (score >= kMinScore && score <= kMaxScore &&
-//      (is_static_eval(score) || is_mate_score(score)));
-//}
-
-//inline Score wpct_to_score(float x) {
-//  //return std::round(kRescale * (2*x - 1));
-//  return WDLScore(x,x);
-//}
-
-//inline constexpr float score_to_wpct(Score x) {
-//  return (((float)x / kRescale) + 1.0) / 2.0;
-//}
 
 inline float score_to_wpct(WDLScore score) {
   return score.to_wpct();
 }
-
-//// TODO remove this abomination once rest of code is ready.
-//inline WDLScore score_to_wdl_estimate(Score score) {
-//  return WDLScore::from_score(score);
-////  return WDLScore((score + kRescale) / 2);
-//  //float wpct = score_to_wpct(score);
-//  //return WDLScore(wpct, wpct);
-//}
-
-//inline NScore wpct_to_cp(float wpct) {
-//  constexpr float kEpsilon = 0.000001;
-//  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
-//  return std::round(std::log(wpct / (1-wpct)) * 1024);
-//}
-
-// Rounds score to next valid score
-//inline Score get_valid_score(Score score) {
-//  if (!is_valid_score(score) || score == kNoScore) {
-//    if (score < kMinScore) {
-//      return kMinScore;
-//    }
-//    if (score < kMinStaticEval) {
-//      return kMinStaticEval;
-//    }
-//    if (score > kMaxScore) {
-//      return kMaxScore;
-//    }
-//    assert(score > kMaxStaticEval);
-//    return kMaxStaticEval;
-//  }
-//  return score;
-//}
 
 constexpr int kLowerBound = 1;
 constexpr int kUpperBound = 2;

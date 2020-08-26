@@ -27,6 +27,8 @@
 #ifndef SRC_GENERAL_BOOKKEEPING_H_
 #define SRC_GENERAL_BOOKKEEPING_H_
 
+#ifdef BOOKKEEPING
+
 #include "settings.h"
 #include "../board.h"
 #include <iostream>
@@ -63,6 +65,6 @@ void log_info(const Board &board, const InfoContainer &info);
 
 }
 
-
+#endif
 
 #endif /* SRC_GENERAL_BOOKKEEPING_H_ */

@@ -102,16 +102,4 @@ inline bool contempt_greater(const WDLScore lhs, const WDLScore rhs,
           + contempt_factor * static_cast<int32_t>(lhs.win - rhs.win) > 0;
 }
 
-//constexpr Score kRescale = 4000; // Used to transform wpct into Score.
-//constexpr WDLScore kMaxStaticEval = WDLScore(1.0, 1.0);
-//constexpr Score kMinStaticEval = WDLScore(0.0, 0.0);
-//
-//constexpr Score kMinMatingScore = kMaxStaticEval + 100;
-//constexpr Score kMaxMatedScore = -kMinMatingScore;
-//
-//constexpr Score kNumMateInScores = 2000;
-//constexpr Score kMaxScore = kMinMatingScore + kNumMateInScores;
-//constexpr Score kMinScore = -kMaxScore;
-
-
 #endif /* SRC_GENERAL_WDL_SCORE_H_ */

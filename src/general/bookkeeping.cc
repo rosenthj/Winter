@@ -24,6 +24,8 @@
  *      Author: Jonathan Rosenthal
  */
 
+#ifdef BOOKKEEPING
+
 #include "bookkeeping.h"
 #include "../board.h"
 #include <vector>
@@ -210,3 +212,5 @@ void log_info(const Board &board, const InfoContainer &info) {
 }
 
 }
+
+#endif
