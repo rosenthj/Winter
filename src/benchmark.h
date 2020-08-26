@@ -31,6 +31,7 @@
 
 namespace benchmark {
 
+#ifdef BENCHMARK
 double MoveOrderTest();
 int TimeToDepthSuite();
 double EntropyLossTimedSuite(Milliseconds time_per_position);
@@ -38,6 +39,7 @@ double EntropyLossNodeSuite(size_t nodes_per_position);
 void PerftSuite();
 void SymmetrySuite();
 double ZuriChessDatasetLoss();
+#endif
 
 void RunBenchCommand(int argc, char **argv);
 

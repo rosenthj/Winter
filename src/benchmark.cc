@@ -44,6 +44,7 @@
 
 namespace {
 
+#ifdef BENCHMARK
 double ResultAbsLoss(Score x, Score y) {
   if (y.is_draw()) {
     return 0.5 * (1.0 - x.get_draw_probability());
@@ -53,6 +54,7 @@ double ResultAbsLoss(Score x, Score y) {
   }
   return 1.0 * x.get_loss_probability() + 0.5 * x.get_draw_probability();
 }
+#endif
 
 //double SigmoidCrossEntropyLossV2(double score, double target) {
 //  return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
@@ -120,6 +122,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 
 namespace benchmark {
 
+#ifdef BENCHMARK
 double MoveOrderTest() {
   std::cout << "Running move order benchmark!" << std::endl;
   std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
@@ -424,6 +427,7 @@ double ZuriChessDatasetLoss() {
   std::cout << "Error: " << error << std::endl;
   return 0;
 }
+#endif
 
 std::array<std::string, 50> kBenchmarkCommandPositions {
   "r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQkq a6 0 14",

@@ -378,6 +378,7 @@ void Loop() {
       bookkeeping::print_relative_counters();
     }
 #endif
+#ifdef BENCHMARK
     else if (Equals(command, "perft_test")) {
       benchmark::PerftSuite();
     }
@@ -395,6 +396,7 @@ void Loop() {
     else if (Equals(command, "benchmark_move_order")) {
       benchmark::MoveOrderTest();
     }
+#endif
     else if (Equals(command, "fen")) {
       std::vector<std::string> fen = board.GetFen();
       for (std::string fen_token : fen) {
