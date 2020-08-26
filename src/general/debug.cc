@@ -24,6 +24,7 @@
  *      Author: Jonathan Rosenthal
  */
 
+/*
 #include "debug.h"
 #include <vector>
 
@@ -73,4 +74,4 @@ void Error(const std::string message, bool exit) {
 
 }
 
-
+*/

@@ -27,6 +27,7 @@
 #ifndef GENERAL_DEBUG_H_
 #define GENERAL_DEBUG_H_
 
+/*
 #include <string>
 #include <iostream>
 #include <cstdlib>
@@ -112,6 +113,6 @@ inline void ExitFunction(const bool active = true) {
 void Error(const std::string message, bool exit=true);
 
 }
-
+*/
 
 #endif
