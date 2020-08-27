@@ -32,7 +32,6 @@
 #include "net_evaluation.h"
 #include "transposition.h"
 #include "data.h"
-#include "general/bookkeeping.h"
 #include "general/feature_indexes.h"
 #include "general/hardcoded_params.h"
 #include "general/magic.h"
@@ -730,22 +729,6 @@ Score sample_node_and_return_alpha(const Board &board, const Depth depth,
   return alpha;
 }
 #endif
-
-inline void bookkeeping_log(int NodeType, const Board &board, Move tt_entry,
-                            Depth depth, int move_number, int expected_node,
-                            bookkeeping::Trigger trigger) {
-  if (settings::bookkeeping_active) {
-    bookkeeping::InfoContainer info;
-    info.NodeType = NodeType;
-    info.depth = depth;
-    info.expected_node = expected_node;
-    info.min_ply = min_ply;
-    info.move_number = move_number;
-    info.tt_entry = tt_entry;
-    info.trigger = trigger;
-    bookkeeping::log_info(board, info);
-  }
-}
 
 std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
                                        const std::vector<Move> &moves,

@@ -26,7 +26,6 @@
 #include "learning/linear_algebra.h"
 #include "general/magic.h"
 #include "general/settings.h"
-#include "general/bookkeeping.h"
 #include "board.h"
 #include "search.h"
 #include "learning/cluster.h"

@@ -28,7 +28,6 @@
 #include "uci.h"
 #include "general/settings.h"
 #include "general/types.h"
-#include "general/bookkeeping.h"
 #include "board.h"
 #include "net_evaluation.h"
 #include "search.h"
@@ -362,15 +361,6 @@ void Loop() {
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       std::cout << "depth: " << depth << " perft: " << sum << " time: " << time_used.count()
           << " nps: " << ((sum * 1000) / (time_used.count() + 1)) << std::endl;
-    }
-    else if (Equals(command, "bookkeeping_reset")) {
-      bookkeeping::reset_counters();
-    }
-    else if (Equals(command, "bookkeeping_absolute")) {
-      bookkeeping::print_counters();
-    }
-    else if (Equals(command, "bookkeeping_relative")) {
-      bookkeeping::print_relative_counters();
     }
     else if (Equals(command, "perft_test")) {
       benchmark::PerftSuite();
