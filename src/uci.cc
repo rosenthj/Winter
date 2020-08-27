@@ -33,7 +33,6 @@
 #include "net_evaluation.h"
 #include "search.h"
 #include "transposition.h"
-#include "general/debug.h"
 #include "search_thread.h"
 #include <cstdint>
 #include <vector>
@@ -146,7 +145,6 @@ void Reply(std::string message) {
 namespace uci {
 
 void Loop() {
-  debug::EnterFunction(debug::kUci, "uci::Loop", "");
   Board board;
   std::string in;
   while (std::getline(std::cin, in)) {
@@ -351,7 +349,6 @@ void Loop() {
       std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
       uint64_t sum = 0;
       Time begin = now();
-      HashType hash = board.get_hash();
       for (Move move : moves) {
         board.Make(move);
         long perft_result = search::Perft(board, depth-1);
@@ -365,9 +362,6 @@ void Loop() {
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       std::cout << "depth: " << depth << " perft: " << sum << " time: " << time_used.count()
           << " nps: " << ((sum * 1000) / (time_used.count() + 1)) << std::endl;
-      if (board.get_hash() != hash) {
-        debug::Error("Hash after perft function is changed!", false);
-      }
     }
     else if (Equals(command, "bookkeeping_reset")) {
       bookkeeping::reset_counters();
@@ -415,7 +409,6 @@ void Loop() {
       Reply("Received unknown command: " + command);
     }
   }
-  debug::ExitFunction(debug::kUci);
 }
 
 }

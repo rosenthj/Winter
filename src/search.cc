@@ -32,7 +32,6 @@
 #include "net_evaluation.h"
 #include "transposition.h"
 #include "data.h"
-#include "general/debug.h"
 #include "general/bookkeeping.h"
 #include "general/feature_indexes.h"
 #include "general/hardcoded_params.h"
@@ -938,9 +937,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   bool moves_sorted = false, swapped = false;
   if (tt_entry != kNullMove) {
     swapped = SwapToFront(moves, tt_entry);
-    if (swapped && tt_entry != moves[0]) {
-      debug::Error("SwapToFront failed");
-    }
+    assert(!swapped || tt_entry == moves[0]);
   }
   if (!swapped) {
     SortMovesML(moves, t, tt_entry);

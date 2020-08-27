@@ -54,27 +54,6 @@ double ResultAbsLoss(Score x, Score y) {
   return 1.0 * x.get_loss_probability() + 0.5 * x.get_draw_probability();
 }
 
-//double SigmoidCrossEntropyLossV2(double score, double target) {
-//  return std::max(score, 0.0) - score * target + std::log(1 + std::exp(-std::abs(score)));
-//}
-
-//double SigmoidCrossEntropyLoss(Score score, double target) {
-//  if (is_mate_score(score)) {
-//    if (score < 0) {
-//      score = kMinScore;
-//    }
-//    else {
-//      score = kMaxScore;
-//    }
-//  }
-//  double prediction = score_to_wpct(score);
-//  prediction = std::min(std::max(prediction, 0.0001), 0.9999);
-//  return target * std::log(prediction) + (1 - target) * std::log(1 - prediction);
-//}
-//
-//const double kMinLoss = SigmoidCrossEntropyLoss(kMinScore, 0);
-//const double kMinDrawLoss = SigmoidCrossEntropyLoss(0, 0.5);
-
 struct PerftTestSet {
   Board board;
   std::vector<std::pair<Depth, long> > depth_results;
