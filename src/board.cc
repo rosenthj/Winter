@@ -26,7 +26,6 @@
 
 #include "board.h"
 #include "general/bit_operations.h"
-#include "general/debug.h"
 #include "general/magic.h"
 #include "general/settings.h"
 #include "general/types.h"
@@ -1152,7 +1151,7 @@ bool Board::NonNegativeSEE(const Move move) const {
 }
 
 bool Board::IsMoveLegal(const Move move) const {
-  debug::Error("Use of not yet implemented function Board::IsMoveLegal");
+  assert(false); // Not yet properly implemented
   if (move == kNullMove) {
     return false;
   }

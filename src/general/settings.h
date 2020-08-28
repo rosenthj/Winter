@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "0.8.5";
+const std::string engine_version = "0.8.5a";
 const std::string engine_author = "Jonathan Rosenthal";
 
 #if defined(__BMI2__)
@@ -64,8 +64,6 @@ const std::string kCEGTPath = "data/CEGT.ucig";
 
 const bool kTrainGMMFromScratch = false;
 const bool kTrainFromScratch = false;
-
-constexpr bool bookkeeping_active = false;
 
 const bool kUseExtensions = true;
 const bool kUseScoreBasedPruning = true;

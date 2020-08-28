@@ -26,8 +26,6 @@
 #include "learning/linear_algebra.h"
 #include "general/magic.h"
 #include "general/settings.h"
-#include "general/debug.h"
-#include "general/bookkeeping.h"
 #include "board.h"
 #include "search.h"
 #include "learning/cluster.h"
@@ -39,7 +37,6 @@ bool Equals(std::string string_a, std::string string_b) {
 }
 
 int main(int argc, char **argv) {
-  debug::EnterFunction(debug::kMain, "Main", "");
   table::SetTableSize(32);
 
   search::LoadSearchVariablesHardCoded();
@@ -78,6 +75,5 @@ int main(int argc, char **argv) {
   //benchmark::TimeToDepthSuite();
   //parse::Save2dVecToCSV<Score>(vecvec,"data/test.csv");
   uci::Loop();
-  debug::ExitFunction(debug::kMain);
   return 0;
 }
