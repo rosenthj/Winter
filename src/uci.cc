@@ -72,10 +72,10 @@ const std::string kUCIHashOptionString =
     "\noption name Threads type spin default 1 min 1 max 256";
 #else
     "\noption name Threads type spin default 1 min 1 max 256"
-    "\noption name AspirationDelta type spin default 40 min 10 max 800"
-    "\noption name Futility type spin default 900 min 400 max 1500"
-    "\noption name SNMPMargin type spin default 700 min 0 max 2000"
-    "\noption name LMRDivisor type spin default 134 min 60 max 250";
+    "\noption name AspirationDelta type spin default 58 min 10 max 800"
+    "\noption name Futility type spin default 1017 min 400 max 1500"
+    "\noption name SNMPMargin type spin default 1019 min 0 max 2000"
+    "\noption name LMRDivisor type spin default 116 min 60 max 250";
 #endif
 
 struct Timer {
