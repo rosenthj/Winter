@@ -2156,20 +2156,20 @@ void SetArmageddon(bool armageddon_) {
 }
 
 #ifdef TUNE
-void SetInitialAspirationDelta(NScore delta) {
+void SetInitialAspirationDelta(int32_t delta) {
   kInitialAspirationDelta = delta;
 }
 
-void SetFutilityMargin(NScore score) {
+void SetFutilityMargin(int32_t score) {
   kFutileMargin = init_futility_margins(score);
 }
 
-void SetSNMPMargin(NScore score) {
+void SetSNMPMargin(int32_t score) {
   kSNMPMargin = score;
 }
 
-void SetLMRDiv(double div) {
-  lmr_reductions = init_lmr_reductions(div);
+void SetLMRDiv(int32_t div) {
+  lmr_reductions = init_lmr_reductions(div * 0.01);
 }
 #endif
 

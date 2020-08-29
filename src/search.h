@@ -72,10 +72,10 @@ void SetContempt(int contempt);
 void SetArmageddon(bool armageddon);
 
 #ifdef TUNE
-void SetInitialAspirationDelta(NScore delta);
-void SetFutilityMargin(NScore score);
-void SetSNMPMargin(NScore score);
-void SetLMRDiv(double div);
+void SetInitialAspirationDelta(int32_t delta);
+void SetFutilityMargin(int32_t score);
+void SetSNMPMargin(int32_t score);
+void SetLMRDiv(int32_t div);
 #endif
 
 }
