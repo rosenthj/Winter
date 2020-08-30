@@ -42,41 +42,66 @@
 namespace {
 
 std::vector<std::string> &splits(const std::string &s, char delimeter,
-    std::vector<std::string> &elements) {
-    std::stringstream string_stream(s);
-    std::string item;
-    while (std::getline(string_stream, item, delimeter)) {
-        elements.push_back(item);
-    }
-    return elements;
+  std::vector<std::string> &elements) {
+  std::stringstream string_stream(s);
+  std::string item;
+  while (std::getline(string_stream, item, delimeter)) {
+    elements.push_back(item);
+  }
+  return elements;
 }
 
 std::vector<std::string> split(const std::string &s, char delim) {
-    std::vector<std::string> elems;
-    splits(s, delim, elems);
-    return elems;
+  std::vector<std::string> elems;
+  splits(s, delim, elems);
+  return elems;
 }
+
+//bool IsTrue(std::string s) {
+//  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
+//}
+
+struct UCIOption {
+	std::string name;
+	void (*func)(int32_t value);
+	int32_t default_value;
+	int32_t lower_bound;
+	int32_t upper_bound;
+  std::string to_string() const {
+    return "option name " + name
+              + " type spin default " + std::to_string(default_value)
+              + " min " + std::to_string(lower_bound)
+              + " max " + std::to_string(upper_bound);
+  }
+};
+
+std::vector<UCIOption> uci_options {
+  {"Hash", table::SetTableSize, 32, 1, 104576},
+  {"Threads", search::SetNumThreads, 1, 1, 256},
+// "\noption name Contempt type spin default 0 min -100 max 100"
+//   search::SetContempt(contempt);
+// "\noption name Armageddon type check default false"
+//   bool armageddon_setting = IsTrue(tokens[index++]);
+//   search::SetArmageddon(armageddon_setting);
+#ifdef TUNE
+  {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
+  {"Futility", search::SetFutilityMargin, 900, 400, 1500},
+  {"SNMPMargin", search::SetSNMPMargin, 700, 0, 2000},
+  {"LMROffset", search::SetLMROffset, 50, 0, 100},
+  {"LMRMultiplier", search::SetLMRMultiplier, 74, 0, 250},
+  {"LMROffsetCap", search::SetLMROffsetCap, 100, 0, 100},
+  {"LMRMultiplierCap", search::SetLMRMultiplierCap, 30, 0, 100},
+  {"LMROffsetPV", search::SetLMROffsetPV, 100, 0, 100},
+  {"LMRMultiplierPV", search::SetLMRMultiplierPV, 76, 0, 100},
+//  {"LMROffsetPVCap", search::SetLMROffsetPVCap, 100, 0, 100},
+//  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 33, 0, 100},
+#endif
+};
 
 const std::string kEngineIsReady = "readyok";
 const std::string kEngineNamePrefix = "id name ";
 const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
-const std::string kUCIHashOptionString =
-    "option name Hash type spin default 32 min 1 max 104576"
-//    "\noption name Contempt type spin default 0 min -100 max 100"
-//#ifndef TUNE
-//    "\noption name Armageddon type check default false";
-//#else
-//    "\noption name Armageddon type check default false"
-#ifndef TUNE
-    "\noption name Threads type spin default 1 min 1 max 256";
-#else
-    "\noption name Threads type spin default 1 min 1 max 256"
-    "\noption name AspirationDelta type spin default 40 min 10 max 800"
-    "\noption name Futility type spin default 900 min 400 max 1500"
-    "\noption name SNMPMargin type spin default 700 min 0 max 2000"
-    "\noption name LMRDivisor type spin default 134 min 60 max 250";
-#endif
 
 struct Timer {
   Timer() {
@@ -134,11 +159,6 @@ void Reply(std::string message) {
   std::cout << message << std::endl;
 }
 
-//bool IsTrue(std::string s) {
-//  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
-//}
-
-
 }
 
 namespace uci {
@@ -192,7 +212,9 @@ void Loop() {
       Reply(kEngineNamePrefix + settings::engine_name + " "
           + settings::engine_version + " " + settings::compile_arch);
       Reply(kEngineAuthorPrefix + settings::engine_author);
-      Reply(kUCIHashOptionString);
+      for (const UCIOption &option : uci_options) {
+        Reply(option.to_string());
+      }
       Reply(kOk);
     }
     else if (Equals(command, "stop")) {
@@ -204,49 +226,14 @@ void Loop() {
     else if (Equals(command, "setoption")) {
       index++;
       command = tokens[index++];
-      if (Equals(command, "Hash")) {
-        index++;
-        int MB = atoi(tokens[index++].c_str());
-        table::SetTableSize(MB);
+      for (UCIOption &option : uci_options) {
+        if (Equals(command, option.name)) {
+          index++;
+          int value = atoi(tokens[index++].c_str());
+          option.func(value);
+          break;
+        }
       }
-      if (Equals(command, "Threads")) {
-        index++;
-        int num_threads = atoi(tokens[index++].c_str());
-        search::Threads.set_num_threads(num_threads);
-      }
-      // TODO re-add contempt
-//      if (Equals(command, "Contempt")) {
-//        index++;
-//        int contempt = atoi(tokens[index++].c_str());
-//        search::SetContempt(contempt);
-//      }
-//      if (Equals(command, "Armageddon")) {
-//        index++;
-//        bool armageddon_setting = IsTrue(tokens[index++]);
-//        search::SetArmageddon(armageddon_setting);
-//      }
-#ifdef TUNE
-      if (Equals(command, "AspirationDelta")) {
-        index++;
-        NScore delta = atoi(tokens[index++].c_str());
-        search::SetInitialAspirationDelta(delta);
-      }
-      if (Equals(command, "Futility")) {
-        index++;
-        NScore futility = atoi(tokens[index++].c_str());
-        search::SetFutilityMargin(futility);
-      }
-      if (Equals(command, "SNMPMargin")) {
-        index++;
-        NScore margin = atoi(tokens[index++].c_str());
-        search::SetSNMPMargin(margin);
-      }
-      if (Equals(command, "LMRDivisor")) {
-        index++;
-        int div = atoi(tokens[index++].c_str());
-        search::SetLMRDiv(div * 0.01);
-      }
-#endif
     }
     else if (Equals(command, "print_moves")) {
       std::vector<Move> moves = board.GetMoves<kNonQuiescent>();

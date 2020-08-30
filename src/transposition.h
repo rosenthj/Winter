@@ -69,7 +69,7 @@ public:
                          // 16 bytes total, 4 entries per cache line.
 };
 
-void SetTableSize(const size_t MB);
+void SetTableSize(const int32_t MB);
 Entry GetEntry(const HashType hash);
 void SaveEntry(const Board &board, const Move best_move, const Score score,
                const Depth depth, const uint8_t bound = kLowerBound);

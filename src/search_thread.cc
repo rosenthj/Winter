@@ -242,4 +242,6 @@ template void Thread::update_continuation_score<2>(const PieceType opp_piecetype
                                                    const PieceType piecetype, const Square des, const int32_t score);
 
 
+void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }
+
 }

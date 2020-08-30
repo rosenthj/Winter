@@ -157,6 +157,8 @@ struct ThreadPool {
 //The only instance of Threads
 extern ThreadPool Threads;
 
+void SetNumThreads(int32_t value);
+
 }
 
 #endif /* SRC_SEARCH_THREAD_H_ */

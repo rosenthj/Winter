@@ -72,10 +72,17 @@ void SetContempt(int contempt);
 void SetArmageddon(bool armageddon);
 
 #ifdef TUNE
-void SetInitialAspirationDelta(NScore delta);
-void SetFutilityMargin(NScore score);
-void SetSNMPMargin(NScore score);
-void SetLMRDiv(double div);
+void SetInitialAspirationDelta(int32_t delta);
+void SetFutilityMargin(int32_t score);
+void SetSNMPMargin(int32_t score);
+void SetLMROffset(int32_t value);
+void SetLMRMultiplier(int32_t value);
+void SetLMROffsetPV(int32_t value);
+void SetLMRMultiplierPV(int32_t value);
+void SetLMROffsetCap(int32_t value);
+void SetLMRMultiplierCap(int32_t value);
+//void SetLMROffsetPVCap(int32_t value);
+//void SetLMRMultiplierPVCap(int32_t value);
 #endif
 
 }

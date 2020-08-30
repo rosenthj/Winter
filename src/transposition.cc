@@ -67,7 +67,8 @@ void UpdateGeneration() {
   current_generation += (0x1 << 2);
 }
 
-void SetTableSize(const size_t MB_total) {
+void SetTableSize(const int32_t MB_total_int) {
+  const size_t MB_total = static_cast<size_t>(MB_total_int);
   const size_t bytes_total = MB_total << 20;
   const size_t bytes_p_hash = bytes_total / 8;
   const size_t bytes = bytes_total - bytes_p_hash;

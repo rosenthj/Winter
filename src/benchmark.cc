@@ -351,7 +351,7 @@ double EntropyLossNodeSuite(size_t nodes_per_position) {
 
 double RunEvalTestSet(const std::vector<EvaluationTest> &test_set) {
   double error_sum = 0;
-  for (const EvaluationTest sample : test_set) {
+  for (const EvaluationTest &sample : test_set) {
     Score score = net_evaluation::ScoreBoard(std::get<0>(sample));
     Score target = std::get<1>(sample);
     //error_sum += std::abs(Sigmoid(evaluation::ScoreBoard(std::get<0>(sample)) / div)-std::get<1>(sample));

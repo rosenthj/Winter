@@ -77,12 +77,30 @@ Depth sampled_depth;
 #endif
 int skip_time_check = 0;
 
-Array2d<Depth, 64, 64> init_lmr_reductions(double div) {
-  Array2d<Depth, 64, 64> lmr_reductions;
+struct LMRInitializer {
+  double off;
+  double mult;
+  double off_cap;
+  double mult_cap;
+  double off_pv;
+  double mult_pv;
+  double off_pv_cap;
+  double mult_pv_cap;
+};
+
+Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
+  Depth res = std::floor(offset + (std::log(i+1) * std::log(j+1) * multiplier));
+  return std::max(std::min(res, i), 0);
+}
+
+Array3d<Depth, 64, 64, 4> init_lmr_reductions(const LMRInitializer &x) {
+  Array3d<Depth, 64, 64, 4> lmr_reductions;
   for (Depth i = 0; i < 64; ++i) {
     for (size_t j = 0; j < 64; ++j) {
-      lmr_reductions[i][j] = std::round(std::log(i+1) * std::log(j+1) / div);
-      lmr_reductions[i][j] = std::min(lmr_reductions[i][j], i);
+      lmr_reductions[i][j][0] = lmr_calculator(i, j, x.off, x.mult);
+      lmr_reductions[i][j][1] = lmr_calculator(i, j, x.off * x.off_cap, x.mult * x.mult_cap);
+      lmr_reductions[i][j][2] = lmr_calculator(i, j, x.off * x.off_pv, x.mult * x.mult_pv);
+      lmr_reductions[i][j][3] = lmr_calculator(i, j, x.off * x.off_cap * x.off_pv, x.mult * x.mult_cap * x.mult_pv);
     }
   }
   return lmr_reductions;
@@ -99,25 +117,29 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 #ifdef TUNE
 NScore kInitialAspirationDelta = 40;
 NScore kSNMPMargin = 700;
-Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 Vec<NScore, 4> kFutileMargin = init_futility_margins(900);
 std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 #else
 constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 700;
-Array2d<Depth, 64, 64> lmr_reductions = init_lmr_reductions(1.34);//135
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(900);
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
+LMRInitializer lmr_initializer {
+  0.5, 0.74,
+  1.0, 0.30,
+  1.0, 0.76,
+  1.0, 0.30 * 0.76
+};
+Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
+
 template<NodeType node_type>
-const Depth get_lmr_reduction(const Depth depth, const size_t move_number) {
+const Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   assert(depth > 0);
-  if (node_type == NodeType::kPV) {
-    return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)] / 2;
-  }
-  return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)];
+  size_t is_pv = node_type == NodeType::kPV ? 2 : 0;
+  return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
 }
 
 std::vector<MoveScore> search_weights(kNumMoveProbabilityFeatures);
@@ -976,10 +998,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       }
 
       //Late Move Reduction factor
-      reduction = get_lmr_reduction<node_type>(depth, i);
-      if (GetMoveType(move) > kDoublePawnMove) {
-        reduction = (2 * reduction) / 3;
-      }
+      reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+//      if (GetMoveType(move) > kDoublePawnMove) {
+//        reduction = (2 * reduction) / 3;
+//      }
 //      if (NodeType == kNW && !strict_worsening && reduction > 2) {
 //        reduction = (4 * reduction) / 5;
 //      }
@@ -1141,10 +1163,10 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
       Depth reduction = 0;
       if (!in_check && !t.board.InCheck() && i > 2) {
         //Late Move Reduction factor
-        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2);
-        if (GetMoveType(moves[i]) > kDoublePawnMove) {
-          reduction = (2 * reduction) / 3;
-        }
+        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2, GetMoveType(moves[i]) > kDoublePawnMove);
+//        if (GetMoveType(moves[i]) > kDoublePawnMove) {
+//          reduction = (2 * reduction) / 3;
+//        }
       }
       Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -get_next_score(alpha),
                                                     -alpha, current_depth - 1 - reduction, true);
@@ -2156,21 +2178,58 @@ void SetArmageddon(bool armageddon_) {
 }
 
 #ifdef TUNE
-void SetInitialAspirationDelta(NScore delta) {
+void SetInitialAspirationDelta(int32_t delta) {
   kInitialAspirationDelta = delta;
 }
 
-void SetFutilityMargin(NScore score) {
+void SetFutilityMargin(int32_t score) {
   kFutileMargin = init_futility_margins(score);
 }
 
-void SetSNMPMargin(NScore score) {
+void SetSNMPMargin(int32_t score) {
   kSNMPMargin = score;
 }
 
-void SetLMRDiv(double div) {
-  lmr_reductions = init_lmr_reductions(div);
+void SetLMROffset(int32_t value) {
+  lmr_initializer.off = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
 }
+
+void SetLMRMultiplier(int32_t value) {
+  lmr_initializer.mult = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
+}
+
+void SetLMROffsetCap(int32_t value) {
+  lmr_initializer.off_cap = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
+}
+
+void SetLMRMultiplierCap(int32_t value) {
+  lmr_initializer.mult_cap = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
+}
+
+void SetLMROffsetPV(int32_t value) {
+  lmr_initializer.off_pv = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
+}
+
+void SetLMRMultiplierPV(int32_t value) {
+  lmr_initializer.mult_pv = 0.01 * value;
+  lmr_reductions = init_lmr_reductions(lmr_initializer);
+}
+
+//void SetLMROffsetPVCap(int32_t value) {
+//  lmr_initializer.off_pv_cap = 0.01 * value;
+//  lmr_reductions = init_lmr_reductions(lmr_initializer);
+//}
+
+//void SetLMRMultiplierPVCap(int32_t value) {
+//  lmr_initializer.mult_pv_cap = 0.01 * value;
+//  lmr_reductions = init_lmr_reductions(lmr_initializer);
+//}
+
 #endif
 
 }
