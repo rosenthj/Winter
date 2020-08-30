@@ -75,7 +75,14 @@ void SetArmageddon(bool armageddon);
 void SetInitialAspirationDelta(int32_t delta);
 void SetFutilityMargin(int32_t score);
 void SetSNMPMargin(int32_t score);
-void SetLMRDiv(int32_t div);
+void SetLMROffset(int32_t value);
+void SetLMRMultiplier(int32_t value);
+void SetLMROffsetPV(int32_t value);
+void SetLMRMultiplierPV(int32_t value);
+void SetLMROffsetCap(int32_t value);
+void SetLMRMultiplierCap(int32_t value);
+//void SetLMROffsetPVCap(int32_t value);
+//void SetLMRMultiplierPVCap(int32_t value);
 #endif
 
 }

@@ -87,7 +87,14 @@ std::vector<UCIOption> uci_options {
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
   {"Futility", search::SetFutilityMargin, 900, 400, 1500},
   {"SNMPMargin", search::SetSNMPMargin, 700, 0, 2000},
-  {"LMRDivisor", search::SetLMRDiv, 134, 60, 250}
+  {"LMROffset", search::SetLMROffset, 50, 0, 100},
+  {"LMRMultiplier", search::SetLMRMultiplier, 74, 0, 250},
+  {"LMROffsetCap", search::SetLMROffsetCap, 100, 0, 100},
+  {"LMRMultiplierCap", search::SetLMRMultiplierCap, 30, 0, 100},
+  {"LMROffsetPV", search::SetLMROffsetPV, 100, 0, 100},
+  {"LMRMultiplierPV", search::SetLMRMultiplierPV, 76, 0, 100},
+//  {"LMROffsetPVCap", search::SetLMROffsetPVCap, 100, 0, 100},
+//  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 33, 0, 100},
 #endif
 };
 
