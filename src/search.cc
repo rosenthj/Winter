@@ -98,9 +98,9 @@ Array3d<Depth, 64, 64, 4> init_lmr_reductions(const LMRInitializer &x) {
   for (Depth i = 0; i < 64; ++i) {
     for (size_t j = 0; j < 64; ++j) {
       lmr_reductions[i][j][0] = lmr_calculator(i, j, x.off, x.mult);
-      lmr_reductions[i][j][1] = lmr_calculator(i, j, x.off * x.off_cap, x.mult * x.mult_cap);
-      lmr_reductions[i][j][2] = lmr_calculator(i, j, x.off * x.off_pv, x.mult * x.mult_pv);
-      lmr_reductions[i][j][3] = lmr_calculator(i, j, x.off * x.off_cap * x.off_pv, x.mult * x.mult_cap * x.mult_pv);
+      lmr_reductions[i][j][1] = lmr_calculator(i, j, x.off + x.off_cap, x.mult * x.mult_cap);
+      lmr_reductions[i][j][2] = lmr_calculator(i, j, x.off + x.off_pv, x.mult * x.mult_pv);
+      lmr_reductions[i][j][3] = lmr_calculator(i, j, x.off + x.off_cap + x.off_pv, x.mult * x.mult_cap * x.mult_pv);
     }
   }
   return lmr_reductions;
@@ -128,10 +128,10 @@ const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
 LMRInitializer lmr_initializer {
-  0.5, 0.74,
-  1.0, 0.30,
-  1.0, 0.76,
-  1.0, 0.30 * 0.76
+  0.91, 0.82,
+  -0.06, 0.28,
+  -0.47, 0.79,
+  -0.53, 0.28 * 0.79
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
