@@ -128,10 +128,10 @@ const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
 LMRInitializer lmr_initializer {
-  0.91, 0.82,
-  -0.06, 0.28,
-  -0.47, 0.79,
-  -0.53, 0.28 * 0.79
+  0.55, 0.74,
+  -0.58, 0.30,
+  -0.79, 0.76,
+  -1.37, 0.30 * 0.76
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
