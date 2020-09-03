@@ -127,11 +127,12 @@ const Vec<NScore, 4> kFutileMargin = init_futility_margins(900);
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
+// Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
-  0.73, 0.74,
-  -0.13, 0.30,
-  0.56, 0.76,
-  -0.50, 0.30 * 0.76
+  0.16, 0.74,
+  0.33, 0.30,
+  0.72, 0.76,
+  0.50, 0.30 * 0.76
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
