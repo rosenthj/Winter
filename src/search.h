@@ -81,7 +81,7 @@ void SetLMROffsetPV(int32_t value);
 void SetLMRMultiplierPV(int32_t value);
 void SetLMROffsetCap(int32_t value);
 void SetLMRMultiplierCap(int32_t value);
-//void SetLMROffsetPVCap(int32_t value);
+void SetLMROffsetPVCap(int32_t value);
 //void SetLMRMultiplierPVCap(int32_t value);
 #endif
 
