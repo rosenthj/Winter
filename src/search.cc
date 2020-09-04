@@ -116,14 +116,14 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 
 #ifdef TUNE
 NScore kInitialAspirationDelta = 40;
-NScore kSNMPMargin = 700;
-Vec<NScore, 4> kFutileMargin = init_futility_margins(900);
+NScore kSNMPMargin = 790;
+Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 
 #else
 constexpr NScore kInitialAspirationDelta = 40;
-constexpr NScore kSNMPMargin = 700;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(900);
+constexpr NScore kSNMPMargin = 790;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
 #endif
 
