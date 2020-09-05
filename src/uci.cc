@@ -95,6 +95,10 @@ std::vector<UCIOption> uci_options {
   {"LMRMultiplierPV", search::SetLMRMultiplierPV, 76, 0, 100},
   {"LMROffsetPVCap", search::SetLMROffsetPVCap, 50, -155, 100},
 //  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 23, 0, 100},
+  {"LMP1", search::SetLMP1, 6, 1, 30},
+  {"LMP2", search::SetLMP2, 7, 1, 30},
+  {"LMP3", search::SetLMP3, 8, 1, 30},
+  {"LMP4", search::SetLMP4, 22, 1, 30},
 #endif
 };
 
