@@ -118,13 +118,13 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 NScore kInitialAspirationDelta = 40;
 NScore kSNMPMargin = 790;
 Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
-std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
+std::array<size_t, 5> kLMP = {0, 6, 7, 8, 22};
 
 #else
 constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 790;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
-const std::array<size_t, 5> kLMP = {0, 6, 9, 13, 18};
+const std::array<size_t, 5> kLMP = {0, 6, 7, 8, 22};
 #endif
 
 // Parameters used to initialize the LMR reduction table
@@ -2230,6 +2230,11 @@ void SetLMROffsetPVCap(int32_t value) {
 //  lmr_initializer.mult_pv_cap = 0.01 * value;
 //  lmr_reductions = init_lmr_reductions(lmr_initializer);
 //}
+
+void SetLMP1(int32_t value) { kLMP[1] = value; }
+void SetLMP2(int32_t value) { kLMP[2] = value; }
+void SetLMP3(int32_t value) { kLMP[3] = value; }
+void SetLMP4(int32_t value) { kLMP[4] = value; }
 
 #endif
 

@@ -83,6 +83,10 @@ void SetLMROffsetCap(int32_t value);
 void SetLMRMultiplierCap(int32_t value);
 void SetLMROffsetPVCap(int32_t value);
 //void SetLMRMultiplierPVCap(int32_t value);
+void SetLMP1(int32_t value);
+void SetLMP2(int32_t value);
+void SetLMP3(int32_t value);
+void SetLMP4(int32_t value);
 #endif
 
 }
