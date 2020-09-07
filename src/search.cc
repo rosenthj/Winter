@@ -993,19 +993,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if (node_type == NodeType::kNW && (size_t)depth < kLMP.size() && (i >= (size_t)kLMP[depth])
+      if ((size_t)depth < kLMP.size() && (i >= (size_t)kLMP[depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
 
       //Late Move Reduction factor
       reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
-//      if (GetMoveType(move) > kDoublePawnMove) {
-//        reduction = (2 * reduction) / 3;
-//      }
-//      if (NodeType == kNW && !strict_worsening && reduction > 2) {
-//        reduction = (4 * reduction) / 5;
-//      }
       assert(reduction < depth);
 
       //Futility Pruning
