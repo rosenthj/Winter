@@ -242,6 +242,101 @@ struct Vec {
   type values[length];
 };
 
+#ifdef __BMI2__
+#include <immintrin.h>
+
+template<size_t length>
+struct Vec<float, length> {
+  using type = float;
+  Vec() {}
+  
+  Vec(float val) {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = val;
+    }
+  }
+  
+  inline size_t size() const {
+    return length;
+  }
+  
+  inline Vec<type, length>& operator+=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-8; i+=8) {
+      __m256 v1 = _mm256_loadu_ps (&values[i]);
+      __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
+      _mm256_store_ps (&values[i], _mm256_add_ps(v1, v2));
+    }
+    return *this;
+  }
+  
+  inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-8; i+=8) {
+      __m256 v1 = _mm256_loadu_ps (&values[i]);
+      __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
+      _mm256_store_ps (&values[i], _mm256_mul_ps(v1, v2));
+    }
+    return *this;
+  }
+  
+  inline Vec<type, length>& relu() {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = std::max(values[i], static_cast<type>(0));
+    }
+    return *this;
+  }
+#ifdef __FMA__
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+    for (size_t i = 0; i < length; ++i) {
+      this->values[i] += a[i] * b;
+    }
+    return *this;
+  }
+
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+    for (size_t i = 0; i <= length-8; i+=8) {
+      __m256 c = _mm256_loadu_ps (&values[i]);
+      __m256 va = _mm256_loadu_ps (&a.values[i]);
+      __m256 vb = _mm256_loadu_ps (&b.values[i]);
+      _mm256_store_ps (&values[i], _mm256_fmadd_ps (va, vb, c));
+    }
+    for (size_t i = 0; i < length; ++i) {
+      this->values[i] += a[i] * b[i];
+    }
+    return *this;
+  }
+#else
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+    for (size_t i = 0; i < length; ++i) {
+      this->values[i] += a[i] * b;
+    }
+    return *this;
+  }
+
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+    for (size_t i = 0; i < length; ++i) {
+      this->values[i] += a[i] * b[i];
+    }
+    return *this;
+  }
+#endif  
+
+  template<typename t>
+  float dot(const Vec<t, length> &other) const {
+    float s = 0;
+    for (size_t i = 0; i < length; ++i) {
+      s += values[i] * other[i];
+    }
+    return s;
+  }
+  
+  inline float& operator[](std::size_t idx) { return values[idx]; }
+  inline const float operator[](std::size_t idx) const { return values[idx]; }
+  
+  float values[length];
+};
+
+#endif
+
 template<typename t, size_t l>
 Vec<t,l> operator*(Vec<t,l> lhs, const int rhs) {
   lhs *= rhs;
