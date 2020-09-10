@@ -106,6 +106,19 @@ Array3d<Depth, 64, 64, 4> init_lmr_reductions(const LMRInitializer &x) {
   return lmr_reductions;
 }
 
+const Array2d<Depth, 2, 6> init_lmp_breakpoints(Depth base_nw, Depth base_pv,
+                                                    int32_t x, int32_t y) {
+  Array2d<Depth, 2, 6> lmp;
+  lmp[0][0] = 0;
+  lmp[1][0] = 0;
+  for (int32_t i = 1; i < lmp[0].size(); ++i) {
+    int32_t j = i-1;
+    lmp[0][i] = base_nw + ((x*j + y*j*j) / 8);
+    lmp[1][i] = base_pv + ((x*j + y*j*j) / 8);
+  }
+  return lmp;
+}
+
 Vec<NScore, 4> init_futility_margins(NScore s) {
   Vec<NScore, 4> kFutilityMargins(0);
   for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
@@ -118,13 +131,16 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 NScore kInitialAspirationDelta = 40;
 NScore kSNMPMargin = 790;
 Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
-std::array<size_t, 5> kLMP = {0, 6, 7, 8, 22};
-
+Depth kLMPBaseNW = 3, kLMPBasePV = 5;
+int32_t kLMPScalar = 12, kLMPQuad = 4;
+Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
 constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 790;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
-const std::array<size_t, 5> kLMP = {0, 6, 7, 8, 22};
+const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
+const int32_t kLMPScalar = 12, kLMPQuad = 4;
+const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
 
 // Parameters used to initialize the LMR reduction table
@@ -993,7 +1009,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if ((size_t)depth < kLMP.size() && (i >= (size_t)kLMP[depth])
+      if ((size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -2225,10 +2241,26 @@ void SetLMROffsetPVCap(int32_t value) {
 //  lmr_reductions = init_lmr_reductions(lmr_initializer);
 //}
 
-void SetLMP1(int32_t value) { kLMP[1] = value; }
-void SetLMP2(int32_t value) { kLMP[2] = value; }
-void SetLMP3(int32_t value) { kLMP[3] = value; }
-void SetLMP4(int32_t value) { kLMP[4] = value; }
+void ResetLMP() {
+  kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
+}
+
+void SetLMPBaseNW(int32_t value) {
+  kLMPBaseNW = value;
+  ResetLMP();
+}
+void SetLMPBasePV(int32_t value) {
+  kLMPBasePV = value;
+  ResetLMP();
+}
+void SetLMPScalar(int32_t value) {
+  kLMPScalar = value;
+  ResetLMP();
+}
+void SetLMPQuadratic(int32_t value) {
+  kLMPQuad = value;
+  ResetLMP();
+}
 
 #endif
 
