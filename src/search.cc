@@ -1005,11 +1005,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
 
     Depth reduction = 0;
 
-    if (i && !in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
+    if (i && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if ((size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
+      if (!in_check && (size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -1020,6 +1020,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
 
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
+          && !in_check
           && depth - reduction <= 3
           && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
