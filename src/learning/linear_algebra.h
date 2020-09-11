@@ -242,8 +242,27 @@ struct Vec {
   type values[length];
 };
 
-#ifdef __BMI2__
+#ifdef __AVX__
 #include <immintrin.h>
+
+// Sept. 10, 2020. Taken from: https://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
+inline float sum8(__m256 x) {
+    const __m128 hiQuad = _mm256_extractf128_ps(x, 1);
+    const __m128 loQuad = _mm256_castps256_ps128(x);
+    const __m128 sumQuad = _mm_add_ps(loQuad, hiQuad);
+    const __m128 loDual = sumQuad;
+    const __m128 hiDual = _mm_movehl_ps(sumQuad, sumQuad);
+    const __m128 sumDual = _mm_add_ps(loDual, hiDual);
+    const __m128 lo = sumDual;
+    const __m128 hi = _mm_shuffle_ps(sumDual, sumDual, 0x1);
+    const __m128 sum = _mm_add_ss(lo, hi);
+    return _mm_cvtss_f32(sum);
+}
+
+inline __m256 fmadd_ps(__m256 a, __m256 b, __m256 c) {
+  //return _mm256_fmadd_ps(a, b, c);
+  return _mm256_add_ps(_mm256_mul_ps(a, b), c);
+}
 
 template<size_t length>
 struct Vec<float, length> {
@@ -264,7 +283,7 @@ struct Vec<float, length> {
     for (size_t i = 0; i <= length-8; i+=8) {
       __m256 v1 = _mm256_loadu_ps (&values[i]);
       __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
-      _mm256_store_ps (&values[i], _mm256_add_ps(v1, v2));
+      _mm256_storeu_ps(&values[i], _mm256_add_ps(v1, v2));
     }
     return *this;
   }
@@ -273,60 +292,151 @@ struct Vec<float, length> {
     for (size_t i = 0; i <= length-8; i+=8) {
       __m256 v1 = _mm256_loadu_ps (&values[i]);
       __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
-      _mm256_store_ps (&values[i], _mm256_mul_ps(v1, v2));
+      _mm256_storeu_ps (&values[i], _mm256_mul_ps(v1, v2));
     }
     return *this;
   }
   
   inline Vec<type, length>& relu() {
-    for (size_t i = 0; i < length; ++i) {
-      values[i] = std::max(values[i], static_cast<type>(0));
+    const __m256 zero = _mm256_set1_ps(0);
+    for (size_t i = 0; i <= length-8; i += 8) {
+      __m256 v1 = _mm256_loadu_ps (&values[i]);
+      _mm256_storeu_ps(&values[i], _mm256_max_ps(v1, zero));
     }
     return *this;
   }
-#ifdef __FMA__
+  
   inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
-    for (size_t i = 0; i < length; ++i) {
-      this->values[i] += a[i] * b;
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    __m256 vb = _mm256_set1_ps (b);
+    for (size_t i = 0; i <= length-8; i+=8) {
+      __m256 c = _mm256_loadu_ps (&values[i]);
+      __m256 va = _mm256_loadu_ps (&a.values[i]);
+      _mm256_storeu_ps (&values[i], fmadd_ps (va, vb, c));
     }
     return *this;
   }
 
   inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
     for (size_t i = 0; i <= length-8; i+=8) {
       __m256 c = _mm256_loadu_ps (&values[i]);
       __m256 va = _mm256_loadu_ps (&a.values[i]);
       __m256 vb = _mm256_loadu_ps (&b.values[i]);
-      _mm256_store_ps (&values[i], _mm256_fmadd_ps (va, vb, c));
-    }
-    for (size_t i = 0; i < length; ++i) {
-      this->values[i] += a[i] * b[i];
+      _mm256_storeu_ps (&values[i], fmadd_ps (va, vb, c));
     }
     return *this;
   }
-#else
-  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+  
+  template<typename t>
+  float dot(const Vec<t, length> &other) const {
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    __m256 c = _mm256_set1_ps(0);
+    for (size_t i = 0; i <= length-8; i+=8) {
+      __m256 va = _mm256_loadu_ps (&values[i]);
+      __m256 vb = _mm256_loadu_ps (&other.values[i]);
+      c = fmadd_ps(va, vb, c);
+    }
+    return sum8(c);
+  }
+  
+  inline float& operator[](std::size_t idx) { return values[idx]; }
+  inline const float operator[](std::size_t idx) const { return values[idx]; }
+  
+  float values[length];
+};
+
+#elif  __SSE__
+#include <xmmintrin.h>
+
+// Sept. 10, 2020. Taken from: https://stackoverflow.com/questions/6996764/fastest-way-to-do-horizontal-sse-vector-sum-or-other-reduction
+inline float sum4(__m128 v) {                                 
+  __m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
+  __m128 sums = _mm_add_ps(v, shuf);
+  shuf = _mm_movehl_ps(shuf, sums);
+  sums = _mm_add_ss(sums, shuf);
+  return _mm_cvtss_f32(sums);
+}
+
+inline __m128 fmadd_ps(__m128 a, __m128 b, __m128 c) {
+  //return _mm256_fmadd_ps(a, b, c);
+  return _mm_add_ps(_mm_mul_ps(a, b), c);
+}
+
+template<size_t length>
+struct Vec<float, length> {
+  using type = float;
+  Vec() {}
+  
+  Vec(float val) {
     for (size_t i = 0; i < length; ++i) {
-      this->values[i] += a[i] * b;
+      values[i] = val;
+    }
+  }
+  
+  inline size_t size() const {
+    return length;
+  }
+  
+  inline Vec<type, length>& operator+=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 v1 = _mm_loadu_ps (&values[i]);
+      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
+      _mm_storeu_ps(&values[i], _mm_add_ps(v1, v2));
+    }
+    return *this;
+  }
+  
+  inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 v1 = _mm_loadu_ps (&values[i]);
+      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
+      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
+    }
+    return *this;
+  }
+  
+  inline Vec<type, length>& relu() {
+    const __m128 zero = _mm_set1_ps(0);
+    for (size_t i = 0; i <= length-4; i += 4) {
+      __m128 v1 = _mm_loadu_ps (&values[i]);
+      _mm_storeu_ps(&values[i], _mm_max_ps(v1, zero));
+    }
+    return *this;
+  }
+  
+  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    __m128 vb = _mm_set1_ps (b);
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 c = _mm_loadu_ps (&values[i]);
+      __m128 va = _mm_loadu_ps (&a.values[i]);
+      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
     }
     return *this;
   }
 
   inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
-    for (size_t i = 0; i < length; ++i) {
-      this->values[i] += a[i] * b[i];
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 c = _mm_loadu_ps (&values[i]);
+      __m128 va = _mm_loadu_ps (&a.values[i]);
+      __m128 vb = _mm_loadu_ps (&b.values[i]);
+      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
     }
     return *this;
   }
-#endif  
-
+  
   template<typename t>
   float dot(const Vec<t, length> &other) const {
-    float s = 0;
-    for (size_t i = 0; i < length; ++i) {
-      s += values[i] * other[i];
+    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    __m128 c = _mm_set1_ps(0);
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 va = _mm_loadu_ps (&values[i]);
+      __m128 vb = _mm_loadu_ps (&other.values[i]);
+      c = fmadd_ps(va, vb, c);
     }
-    return s;
+    return sum4(c);
   }
   
   inline float& operator[](std::size_t idx) { return values[idx]; }
@@ -336,6 +446,8 @@ struct Vec<float, length> {
 };
 
 #endif
+
+
 
 template<typename t, size_t l>
 Vec<t,l> operator*(Vec<t,l> lhs, const int rhs) {
