@@ -341,7 +341,7 @@ struct Vec<float, length> {
   }
   
   inline float& operator[](std::size_t idx) { return values[idx]; }
-  inline const float operator[](std::size_t idx) const { return values[idx]; }
+  inline float operator[](std::size_t idx) const { return values[idx]; }
   
   float values[length];
 };
@@ -440,7 +440,7 @@ struct Vec<float, length> {
   }
   
   inline float& operator[](std::size_t idx) { return values[idx]; }
-  inline const float operator[](std::size_t idx) const { return values[idx]; }
+  inline float operator[](std::size_t idx) const { return values[idx]; }
   
   float values[length];
 };

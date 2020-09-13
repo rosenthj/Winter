@@ -388,7 +388,7 @@ enum PawnCategory {
 };
 
 template<typename T, Color color, Color our_color, PawnCategory cat>
-inline void AddPawnsToInputByGroup(T &score, const EvalConstants &ec, BitBoard cat_pawns, CNNHelper &helper) {
+inline void AddPawnsToInputByGroup(T &score, BitBoard cat_pawns, CNNHelper &helper) {
   constexpr size_t offset = color == our_color ? 0 : kChannelsPerSide;
 
   for (; cat_pawns; bitops::PopLSB(cat_pawns)) {
@@ -421,13 +421,13 @@ inline void AddPawnsToInput(T &score, const EvalConstants &ec, CNNHelper &helper
   constexpr Color not_color = color ^ 0x1;
 
   AddPawnsToInputByGroup<T, color, our_color, PawnCategory::Opposed>(
-      score, ec, ec.pawn_bb[color] & ec.opposed_pawns, helper);
+      score, ec.pawn_bb[color] & ec.opposed_pawns, helper);
   AddPawnsToInputByGroup<T, color, our_color, PawnCategory::Unopposed>(
-      score, ec, ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]), helper);
+      score, ec.pawn_bb[color] & ~(ec.opposed_pawns | ec.passed[color]), helper);
   AddPawnsToInputByGroup<T, color, our_color, PawnCategory::PassedCovered>(
-      score, ec, ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
+      score, ec.passed[color] & king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
   AddPawnsToInputByGroup<T, color, our_color, PawnCategory::PassedUncovered>(
-      score, ec, ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
+      score, ec.passed[color] & ~king_pawn_coverage[not_color][ec.king_squares[not_color]], helper);
 }
 
 template<typename T, Color color, Color our_color>
@@ -573,8 +573,7 @@ inline void ScoreQueens(T &score, const Board &board, const EvalConstants &ec,
 }
 
 template<typename T, Color color, Color our_color>
-inline void ScoreKings(T &score, const Board &board,
-                       const EvalConstants &ec, const EvalCounter &counter) {
+inline void ScoreKings(T &score, const Board &board, const EvalCounter &counter) {
   constexpr Color not_color = color ^ 0x1;
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
 
@@ -666,7 +665,7 @@ inline void ScorePieces(T &score, const Board &board, const EvalConstants &ec,
   ScoreBishops<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
   ScoreRooks<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
   ScoreQueens<T, color, our_color>(score, board, ec, counter, enemy_king_zone);
-  ScoreKings<T, color, our_color>(score, board, ec, counter);
+  ScoreKings<T, color, our_color>(score, board, counter);
 }
 
 template<typename T, Color color, Color our_color>
@@ -695,7 +694,7 @@ inline void AddCommonFeatures(T &score, const Board &board) {
 }
 
 template<typename T, Color our_color>
-inline void AddCommonFeatures(T &score, const Board &board, const EvalConstants &ec) {
+inline void AddCommonFeatures(T &score, const EvalConstants &ec) {
   AddFeaturePair<T, our_color>(score, kPawn + kActivityBonusIndex,
                                bitops::PopCount(ec.p_forward[kWhite]),
                                bitops::PopCount(ec.p_forward[kBlack]));
@@ -732,7 +731,7 @@ T ScoreBoard(const Board &board, const EvalConstants &ec) {
 
   // Common features independent of specific individual piece placement.
   AddCommonFeatures<T, our_color>(score, board);
-  AddCommonFeatures<T, our_color>(score, board, ec);
+  AddCommonFeatures<T, our_color>(score, ec);
 
   // Piece evaluations
   std::array<EvalCounter, 2> check_counter;

@@ -111,7 +111,7 @@ const Array2d<Depth, 2, 6> init_lmp_breakpoints(Depth base_nw, Depth base_pv,
   Array2d<Depth, 2, 6> lmp;
   lmp[0][0] = 0;
   lmp[1][0] = 0;
-  for (int32_t i = 1; i < lmp[0].size(); ++i) {
+  for (size_t i = 1; i < lmp[0].size(); ++i) {
     int32_t j = i-1;
     lmp[0][i] = base_nw + ((x*j + y*j*j) / 8);
     lmp[1][i] = base_pv + ((x*j + y*j*j) / 8);
@@ -153,7 +153,7 @@ LMRInitializer lmr_initializer {
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
 template<NodeType node_type>
-const Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
+Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   assert(depth > 0);
   size_t is_pv = node_type == NodeType::kPV ? 2 : 0;
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
@@ -749,7 +749,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   return lower_bound_score;
 }
 
-inline NScore get_futility_margin(Depth depth, const Score score, bool improving) {
+inline NScore get_futility_margin(Depth depth, bool improving) {
   return kFutileMargin[depth] - 100 * depth * improving;
 }
 
@@ -1021,7 +1021,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
