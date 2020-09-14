@@ -749,8 +749,8 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   return lower_bound_score;
 }
 
-inline NScore get_futility_margin(Depth depth, const Score score, bool improving) {
-  return kFutileMargin[depth] - 100 * depth * improving;
+inline NScore get_futility_margin(Depth depth, bool improving) {
+  return kFutileMargin[depth] + 100 * depth * improving;
 }
 
 #ifdef SAMPLE_SEARCH
@@ -1021,7 +1021,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, static_eval, !strict_worsening))
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
