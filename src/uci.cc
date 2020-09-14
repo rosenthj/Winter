@@ -85,8 +85,8 @@ std::vector<UCIOption> uci_options {
 //   search::SetArmageddon(armageddon_setting);
 #ifdef TUNE
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
-  {"Futility", search::SetFutilityMargin, 560, 400, 1500},
-  {"SNMPMargin", search::SetSNMPMargin, 790, 500, 1500},
+  {"Futility", search::SetFutilityMargin, 535, 400, 1000},
+  {"SNMPMargin", search::SetSNMPMargin, 790, 500, 1200},
   {"LMROffset", search::SetLMROffset, 16, 0, 100},
   {"LMRMultiplier", search::SetLMRMultiplier, 74, 0, 250},
   {"LMROffsetCap", search::SetLMROffsetCap, 33, -55, 100},
@@ -99,8 +99,8 @@ std::vector<UCIOption> uci_options {
   {"LMPBasePV", search::SetLMPBasePV, 5, 1, 20},
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
-  {"FutilityImprovement", search::SetFutilityImprovement, 100, -100, 400},
-  {"SNMPImprovement", search::SetSNMPImprovement, 60, -100, 400},
+  {"FutilityImprovement", search::SetFutilityImprovement, 380, 0, 500},
+  {"SNMPImprovement", search::SetSNMPImprovement, 0, -100, 400},
 #endif
 };
 

@@ -127,8 +127,8 @@ std::array<NScore, 4> init_futility_margins(NScore s) {
 NScore kInitialAspirationDelta = 40;
 NScore kSNMPMargin = 790;
 NScore kSNMPImprovement = 0;
-std::array<NScore, 4> kFutileMargin = init_futility_margins(560);
-NScore kFutileImprovement = -380;
+std::array<NScore, 4> kFutileMargin = init_futility_margins(535);
+NScore kFutileImprovement = 380;
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
@@ -137,7 +137,7 @@ constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 790;
 constexpr NScore kSNMPImprovement = 0;
 std::array<NScore, 4> kFutileMargin = init_futility_margins(535);
-constexpr NScore kFutileImprovement = -380;
+constexpr NScore kFutileImprovement = 380;
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
@@ -750,7 +750,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 }
 
 inline NScore get_futility_margin(Depth depth, bool improving) {
-  return kFutileMargin[depth] - kFutileImprovement * depth * improving;
+  return kFutileMargin[depth] + kFutileImprovement * depth * improving;
 }
 
 #ifdef SAMPLE_SEARCH
