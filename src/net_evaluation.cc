@@ -21,18 +21,14 @@ constexpr size_t cnn_dense_in = 4 * block_size;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
-#ifdef __AVX__
-using FNetLayerType = Vec<__m256, block_size>;
-#else
-using FNetLayerType = Vec<__m128, block_size>;
-#endif
+using FNetLayerType = Vec<SIMDFloat, block_size>;
 
 // CNN types
-using CNNLayerType = Array2d<Vec<float, block_size>, 8, 8>;
-using Filter = Array2d<Vec<float, block_size>, 3, 3>;
+using CNNLayerType = Array2d<NetLayerType, 8, 8>;
+using Filter = Array2d<NetLayerType, 3, 3>;
 // The net inputs are very sparse (less than 18/640)
 // so it makes sense to rely on deconvolution instead of regular conv.
-using DeconvFilter = Array2d<Vec<float, block_size>, 3, 3>;
+using DeconvFilter = Array2d<NetLayerType, 3, 3>;
 
 //using CReLULayerType = Vec<float, act_block_size>;
 std::array<float, 2> contempt = { 0.5, 0.5 };
