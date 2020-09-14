@@ -475,7 +475,7 @@ void RunBenchCommand(int argc, char **argv) {
   Time initial_time = now();
   search::Threads.set_num_threads(num_threads);
 
-  for (int i = 0; i < kBenchmarkCommandPositions.size(); i++) {
+  for (size_t i = 0; i < kBenchmarkCommandPositions.size(); ++i) {
 
     // Perform the search on the position
     Time start = now();
@@ -493,13 +493,13 @@ void RunBenchCommand(int argc, char **argv) {
 
   printf("\n================================================================\n");
 
-  for (int i = 0; i < kBenchmarkCommandPositions.size(); i++) {
+  for (size_t i = 0; i < kBenchmarkCommandPositions.size(); ++i) {
 
     // Convert moves to typical UCI notation
     std::string bestStr = parse::MoveToString(bestMoves[i]);
 
     // Log all collected information for the current position
-    printf("Bench [# %2d] %5d cp  Best:%6s %12d nodes %8d nps\n", i + 1, (scores[i].to_cp() / 8),
+    printf("Bench [# %2lu] %5d cp  Best:%6s %12d nodes %8d nps\n", i + 1, (scores[i].to_cp() / 8),
            bestStr.c_str(), (int)nodes[i], (int)(1000 * nodes[i] / (times[i].count() + 1)));
   }
 
@@ -508,7 +508,7 @@ void RunBenchCommand(int argc, char **argv) {
   // Report the overall statistics
   auto total_time = std::chrono::duration_cast<Milliseconds>(now() - initial_time);
   int64_t totalNodes = 0;
-  for (int i = 0; i < kBenchmarkCommandPositions.size(); i++) totalNodes += nodes[i];
+  for (size_t i = 0; i < kBenchmarkCommandPositions.size(); ++i) totalNodes += nodes[i];
   printf("OVERALL: %38d nodes %8d nps\n", (int)totalNodes, (int)(1000 * totalNodes / (total_time.count() + 1)));
 }
 
