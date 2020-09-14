@@ -1169,8 +1169,8 @@ bool Board::IsMoveLegal(const Move move) const {
   return true;
 }
 
-Vec<BitBoard, 6> Board::GetDirectCheckingSquares() const {
-  Vec<BitBoard, 6> direct_checks;
+std::array<BitBoard, 6> Board::GetDirectCheckingSquares() const {
+  std::array<BitBoard, 6> direct_checks;
   BitBoard king_bb = get_piece_bitboard(get_not_turn(), kKing);
   if (get_turn() == kWhite) {
     direct_checks[kPawn] = bitops::SW(king_bb) | bitops::SE(king_bb);
@@ -1188,10 +1188,10 @@ Vec<BitBoard, 6> Board::GetDirectCheckingSquares() const {
   return direct_checks;
 }
 
-Vec<BitBoard, 6> Board::GetTabooSquares() const {
+std::array<BitBoard, 6> Board::GetTabooSquares() const {
   const Color not_turn = get_not_turn();
   const BitBoard all_pieces = get_all_pieces();
-  Vec<BitBoard, 6> taboo_squares;
+  std::array<BitBoard, 6> taboo_squares;
   BitBoard taboo;
   if (get_turn() == kWhite) {
     BitBoard bb = get_piece_bitboard(not_turn, kPawn);

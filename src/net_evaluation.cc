@@ -377,7 +377,7 @@ struct EvalConstants {
 };
 
 struct EvalCounter {
-  Vec<int, (kQueen - kPawn)> king_zone_attacks = Vec<int, (kQueen - kPawn)>(0);
+  std::array<int, (kQueen - kPawn)> king_zone_attacks {};
   int king_attack_count = 0;
   int safe = 0;
   int unsafe = 0;

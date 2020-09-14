@@ -117,8 +117,8 @@ public:
     std::cout << std::endl;
   }
   bool InCheck() const;
-  Vec<BitBoard, 6> GetDirectCheckingSquares() const;
-  Vec<BitBoard, 6> GetTabooSquares() const;
+  std::array<BitBoard, 6> GetDirectCheckingSquares() const;
+  std::array<BitBoard, 6> GetTabooSquares() const;
   bool GivesCheck(const Move move);
   void SetToSamePosition(const Board &board);
   bool NonNegativeSEE(const Move move) const;

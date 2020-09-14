@@ -493,7 +493,7 @@ Vec<t,l> squared_differences(const Vec<t,l> &v1, const Vec<t,l> &v2) {
   return v;
 }
 
-template <typename type,size_t length>
+/*template <typename type,size_t length>
 struct SqMatrix {
   SqMatrix() {
     for (size_t i = 0; i < length; ++i) {
@@ -651,6 +651,6 @@ template<typename type, size_t length> SqMatrix<type, length> SymmetricSquareMat
   }
   adj_mat /= det;
   return adj_mat;
-}
+}*/
 
 #endif /* LEARNING_LINEAR_ALGEBRA_H_ */

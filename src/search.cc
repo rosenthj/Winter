@@ -348,8 +348,8 @@ inline BitBoard get_under_threat_squares(const Board &board) {
 struct MoveOrderInfo {
   const Move tt_entry;
   const Move last_move;
-  const Vec<BitBoard, 6> direct_checks;
-  const Vec<BitBoard, 6> taboo_squares;
+  const std::array<BitBoard, 6> direct_checks;
+  const std::array<BitBoard, 6> taboo_squares;
   const BitBoard passed_pawn_squares;
   const BitBoard pawn_attack_squares;
   const BitBoard under_threat;
@@ -974,7 +974,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   //Init checking squares for efficient detection of checking moves.
   //Moves detected always give check, but only direct checks are detected.
   //Ie no checks from special moves or discovered checks.
-  Vec<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
+  std::array<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
   Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
   std::vector<Move> quiets;
