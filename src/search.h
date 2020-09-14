@@ -88,6 +88,8 @@ void SetLMPBasePV(int32_t value);
 void SetLMPScalar(int32_t value);
 void SetLMPQuadratic(int32_t value);
 void SetLMPDepth(int32_t value);
+void SetFutilityImprovement(int32_t value);
+void SetSNMPImprovement(int32_t value);
 #endif
 
 }

@@ -1,12 +1,8 @@
 /*
  *  Winter is a UCI chess engine.
-
- *
- *
- *
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2020 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -130,7 +126,9 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 #ifdef TUNE
 NScore kInitialAspirationDelta = 40;
 NScore kSNMPMargin = 790;
+NScore kSNMPImprovement = 60;
 Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
+NScore kFutileImprovement = 100;
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
@@ -750,7 +748,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 }
 
 inline NScore get_futility_margin(Depth depth, const Score score, bool improving) {
-  return kFutileMargin[depth] - 100 * depth * improving;
+  return kFutileMargin[depth] - kFutileImprovement * depth * improving;
 }
 
 #ifdef SAMPLE_SEARCH
@@ -908,7 +906,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
-      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
+      NScore margin = (kSNMPMargin - kSNMPImprovement * !strict_worsening) * depth;
       if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
@@ -2261,6 +2259,9 @@ void SetLMPQuadratic(int32_t value) {
   kLMPQuad = value;
   ResetLMP();
 }
+
+void SetFutilityImprovement(int32_t value) { kFutileImprovement = value; }
+void SetSNMPImprovement(int32_t value) { kSNMPImprovement = value; }
 
 #endif
 
