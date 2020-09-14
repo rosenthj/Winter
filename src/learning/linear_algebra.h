@@ -244,9 +244,12 @@ struct Vec {
 
 #ifdef __AVX__
 #include <immintrin.h>
+using SIMDFloat = __m256;
+constexpr size_t kSIMDWidth = 8;
 
+namespace simd {
 // Sept. 10, 2020. Taken from: https://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
-inline float sum8(__m256 x) {
+inline float sum(__m256 x) {
     const __m128 hiQuad = _mm256_extractf128_ps(x, 1);
     const __m128 loQuad = _mm256_castps256_ps128(x);
     const __m128 sumQuad = _mm_add_ps(loQuad, hiQuad);
@@ -259,202 +262,52 @@ inline float sum8(__m256 x) {
     return _mm_cvtss_f32(sum);
 }
 
-inline __m256 fmadd_ps(__m256 a, __m256 b, __m256 c) {
+inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm256_add_ps(a, b); }
+inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm256_mul_ps(a, b); }
+inline void store(float* mem_addr, SIMDFloat a) { _mm256_storeu_ps(mem_addr, a); }
+inline SIMDFloat load(float const* mem_addr) { return _mm256_loadu_ps(mem_addr); }
+inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm256_max_ps(a,  b); }
+inline SIMDFloat set(float a) { return _mm256_set1_ps(a); }
+
+inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
   //return _mm256_fmadd_ps(a, b, c);
-  return _mm256_add_ps(_mm256_mul_ps(a, b), c);
+  return add(multiply(a, b), c);
 }
 
-template<size_t length>
-struct Vec<float, length> {
-  using type = float;
-  Vec() {}
-  
-  Vec(float val) {
-    for (size_t i = 0; i < length; ++i) {
-      values[i] = val;
-    }
-  }
-  
-  inline size_t size() const {
-    return length;
-  }
-  
-  inline Vec<type, length>& operator+=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-8; i+=8) {
-      __m256 v1 = _mm256_loadu_ps (&values[i]);
-      __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
-      _mm256_storeu_ps(&values[i], _mm256_add_ps(v1, v2));
-    }
-    return *this;
-  }
-  
-  inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-8; i+=8) {
-      __m256 v1 = _mm256_loadu_ps (&values[i]);
-      __m256 v2 = _mm256_loadu_ps (&rhs.values[i]);
-      _mm256_storeu_ps (&values[i], _mm256_mul_ps(v1, v2));
-    }
-    return *this;
-  }
-  
-  inline Vec<type, length>& relu() {
-    const __m256 zero = _mm256_set1_ps(0);
-    for (size_t i = 0; i <= length-8; i += 8) {
-      __m256 v1 = _mm256_loadu_ps (&values[i]);
-      _mm256_storeu_ps(&values[i], _mm256_max_ps(v1, zero));
-    }
-    return *this;
-  }
-  
-  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    __m256 vb = _mm256_set1_ps (b);
-    for (size_t i = 0; i <= length-8; i+=8) {
-      __m256 c = _mm256_loadu_ps (&values[i]);
-      __m256 va = _mm256_loadu_ps (&a.values[i]);
-      _mm256_storeu_ps (&values[i], fmadd_ps (va, vb, c));
-    }
-    return *this;
-  }
+}
 
-  inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    for (size_t i = 0; i <= length-8; i+=8) {
-      __m256 c = _mm256_loadu_ps (&values[i]);
-      __m256 va = _mm256_loadu_ps (&a.values[i]);
-      __m256 vb = _mm256_loadu_ps (&b.values[i]);
-      _mm256_storeu_ps (&values[i], fmadd_ps (va, vb, c));
-    }
-    return *this;
-  }
-  
-  template<typename t>
-  float dot(const Vec<t, length> &other) const {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    __m256 c = _mm256_set1_ps(0);
-    for (size_t i = 0; i <= length-8; i+=8) {
-      __m256 va = _mm256_loadu_ps (&values[i]);
-      __m256 vb = _mm256_loadu_ps (&other.values[i]);
-      c = fmadd_ps(va, vb, c);
-    }
-    return sum8(c);
-  }
-  
-  inline float& operator[](std::size_t idx) { return values[idx]; }
-  inline const float operator[](std::size_t idx) const { return values[idx]; }
-  
-  float values[length];
-};
-
-template<size_t length>
-struct Vec<__m256, length> {
-  using type = __m256;
-  static constexpr size_t arr_length = length / 8;
-  Vec() {}
-  
-  Vec(Vec<float, length> input) {
-    for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm256_loadu_ps(&input.values[i*8]);
-    }
-  }
-  
-  inline size_t size() const {
-    return length;
-  }
-  
-  inline Vec<type, length>& operator+=(const Vec<__m256, length> &rhs) {
-    for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm256_add_ps(values[i], rhs.values[i]);
-    }
-    return *this;
-  }
-  
-  /*inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 v1 = _mm_loadu_ps (&values[i]);
-      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
-      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
-    }
-    return *this;
-  }*/
-  
-  inline Vec<__m256, length>& relu() {
-    const __m256 zero = _mm256_set1_ps(0);
-    for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm256_max_ps(values[i], zero);
-    }
-    return *this;
-  }
-  
-  inline Vec<__m256, length>& FMA(const Vec<float, length> &a, const float &b) {
-    __m256 vb = _mm256_set1_ps(b);
-    for (size_t i = 0; i < arr_length; ++i) {
-      __m256 va = _mm256_loadu_ps (&a.values[8*i]);
-      values[i] = fmadd_ps (va, vb, values[i]);
-    }
-    return *this;
-  }
-  
-  inline Vec<__m256, length>& FMA(const Vec<__m256, length> &a, const float &b) {
-    __m256 vb = _mm256_set1_ps(b);
-    for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = fmadd_ps (a.values[i], vb, values[i]);
-    }
-    return *this;
-  }
-
-  /*inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 c = _mm_loadu_ps (&values[i]);
-      __m128 va = _mm_loadu_ps (&a.values[i]);
-      __m128 vb = _mm_loadu_ps (&b.values[i]);
-      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
-    }
-    return *this;
-  }
-  
-  inline float& operator[](std::size_t idx) { return values[idx]; }
-  inline const float operator[](std::size_t idx) const { return values[idx]; }*/
-  
-  float dot(const Vec<__m256, length> &other) const {
-    __m256 c = _mm256_set1_ps(0);
-    for (size_t i = 0; i < arr_length; ++i) {
-      c = fmadd_ps(values[i], other.values[i], c);
-    }
-    return sum8(c);
-  }
-  
-  inline Vec<float, length> to_simple_vec() const {
-    Vec<float, length> result;
-    for (size_t i = 0; i < arr_length; ++i) {
-      _mm256_storeu_ps(&result.values[8*i], values[i]);
-    }
-    return result;
-  }
-  
-  __m256 values[arr_length];
-};
-
-#elif  __SSE__
+#else
 #include <xmmintrin.h>
+using SIMDFloat = __m128;
+constexpr size_t kSIMDWidth = 4;
 
+namespace simd {
 // Sept. 10, 2020. Taken from: https://stackoverflow.com/questions/6996764/fastest-way-to-do-horizontal-sse-vector-sum-or-other-reduction
-inline float sum4(__m128 v) {                                 
-  __m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
-  __m128 sums = _mm_add_ps(v, shuf);
+inline float sum(SIMDFloat v) {                                 
+  SIMDFloat shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
+  SIMDFloat sums = _mm_add_ps(v, shuf);
   shuf = _mm_movehl_ps(shuf, sums);
   sums = _mm_add_ss(sums, shuf);
   return _mm_cvtss_f32(sums);
 }
 
-inline __m128 fmadd_ps(__m128 a, __m128 b, __m128 c) {
+inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm_add_ps(a, b); }
+inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm_mul_ps(a, b); }
+inline void store(float* mem_addr, SIMDFloat a) { _mm_storeu_ps(mem_addr, a); }
+inline SIMDFloat load(float const* mem_addr) { return _mm_loadu_ps(mem_addr); }
+inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm_max_ps(a,  b); }
+inline SIMDFloat set(float a) { return _mm_set1_ps(a); }
+
+inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
   //return _mm256_fmadd_ps(a, b, c);
-  return _mm_add_ps(_mm_mul_ps(a, b), c);
+  return add(multiply(a, b), c);
 }
+
+}
+#endif
 
 template<size_t length>
 struct Vec<float, length> {
-  using type = float;
   Vec() {}
   
   Vec(float val) {
@@ -467,51 +320,51 @@ struct Vec<float, length> {
     return length;
   }
   
-  inline Vec<type, length>& operator+=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 v1 = _mm_loadu_ps (&values[i]);
-      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
-      _mm_storeu_ps(&values[i], _mm_add_ps(v1, v2));
+  inline Vec<float, length>& operator+=(const Vec<float, length> &rhs) {
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat v1 = simd::load(&values[i]);
+      SIMDFloat v2 = simd::load(&rhs.values[i]);
+      simd::store(&values[i], simd::add(v1, v2));
     }
     return *this;
   }
   
-  inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 v1 = _mm_loadu_ps (&values[i]);
-      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
-      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
+  inline Vec<float, length>& operator*=(const Vec<float, length> &rhs) {
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat v1 = simd::load(&values[i]);
+      SIMDFloat v2 = simd::load(&rhs.values[i]);
+      simd::store(&values[i], simd::multiply(v1, v2));
     }
     return *this;
   }
   
-  inline Vec<type, length>& relu() {
-    const __m128 zero = _mm_set1_ps(0);
-    for (size_t i = 0; i <= length-4; i += 4) {
-      __m128 v1 = _mm_loadu_ps (&values[i]);
-      _mm_storeu_ps(&values[i], _mm_max_ps(v1, zero));
+  inline Vec<float, length>& relu() {
+    const SIMDFloat zero = simd::set(0);
+    for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
+      SIMDFloat v1 = simd::load(&values[i]);
+      simd::store(&values[i], simd::max(v1, zero));
     }
     return *this;
   }
   
-  inline Vec<type, length>& FMA(const Vec<type, length> &a, const type &b) {
+  inline Vec<float, length>& FMA(const Vec<float, length> &a, const float &b) {
     static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    __m128 vb = _mm_set1_ps (b);
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 c = _mm_loadu_ps (&values[i]);
-      __m128 va = _mm_loadu_ps (&a.values[i]);
-      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
+    SIMDFloat vb = simd::set(b);
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat c = simd::load(&values[i]);
+      SIMDFloat va = simd::load(&a.values[i]);
+     simd::store(&values[i], simd::fmadd(va, vb, c));
     }
     return *this;
   }
 
-  inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+  inline Vec<float, length>& FMA(const Vec<float, length> &a, const Vec<float, length> &b) {
     static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 c = _mm_loadu_ps (&values[i]);
-      __m128 va = _mm_loadu_ps (&a.values[i]);
-      __m128 vb = _mm_loadu_ps (&b.values[i]);
-      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat c = simd::load(&values[i]);
+      SIMDFloat va = simd::load(&a.values[i]);
+      SIMDFloat vb = simd::load(&b.values[i]);
+      simd::store(&values[i], simd::fmadd(va, vb, c));
     }
     return *this;
   }
@@ -519,13 +372,13 @@ struct Vec<float, length> {
   template<typename t>
   float dot(const Vec<t, length> &other) const {
     static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    __m128 c = _mm_set1_ps(0);
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 va = _mm_loadu_ps (&values[i]);
-      __m128 vb = _mm_loadu_ps (&other.values[i]);
-      c = fmadd_ps(va, vb, c);
+    SIMDFloat c = simd::set(0);
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat va = simd::load(&values[i]);
+      SIMDFloat vb = simd::load(&other.values[i]);
+      c = simd::fmadd(va, vb, c);
     }
-    return sum4(c);
+    return simd::sum(c);
   }
   
   inline float& operator[](std::size_t idx) { return values[idx]; }
@@ -535,14 +388,13 @@ struct Vec<float, length> {
 };
 
 template<size_t length>
-struct Vec<__m128, length> {
-  using type = __m128;
-  static constexpr size_t arr_length = length / 4;
+struct Vec<SIMDFloat, length> {
+  static constexpr size_t arr_length = length / kSIMDWidth;
   Vec() {}
   
   Vec(Vec<float, length> input) {
     for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm_loadu_ps(&input.values[i*4]);
+      values[i] = simd::load(&input.values[i*kSIMDWidth]);
     }
   }
   
@@ -550,81 +402,56 @@ struct Vec<__m128, length> {
     return length;
   }
   
-  inline Vec<type, length>& operator+=(const Vec<__m128, length> &rhs) {
+  inline Vec<SIMDFloat, length>& operator+=(const Vec<SIMDFloat, length> &rhs) {
     for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm_add_ps(values[i], rhs.values[i]);
+      values[i] = simd::add(values[i], rhs.values[i]);
     }
     return *this;
   }
   
-  /*inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 v1 = _mm_loadu_ps (&values[i]);
-      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
-      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
-    }
-    return *this;
-  }*/
-  
-  inline Vec<__m128, length>& relu() {
-    const __m128 zero = _mm_set1_ps(0);
+  inline Vec<SIMDFloat, length>& relu() {
+    const SIMDFloat zero = simd::set(0);
     for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = _mm_max_ps(values[i], zero);
+      values[i] = simd::max(values[i], zero);
     }
     return *this;
   }
   
-  inline Vec<__m128, length>& FMA(const Vec<float, length> &a, const float &b) {
-    __m128 vb = _mm_set1_ps(b);
+  inline Vec<SIMDFloat, length>& FMA(const Vec<float, length> &a, const float &b) {
+    SIMDFloat vb = simd::set(b);
     for (size_t i = 0; i < arr_length; ++i) {
-      __m128 va = _mm_loadu_ps (&a.values[4*i]);
-      values[i] = fmadd_ps (va, vb, values[i]);
+      SIMDFloat va = simd::load(&a.values[kSIMDWidth*i]);
+      values[i] = simd::fmadd(va, vb, values[i]);
     }
     return *this;
   }
   
-  inline Vec<__m128, length>& FMA(const Vec<__m128, length> &a, const float &b) {
-    __m128 vb = _mm_set1_ps(b);
+  inline Vec<SIMDFloat, length>& FMA(const Vec<SIMDFloat, length> &a, const float &b) {
+    SIMDFloat vb = simd::set(b);
     for (size_t i = 0; i < arr_length; ++i) {
-      values[i] = fmadd_ps (a.values[i], vb, values[i]);
+      values[i] = simd::fmadd(a.values[i], vb, values[i]);
     }
     return *this;
   }
 
-  /*inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
-    for (size_t i = 0; i <= length-4; i+=4) {
-      __m128 c = _mm_loadu_ps (&values[i]);
-      __m128 va = _mm_loadu_ps (&a.values[i]);
-      __m128 vb = _mm_loadu_ps (&b.values[i]);
-      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
-    }
-    return *this;
-  }
-  
-  inline float& operator[](std::size_t idx) { return values[idx]; }
-  inline const float operator[](std::size_t idx) const { return values[idx]; }*/
-  
-  float dot(const Vec<__m128, length> &other) const {
-    __m128 c = _mm_set1_ps(0);
+  float dot(const Vec<SIMDFloat, length> &other) const {
+    SIMDFloat c = simd::set(0);
     for (size_t i = 0; i < arr_length; ++i) {
-      c = fmadd_ps(values[i], other.values[i], c);
+      c = simd::fmadd(values[i], other.values[i], c);
     }
-    return sum4(c);
+    return simd::sum(c);
   }
   
   inline Vec<float, length> to_simple_vec() const {
     Vec<float, length> result;
     for (size_t i = 0; i < arr_length; ++i) {
-      _mm_storeu_ps(&result.values[4*i], values[i]);
+      simd::store(&result.values[kSIMDWidth*i], values[i]);
     }
     return result;
   }
   
-  __m128 values[arr_length];
+  SIMDFloat values[arr_length];
 };
-
-#endif
-
 
 
 template<typename t, size_t l>
