@@ -21,6 +21,11 @@ constexpr size_t cnn_dense_in = 4 * block_size;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
+#ifdef __AVX__
+using FNetLayerType = Vec<__m256, block_size>;
+#else
+using FNetLayerType = Vec<__m128, block_size>;
+#endif
 
 // CNN types
 using CNNLayerType = Array2d<Vec<float, block_size>, 8, 8>;
@@ -88,8 +93,8 @@ Array3d<NetLayerType, 5, 5, 10> cnn_l1_filters;
 // the output of the convolutions on the constant inputs.
 CNNLayerType cnn_input_bias;
 
-Array3d<NetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
-NetLayerType cnn_our_p_bias(0), cnn_our_k_bias(0), cnn_opp_p_bias(0), cnn_opp_k_bias(0);
+Array3d<FNetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
+NetLayerType cnn_our_p_bias, cnn_our_k_bias, cnn_opp_p_bias, cnn_opp_k_bias;
 
 std::vector<NetLayerType> cnn_dense_out(cnn_dense_in, 0);
 
@@ -746,11 +751,11 @@ T ScoreBoard(const Board &board, const EvalConstants &ec) {
   return score;
 }
 
-NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<NetLayerType, 3, 3, 16> &filters,
+NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<FNetLayerType, 3, 3, 16> &filters,
                             const NetLayerType &bias, Square s) {
   int h = GetSquareY(s);
   int w = GetSquareX(s);
-  NetLayerType result = bias;
+  FNetLayerType result(bias);
   for (size_t i = 0; i < 3; ++i) {
     if (h+i == 0 || h+i > 8) {
       continue;
@@ -760,12 +765,13 @@ NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<Ne
         continue;
       }
       for (size_t c = 0; c < prev_cnn_layer[0][0].size(); ++c) {
-        result += prev_cnn_layer[h+i-1][w+j-1][c] * filters[i][j][c];
+        //result += prev_cnn_layer[h+i-1][w+j-1][c] * filters[i][j][c];
+        result.FMA(filters[i][j][c], prev_cnn_layer[h+i-1][w+j-1][c]);
       }
     }
   }
   result.relu();
-  return result;
+  return result.to_simple_vec();
 }
 
 NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
@@ -847,15 +853,18 @@ Score ScoreBoard(const Board &board) {
 }
 
 template<size_t size>
-void init_cnn_weights(Array3d<NetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
+void init_cnn_weights(Array3d<FNetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
                       double multiplier = 1.0) {
   size_t idx = 0;
   for (size_t h = 0; h < cnn_filters.size(); ++h) {
     for (size_t w = 0; w < cnn_filters[0].size(); ++w) {
       for (size_t i = 0; i < cnn_filters[0][0].size(); ++i) {
+        NetLayerType tmp(0);
         for (size_t j = 0; j < cnn_filters[0][0][0].size(); ++j) {
-          cnn_filters[h][w][i][j] = weights[idx++] * multiplier;
+          tmp[j] = weights[idx++] * multiplier;
+          // cnn_filters[h][w][i][j] = weights[idx++] * multiplier;
         }
+        cnn_filters[h][w][i] = FNetLayerType(tmp);
       }
     }
   }
