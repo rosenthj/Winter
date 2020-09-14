@@ -346,6 +346,95 @@ struct Vec<float, length> {
   float values[length];
 };
 
+template<size_t length>
+struct Vec<__m256, length> {
+  using type = __m256;
+  static constexpr size_t arr_length = length / 8;
+  Vec() {}
+  
+  Vec(Vec<float, length> input) {
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm256_loadu_ps(&input.values[i*8]);
+    }
+  }
+  
+  inline size_t size() const {
+    return length;
+  }
+  
+  inline Vec<type, length>& operator+=(const Vec<__m256, length> &rhs) {
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm256_add_ps(values[i], rhs.values[i]);
+    }
+    return *this;
+  }
+  
+  /*inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 v1 = _mm_loadu_ps (&values[i]);
+      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
+      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
+    }
+    return *this;
+  }*/
+  
+  inline Vec<__m256, length>& relu() {
+    const __m256 zero = _mm256_set1_ps(0);
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm256_max_ps(values[i], zero);
+    }
+    return *this;
+  }
+  
+  inline Vec<__m256, length>& FMA(const Vec<float, length> &a, const float &b) {
+    __m256 vb = _mm256_set1_ps(b);
+    for (size_t i = 0; i < arr_length; ++i) {
+      __m256 va = _mm256_loadu_ps (&a.values[8*i]);
+      values[i] = fmadd_ps (va, vb, values[i]);
+    }
+    return *this;
+  }
+  
+  inline Vec<__m256, length>& FMA(const Vec<__m256, length> &a, const float &b) {
+    __m256 vb = _mm256_set1_ps(b);
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = fmadd_ps (a.values[i], vb, values[i]);
+    }
+    return *this;
+  }
+
+  /*inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 c = _mm_loadu_ps (&values[i]);
+      __m128 va = _mm_loadu_ps (&a.values[i]);
+      __m128 vb = _mm_loadu_ps (&b.values[i]);
+      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
+    }
+    return *this;
+  }
+  
+  inline float& operator[](std::size_t idx) { return values[idx]; }
+  inline const float operator[](std::size_t idx) const { return values[idx]; }*/
+  
+  float dot(const Vec<__m256, length> &other) const {
+    __m256 c = _mm256_set1_ps(0);
+    for (size_t i = 0; i < arr_length; ++i) {
+      c = fmadd_ps(values[i], other.values[i], c);
+    }
+    return sum8(c);
+  }
+  
+  inline Vec<float, length> to_simple_vec() const {
+    Vec<float, length> result;
+    for (size_t i = 0; i < arr_length; ++i) {
+      _mm256_storeu_ps(&result.values[8*i], values[i]);
+    }
+    return result;
+  }
+  
+  __m256 values[arr_length];
+};
+
 #elif  __SSE__
 #include <xmmintrin.h>
 
@@ -443,6 +532,95 @@ struct Vec<float, length> {
   inline const float operator[](std::size_t idx) const { return values[idx]; }
   
   float values[length];
+};
+
+template<size_t length>
+struct Vec<__m128, length> {
+  using type = __m128;
+  static constexpr size_t arr_length = length / 4;
+  Vec() {}
+  
+  Vec(Vec<float, length> input) {
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm_loadu_ps(&input.values[i*4]);
+    }
+  }
+  
+  inline size_t size() const {
+    return length;
+  }
+  
+  inline Vec<type, length>& operator+=(const Vec<__m128, length> &rhs) {
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm_add_ps(values[i], rhs.values[i]);
+    }
+    return *this;
+  }
+  
+  /*inline Vec<type, length>& operator*=(const Vec<type, length> &rhs) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 v1 = _mm_loadu_ps (&values[i]);
+      __m128 v2 = _mm_loadu_ps (&rhs.values[i]);
+      _mm_storeu_ps (&values[i], _mm_mul_ps(v1, v2));
+    }
+    return *this;
+  }*/
+  
+  inline Vec<__m128, length>& relu() {
+    const __m128 zero = _mm_set1_ps(0);
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = _mm_max_ps(values[i], zero);
+    }
+    return *this;
+  }
+  
+  inline Vec<__m128, length>& FMA(const Vec<float, length> &a, const float &b) {
+    __m128 vb = _mm_set1_ps(b);
+    for (size_t i = 0; i < arr_length; ++i) {
+      __m128 va = _mm_loadu_ps (&a.values[4*i]);
+      values[i] = fmadd_ps (va, vb, values[i]);
+    }
+    return *this;
+  }
+  
+  inline Vec<__m128, length>& FMA(const Vec<__m128, length> &a, const float &b) {
+    __m128 vb = _mm_set1_ps(b);
+    for (size_t i = 0; i < arr_length; ++i) {
+      values[i] = fmadd_ps (a.values[i], vb, values[i]);
+    }
+    return *this;
+  }
+
+  /*inline Vec<type, length>& FMA(const Vec<type, length> &a, const Vec<type, length> &b) {
+    for (size_t i = 0; i <= length-4; i+=4) {
+      __m128 c = _mm_loadu_ps (&values[i]);
+      __m128 va = _mm_loadu_ps (&a.values[i]);
+      __m128 vb = _mm_loadu_ps (&b.values[i]);
+      _mm_storeu_ps (&values[i], fmadd_ps (va, vb, c));
+    }
+    return *this;
+  }
+  
+  inline float& operator[](std::size_t idx) { return values[idx]; }
+  inline const float operator[](std::size_t idx) const { return values[idx]; }*/
+  
+  float dot(const Vec<__m128, length> &other) const {
+    __m128 c = _mm_set1_ps(0);
+    for (size_t i = 0; i < arr_length; ++i) {
+      c = fmadd_ps(values[i], other.values[i], c);
+    }
+    return sum4(c);
+  }
+  
+  inline Vec<float, length> to_simple_vec() const {
+    Vec<float, length> result;
+    for (size_t i = 0; i < arr_length; ++i) {
+      _mm_storeu_ps(&result.values[4*i], values[i]);
+    }
+    return result;
+  }
+  
+  __m128 values[arr_length];
 };
 
 #endif
