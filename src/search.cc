@@ -884,9 +884,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   t.set_static_score(kNoScore);
   bool strict_worsening = false;
 
-  //Speculative pruning methods
-  if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
-
+  //Score estimation
+  if (!in_check) {
     //Set static eval from board and TT entry.
     if (valid_entry) {
       if (entry.get_bound() == kExactBound) {
@@ -905,7 +904,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
     }
     t.set_static_score(static_eval);
     strict_worsening = t.strict_worsening();
+  }
 
+  //Speculative pruning methods
+  if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
       NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
