@@ -128,7 +128,7 @@ public:
   Move get_last_move() const { return move_history.back(); }
   BitBoard PlayerBitBoardControl(Color color, BitBoard all_pieces) const;
   bool MoveInListCanRepeat(const std::vector<Move> moves);
-  int CountRepetitions(size_t min_ply = 0) const;
+  int32_t CountRepetitions(int32_t min_ply = 0) const;
 
 private:
   template<int Quiescent, int MoveGenerationType>
