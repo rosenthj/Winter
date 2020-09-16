@@ -182,14 +182,6 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
   return false;
 }
 
-//inline void assert_scores_ok(Score alpha, Score beta) {
-//  assert(alpha < beta);
-//  assert(alpha >= kMinScore);
-//  assert(alpha <= kMaxScore);
-//  assert(beta >= kMinScore);
-//  assert(beta <= kMaxScore);
-//}
-
 std::mt19937_64 rng;
 size_t min_ply = 0;
 const size_t kInfiniteNodes = 1000000000000;
@@ -219,33 +211,22 @@ inline Time get_infinite_time() {
 }
 #endif
 
-template<int Quiescent>
-MoveScore get_move_priority(const Move move, const Board &board, const Move best) {
+MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
   if (move == best)
     return 20000;
   else if (GetMoveType(move) > kCapture) {
     return 11000;
   }
   else if (GetMoveType(move) == kCapture) {
-    return 1000 + 10 * GetPieceType(board.get_piece(GetMoveDestination(move)))
-                - GetPieceType(board.get_piece(GetMoveSource(move)));
+    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  else if (Quiescent == kQuiescent) {
-    return 10;
-  }
-//  else if (move == killers[board.get_num_made_moves()][0]) {
-//    return 1001;
-//  }
-//  else if (move == killers[board.get_num_made_moves()][1]) {
-//    return 1000;
-//  }
-  return 10;
+  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
 }
 
-template<int Quiescent>
-void SortMoves(std::vector<Move> &moves, Board &board, const Move best_move) {
+void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
   for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] |= (get_move_priority<Quiescent>(moves[i], board, best_move) << 16);
+    moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
   }
   std::sort(moves.begin(), moves.end(), Sorter());
   for (size_t i = 0; i < moves.size(); ++i) {
@@ -606,38 +587,6 @@ Board get_sampled_board() {
   return sampled_board;
 }
 
-Score SQSearch(Board &board, Score alpha, const Score beta) {
-  if (!board.InCheck()) {
-    Score static_eval = net_evaluation::ScoreBoard(board);
-    if (static_eval >= beta) {
-      return beta;
-    }
-    alpha = std::max(static_eval, alpha);
-  }
-  std::vector<Move> moves = board.GetMoves<kQuiescent>();
-  if (board.InCheck() && moves.size() == 0) {
-    return GetMatedOnMoveScore(board.get_num_made_moves());
-  }
-  SortMoves<kQuiescent>(moves, board, 0);
-
-  for (Move move : moves) {
-    board.Make(move);
-    Score score = -SQSearch(board, -beta, -alpha);
-    board.UnMake();
-    if (score >= beta) {
-      return beta;
-    }
-    alpha = std::max(score, alpha);
-  }
-  return alpha;
-}
-
-//Simplified Q-Search with no pruning features or TT-access
-Score SQSearch(Board &board) {
-  return SQSearch(board, kMinScore, kMaxScore);
-}
-
-
 template<int Mode>
 Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   assert(beta > alpha);
@@ -709,11 +658,11 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
   //Sort move list
   if (valid_hash) {
-    SortMoves<kQuiescent>(moves, t.board, entry.get_best_move());
+    SortMoves(moves, t, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
   else {
-    SortMoves<kQuiescent>(moves, t.board, 0);
+    SortMoves(moves, t, 0);
     //SortMovesML(moves, board, 0);
   }
 
