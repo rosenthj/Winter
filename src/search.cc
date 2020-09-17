@@ -349,7 +349,7 @@ enum SlidingCheckType {
   kNoSlideCheck = 0, kBishopCheck, kRookCheck, kQueenDiagCheck, kQueenRooklikeCheck
 };
 
-template<typename T, bool in_check>
+template<typename T, bool in_check, bool use_see>
 T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
   T move_weight = init<T>();
   if (move == info.tt_entry) {
@@ -386,7 +386,7 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
   PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
   const MoveType move_type = GetMoveType(move);
-  if (move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
+  if (use_see && move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
     if (!t.board.NonNegativeSEE(move)) {
       AddFeature<T, in_check>(move_weight, kPWISEE);
     }
@@ -458,7 +458,7 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
     if (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece]) {
       AddFeature<T, in_check>(move_weight, kPWITabooDestination);
     }
-    else if (!t.board.NonNegativeSEE(move)) {
+    else if (use_see && !t.board.NonNegativeSEE(move)) {
       AddFeature<T, in_check>(move_weight, kPWISEE + 1);
     }
   }
@@ -467,18 +467,19 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
 }
 
 // Sorten moves according to weights given by some classifier
+template<bool use_see>
 void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_move = kNullMove) {
   MoveOrderInfo info(t.board, best_move);
 
   //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
     for (size_t i = 0; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<MoveScore, true>(moves[i], t, info)) << 16);
+      moves[i] |= ((10000 + GetMoveWeight<MoveScore, true, use_see>(moves[i], t, info)) << 16);
     }
   }
   else {
     for (size_t i = 0; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<MoveScore, false>(moves[i], t, info)) << 16);
+      moves[i] |= ((10000 + GetMoveWeight<MoveScore, false, use_see>(moves[i], t, info)) << 16);
     }
   }
 
@@ -562,7 +563,7 @@ namespace search {
 std::vector<Move> GetSortedMovesML(Board &board) {
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   Threads.main_thread->board.SetToSamePosition(board);
-  SortMovesML(moves, *Threads.main_thread);
+  SortMovesML<true>(moves, *Threads.main_thread);
   return moves;
 }
 
@@ -658,11 +659,13 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
   //Sort move list
   if (valid_hash) {
-    SortMoves(moves, t, entry.get_best_move());
+    //SortMoves(moves, t, entry.get_best_move());
+    SortMovesML<false>(moves, t, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
   else {
-    SortMoves(moves, t, 0);
+    //SortMoves(moves, t, 0);
+    SortMovesML<false>(moves, t, 0);
     //SortMovesML(moves, board, 0);
   }
 
@@ -911,7 +914,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
     assert(!swapped || tt_entry == moves[0]);
   }
   if (!swapped) {
-    SortMovesML(moves, t, tt_entry);
+    SortMovesML<true>(moves, t, tt_entry);
     moves_sorted = true;
   }
 
@@ -931,7 +934,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
     if (i == 1 && !moves_sorted) {
-      SortMovesML(moves, t, tt_entry);
+      SortMovesML<true>(moves, t, tt_entry);
       moves_sorted = true;
     }
     const Move move = moves[i];
@@ -941,7 +944,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
         && entry.depth >= depth - 3 && !(node_type == NodeType::kPV && moves.size() == 1)
         && entry.get_bound() != kUpperBound && entry.get_score(t.board).is_static_eval()
         && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval) {
-      SortMovesML(moves, t, tt_entry);
+      SortMovesML<true>(moves, t, tt_entry);
       moves_sorted = true;
       auto is_singular = move_is_singular(t, depth, moves, entry, expected_cut_node);
       if (is_singular.first) {
@@ -1171,7 +1174,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
-    SortMovesML(moves, t, moves[0]);
+    SortMovesML<true>(moves, t, moves[0]);
 //    assert(is_valid_score(alpha));
 //    assert(is_valid_score(beta));
     score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
@@ -1365,7 +1368,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.main_thread->board.SetToSamePosition(board);
   Threads.main_thread->root_height = board.get_num_made_moves();
   Threads.main_thread->max_depth = board.get_num_made_moves();
-  SortMovesML(moves, *Threads.main_thread, tt_move);
+  SortMovesML<true>(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
   Threads.ignorance_smp = false; // moves.size() > 10;
@@ -1495,7 +1498,7 @@ void TrainSearchParams(bool from_scratch) {
     std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
     std::shuffle(moves.begin(), moves.end(), rng);
     Threads.main_thread->board.SetToSamePosition(sampled_board);
-    SortMovesML(moves, *Threads.main_thread, kNullMove);
+    SortMovesML<true>(moves, *Threads.main_thread, kNullMove);
     std::vector<std::vector<int> > features;
     MoveOrderInfo info(sampled_board);
     if (sampled_board.InCheck()) {
@@ -1719,7 +1722,7 @@ void CreateSearchParamDataset() {
     }
     std::shuffle(moves.begin(), moves.end(), rng);
     Threads.main_thread->board.SetToSamePosition(sampled_board);
-    SortMovesML(moves, *Threads.main_thread, kNullMove);
+    SortMovesML<true>(moves, *Threads.main_thread, kNullMove);
     std::vector<std::vector<int> > features;
     MoveOrderInfo info(sampled_board);
     if (sampled_board.InCheck()) {
