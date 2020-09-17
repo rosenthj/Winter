@@ -211,29 +211,6 @@ inline Time get_infinite_time() {
 }
 #endif
 
-MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
-  if (move == best)
-    return 20000;
-  else if (GetMoveType(move) > kCapture) {
-    return 11000;
-  }
-  else if (GetMoveType(move) == kCapture) {
-    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-  }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
-}
-
-void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
-  for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
-  }
-  std::sort(moves.begin(), moves.end(), Sorter());
-  for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] &= 0xFFFFL;
-  }
-}
-
 template<typename T>
 T init() {
   return T(kNumMoveProbabilityFeatures);
@@ -273,6 +250,43 @@ inline Move get_last_move(const Board &board) {
     return board.get_last_move();
   }
   return kNullMove;
+}
+
+MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
+  if (move == best)
+    return 20000;
+  else if (GetMoveType(move) > kCapture) {
+    return 11000;
+  }
+  else if (GetMoveType(move) == kCapture) {
+    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  }
+  MoveScore move_weight = 0;
+  const Color color = t.board.get_turn();
+  const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  const Square source = GetMoveSource(move);
+  const Square destination = GetMoveDestination(move);
+  if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
+    const Square last_destination = GetMoveDestination(t.board.get_last_move());
+    PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+    const int32_t score = t.get_continuation_score<1>(last_moved_piece, last_destination,
+                                                      moving_piece, destination);
+    AddFeature<MoveScore, true>(move_weight, kPWICMH, score / 1000);
+    AddFeature<MoveScore, true>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 1000);
+  }
+  AddFeature<MoveScore, true>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 1000);
+  return move_weight;
+}
+
+void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
+  for (size_t i = 0; i < moves.size(); ++i) {
+    moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
+  }
+  std::sort(moves.begin(), moves.end(), Sorter());
+  for (size_t i = 0; i < moves.size(); ++i) {
+    moves[i] &= 0xFFFFL;
+  }
 }
 
 inline BitBoard get_passed_pawn_squares(const Board &board) {
