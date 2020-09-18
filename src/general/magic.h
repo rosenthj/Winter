@@ -39,6 +39,10 @@ int GetSquareDistance(const Square a, const Square b);
 BitBoard GetKingArea(const Square square);
 BitBoard GetSquareFile(const Square square);
 BitBoard GetSinglePawnAttack(Square square, Color color);
+
+int popcount(uint64_t bb);
+int getlsb(uint64_t bb);
+int poplsb(uint64_t *bb);
 }
 
 #endif /* GENERAL_MAGIC_H_ */

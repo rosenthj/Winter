@@ -1,7 +1,7 @@
 #If you have clang, it seems to generate a faster compile as of the beginning of 2018
 #CC=g++
 CC=clang++
-CFLAGS=-c -g3 -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++11 -Isrc -Isrc/general -Isrc/learning
+CFLAGS=-c -g3 -O3 -flto -Wall -Wno-sign-compare -m64 -std=c++11 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-flto -Wall
 SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc src/pyrrhic/tbprobe.cc)
 OBJECTS=$(SOURCES:.cc=.o)

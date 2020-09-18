@@ -803,7 +803,14 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   if (t.board.get_fifty_move_count() == 0 && t.board.get_num_pieces() <= egtb::MaxPieces()) {
     Score tb_result = egtb::ProbeWDL(t.board);
     if (tb_result != kNoScore) {
-      return tb_result;
+      //t.board.Print();
+      //tb_result.print();
+      //std::cout << " turn = " << t.board.get_turn() << std::endl;
+      if ((tb_result >= beta && tb_result > kDrawScore)
+          || (tb_result <= alpha && tb_result < kDrawScore)
+          || tb_result == kDrawScore) {
+          return tb_result;
+      }
     }
   }
 
@@ -1359,17 +1366,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
   rsearch_mode = Mode;
-  std::vector<Move> moves;
-  if (board.get_castling_rights() != 0
-      || board.get_num_pieces() > egtb::MaxPieces()) {
-    moves = egtb::ProbOptimalMoves(board);
-  }
-  else {
-    moves = board.GetMoves<kNonQuiescent>();
-  }
-  for (Move move : moves) {
-    std::cout << parse::MoveToString(move) << std::endl;
-  }
+  std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   assert(moves.size() != 0);
   if (moves.size() == 1 && !fixed_search_time) {
     return moves[0];

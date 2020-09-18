@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 #ifdef __cplusplus
     #include <atomic>
@@ -389,7 +390,8 @@ unsigned tb_probe_root(
     if (move == 0)                 return TB_RESULT_FAILED;
     if (move == TB_MOVE_CHECKMATE) return TB_RESULT_CHECKMATE;
     if (move == TB_MOVE_STALEMATE) return TB_RESULT_STALEMATE;
-
+    
+    cout << "DTZ: " << dtz << endl;
     unsigned res = 0;
     res = TB_SET_WDL(res, dtz_to_wdl(rule50, dtz));
     res = TB_SET_DTZ(res, dtz < 0 ? -dtz : dtz);

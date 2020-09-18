@@ -46,11 +46,11 @@
 #include "../general/magic.h"
 #include "../general/types.h"
 
-#define PYRRHIC_POPCOUNT(x)              (bitops::PopCount(x))
-#define PYRRHIC_LSB(x)                   (bitops::NumberOfLeadingZeros(x))
-#define PYRRHIC_POPLSB(x)                (bitops::PopLSBFromAddressAndReturnSquare(x))
+#define PYRRHIC_POPCOUNT(x)              (magic::popcount(x))
+#define PYRRHIC_LSB(x)                   (magic::getlsb(x))
+#define PYRRHIC_POPLSB(x)                (magic::poplsb(x))
 
-#define PYRRHIC_PAWN_ATTACKS(sq, c)      (magic::GetSinglePawnAttack(sq, !c))
+#define PYRRHIC_PAWN_ATTACKS(sq, c)      (magic::GetSinglePawnAttack(sq, c))
 #define PYRRHIC_KNIGHT_ATTACKS(sq)       (magic::GetAttackMap<kKnight>(sq, 0))
 #define PYRRHIC_BISHOP_ATTACKS(sq, occ)  (magic::GetAttackMap<kBishop>(sq, occ))
 #define PYRRHIC_ROOK_ATTACKS(sq, occ)    (magic::GetAttackMap<kRook>(sq, occ))

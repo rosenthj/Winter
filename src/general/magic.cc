@@ -401,4 +401,19 @@ BitBoard GetSinglePawnAttack(Square square, Color color) {
   return bitops::SE(bb) | bitops::SW(bb);
 }
 
+int popcount(uint64_t bb) {
+    return __builtin_popcountll(bb);
+}
+
+int getlsb(uint64_t bb) {
+    assert(bb);  // lsb(0) is undefined
+    return __builtin_ctzll(bb);
+}
+
+int poplsb(uint64_t *bb) {
+    int lsb = getlsb(*bb);
+    *bb &= *bb - 1;
+    return lsb;
+}
+
 }
