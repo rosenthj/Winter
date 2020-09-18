@@ -213,6 +213,12 @@ inline void PopLSB(BitBoard &x) {
   x &= x-1;
 }
 
+inline int PopLSBFromAddressAndReturnSquare(BitBoard *x) {
+  int res = NumberOfTrailingZeros(*x);
+  PopLSB(*x);
+  return res;
+}
+
 }
 
 #endif /* GENERAL_BIT_OPERATIONS_H_ */

@@ -38,7 +38,7 @@ BitBoard GetAttackMap(PieceType piece_type, Square square, BitBoard all_pieces);
 int GetSquareDistance(const Square a, const Square b);
 BitBoard GetKingArea(const Square square);
 BitBoard GetSquareFile(const Square square);
-
+BitBoard GetSinglePawnAttack(Square square, Color color);
 }
 
 #endif /* GENERAL_MAGIC_H_ */

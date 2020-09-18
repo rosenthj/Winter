@@ -25,6 +25,7 @@
  */
 
 #include "benchmark.h"
+#include "egtb.h"
 #include "uci.h"
 #include "general/settings.h"
 #include "general/types.h"
@@ -172,6 +173,7 @@ void Reply(std::string message) {
 namespace uci {
 
 void Loop() {
+  egtb::InitTB("3-4-5piecesSyzygy/3-4-5/");
   Board board;
   std::string in;
   while (std::getline(std::cin, in)) {

@@ -393,4 +393,12 @@ BitBoard GetSquareFile(const Square square) {
   return file_map[square];
 }
 
+BitBoard GetSinglePawnAttack(Square square, Color color) {
+  BitBoard bb = GetSquareBitBoard(square);
+  if (color == kWhite) {
+    return bitops::NE(bb) | bitops::NW(bb);
+  }
+  return bitops::SE(bb) | bitops::SW(bb);
+}
+
 }

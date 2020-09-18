@@ -114,16 +114,31 @@ constexpr Score kMinStaticEval = -kMaxStaticEval;
 
 constexpr Score kMinMatingScore = WDLScore{kMaxStaticEval.win + 100, kMaxStaticEval.win_draw + 100};
 constexpr Score kMaxMatedScore = -kMinMatingScore;
-//
+
+constexpr int32_t kTBScores = 400;
+constexpr Score kMaxTBWin = WDLScore{kMinMatingScore.win + kTBScores,
+                                     kMinMatingScore.win_draw + kTBScores};
+constexpr Score kMinTBLoss = -kMaxTBWin;
+
 constexpr int32_t kNumMateInScores = 2000;
 constexpr Score kMaxScore = WDLScore{kMinMatingScore.win + kNumMateInScores,
                          kMinMatingScore.win_draw + kNumMateInScores};
 constexpr Score kMinScore = -kMaxScore;
+
+
 constexpr Score kNoScore = WDLScore{-1, WDLScore::scale + 1};
 constexpr Score kDrawScore = WDLScore::from_pct_truncated(0.0, 1.0);
 
 inline constexpr Score GetMatedOnMoveScore(int32_t ply) {
   return WDLScore{kMinScore.win + ply, kMinScore.win_draw + ply};
+}
+
+inline constexpr Score GetTBLossOnMoveScore(int32_t ply) {
+  return WDLScore{kMinTBLoss.win + ply, kMinTBLoss.win_draw + ply};
+}
+
+inline constexpr Score GetTBWinOnMoveScore(int32_t ply) {
+  return WDLScore{kMaxTBWin.win - ply, kMaxTBWin.win_draw - ply};
 }
 
 inline Score get_next_score(const Score score) {

@@ -28,6 +28,7 @@
  *      Author: Jonathan Rosenthal
  */
 
+#include "egtb.h"
 #include "search.h"
 #include "net_evaluation.h"
 #include "transposition.h"
@@ -789,7 +790,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
   assert(node_type != NodeType::kPV || !expected_cut_node);
 
   const Score original_alpha = alpha;
-//  Score lower_bound_score = kMinScore+t.board.get_num_made_moves();
 
   //Immediately return 0 if we detect a draw.
   if (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2)) {
@@ -798,6 +798,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, bool expe
       return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
     return kDrawScore;
+  }
+  
+  if (t.board.get_fifty_move_count() == 0 && t.board.get_num_pieces() <= egtb::MaxPieces()) {
+    Score tb_result = egtb::ProbeWDL(t.board);
+    if (tb_result != kNoScore) {
+      return tb_result;
+    }
   }
 
   //We drop to QSearch if we run out of depth.
@@ -1352,7 +1359,17 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
   rsearch_mode = Mode;
-  std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
+  std::vector<Move> moves;
+  if (board.get_castling_rights() != 0
+      || board.get_num_pieces() > egtb::MaxPieces()) {
+    moves = egtb::ProbOptimalMoves(board);
+  }
+  else {
+    moves = board.GetMoves<kNonQuiescent>();
+  }
+  for (Move move : moves) {
+    std::cout << parse::MoveToString(move) << std::endl;
+  }
   assert(moves.size() != 0);
   if (moves.size() == 1 && !fixed_search_time) {
     return moves[0];
