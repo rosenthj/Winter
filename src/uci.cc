@@ -117,7 +117,8 @@ struct Timer {
   std::array<int, 2> inc;
   int movetime;
   size_t nodes;
-  Depth moves_to_go, search_depth;
+  Depth moves_to_go;
+  Depth search_depth;
 };
 
 int maxtime(int time) {
@@ -125,7 +126,7 @@ int maxtime(int time) {
 }
 
 int get_base_time(int base, int inc, int to_go=48) {
-  return (base + inc * to_go) / (to_go + 2);
+  return (2 * base + inc * to_go) / (to_go + 4);
 }
 
 void Go(Board *board, Timer timer) {
@@ -143,7 +144,7 @@ void Go(Board *board, Timer timer) {
   else {
     int time;
     const Color color = board->get_turn();
-    if (timer.moves_to_go) {
+    if (timer.moves_to_go > 0) {
       time = get_base_time(timer.time[color], timer.inc[color], timer.moves_to_go);
     }
     else {
