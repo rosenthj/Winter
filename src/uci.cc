@@ -33,6 +33,7 @@
 #include "search.h"
 #include "transposition.h"
 #include "search_thread.h"
+#include <array>
 #include <cstdint>
 #include <vector>
 #include <sstream>
@@ -112,23 +113,19 @@ const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 
 struct Timer {
-  Timer() {
-    for (Color color = kWhite; color <= kBlack; color++) {
-      time[color] = 0;
-      inc[color] = 0;
-    }
-    movetime = 0;
-    moves_to_go = 0;
-    search_depth = 0;
-    nodes = 0;
-  }
-  int time[2], inc[2], movetime;
+  std::array<int, 2> time;
+  std::array<int, 2> inc;
+  int movetime;
   size_t nodes;
   Depth moves_to_go, search_depth;
 };
 
 int maxtime(int time) {
   return std::max((8 * time) / 10, time - 100);
+}
+
+int get_base_time(int base, int inc, int to_go=48) {
+  return (base + inc * to_go) / (to_go + 2);
 }
 
 void Go(Board *board, Timer timer) {
@@ -144,15 +141,14 @@ void Go(Board *board, Timer timer) {
     move = search::NodeSearch((*board), timer.nodes);
   }
   else {
-    if (timer.moves_to_go == 0) {
-      timer.moves_to_go = 40;
+    int time;
+    const Color color = board->get_turn();
+    if (timer.moves_to_go) {
+      time = get_base_time(timer.time[color], timer.inc[color], timer.moves_to_go);
     }
-    Color color = board->get_turn();
-    int time = timer.time[color] + ((timer.time[color] * board->get_phase()) / kMaxPhase);
-    time = (6 * time) / 5;
-    time /= timer.moves_to_go + 8;
-    time = std::max(time, timer.time[color] / timer.moves_to_go + 4);
-    time += timer.inc[color];
+    else {
+      time = get_base_time(timer.time[color], timer.inc[color]);
+    }
     Milliseconds duration = Milliseconds(maxtime(time));
     move = search::TimeSearch((*board), duration);
   }
@@ -294,7 +290,7 @@ void Loop() {
     }
     else if (Equals(command, "go")) {
       search::end_search();
-      Timer timer;
+      Timer timer {};
       if (tokens.size() >= index+2) {
         while (tokens.size() >= index+2) {
           std::string arg = tokens[index++];
