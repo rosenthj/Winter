@@ -52,6 +52,24 @@ std::vector<std::string> &splits(const std::string &s, char delimeter,
   return elements;
 }
 
+//int kTimeIncParam = 58;
+//int kTimeBaseFactor = 27;
+//int kTimeToGoOffset = 4;
+
+int maxtime(int time) {
+  return std::max((8 * time) / 10, time - 100);
+}
+
+
+ // x = 580 / 27 ->
+int get_base_time(int base, int inc, int to_go=22) {
+  return std::min(maxtime(base),((58 * base) / std::min(50, to_go) + 58 * inc) / 50);
+}
+
+//void SetTimeIncParam(int32_t value) { kTimeIncParam = value; }
+//void SetTimeBaseFactor(int32_t value) { kTimeBaseFactor = value; }
+//void SetTimeToGoOffset(int32_t value) { kTimeToGoOffset = value; }
+
 std::vector<std::string> split(const std::string &s, char delim) {
   std::vector<std::string> elems;
   splits(s, delim, elems);
@@ -104,6 +122,9 @@ std::vector<UCIOption> uci_options {
   {"LMPBasePV", search::SetLMPBasePV, 5, 1, 20},
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
+//  {"TimeIncParam", SetTimeIncParam, 58, 0, 100},
+//  {"TimeBaseFactor", SetTimeBaseFactor, 0, 5, 80},
+//  {"TimeToGoOffset", SetTimeToGoOffset, 3, 0, 10}
 #endif
 };
 
@@ -120,14 +141,6 @@ struct Timer {
   Depth moves_to_go;
   Depth search_depth;
 };
-
-int maxtime(int time) {
-  return std::max((8 * time) / 10, time - 100);
-}
-
-int get_base_time(int base, int inc, int to_go=48) {
-  return (2 * base + inc * to_go) / (to_go + 4);
-}
 
 void Go(Board *board, Timer timer) {
   Move move = 0;
@@ -150,7 +163,7 @@ void Go(Board *board, Timer timer) {
     else {
       time = get_base_time(timer.time[color], timer.inc[color]);
     }
-    Milliseconds duration = Milliseconds(maxtime(time));
+    Milliseconds duration = Milliseconds(time);
     move = search::TimeSearch((*board), duration);
   }
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
