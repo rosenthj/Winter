@@ -59,7 +59,7 @@ int32_t  maxtime(int32_t time) {
 
 
 int32_t  get_base_time(int32_t  base, int32_t  inc, int32_t  to_go=22) {
-  return std::min(maxtime(base),((58 * base) / std::min(50, to_go) + 58 * inc) / 50);
+  return std::min(maxtime(base),((58 * base) / std::min(22, to_go) + 58 * inc) / 50);
 }
 
 std::vector<std::string> split(const std::string &s, char delim) {
