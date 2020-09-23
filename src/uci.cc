@@ -52,23 +52,15 @@ std::vector<std::string> &splits(const std::string &s, char delimeter,
   return elements;
 }
 
-//int kTimeIncParam = 58;
-//int kTimeBaseFactor = 27;
-//int kTimeToGoOffset = 4;
-
-int maxtime(int time) {
+// Returns a maximum time with margin of error for param clock time
+int32_t  maxtime(int32_t time) {
   return std::max((8 * time) / 10, time - 100);
 }
 
 
- // x = 580 / 27 ->
-int get_base_time(int base, int inc, int to_go=22) {
+int32_t  get_base_time(int32_t  base, int32_t  inc, int32_t  to_go=22) {
   return std::min(maxtime(base),((58 * base) / std::min(50, to_go) + 58 * inc) / 50);
 }
-
-//void SetTimeIncParam(int32_t value) { kTimeIncParam = value; }
-//void SetTimeBaseFactor(int32_t value) { kTimeBaseFactor = value; }
-//void SetTimeToGoOffset(int32_t value) { kTimeToGoOffset = value; }
 
 std::vector<std::string> split(const std::string &s, char delim) {
   std::vector<std::string> elems;
@@ -114,17 +106,10 @@ std::vector<UCIOption> uci_options {
   {"LMRMultiplierPV", search::SetLMRMultiplierPV, 76, 0, 100},
   {"LMROffsetPVCap", search::SetLMROffsetPVCap, 50, -155, 100},
 //  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 23, 0, 100},
-//  {"LMP1", search::SetLMP1, 6, 1, 30},
-//  {"LMP2", search::SetLMP2, 7, 1, 30},
-//  {"LMP3", search::SetLMP3, 8, 1, 30},
-//  {"LMP4", search::SetLMP4, 22, 1, 30},
   {"LMPBaseNW", search::SetLMPBaseNW, 3, 1, 20},
   {"LMPBasePV", search::SetLMPBasePV, 5, 1, 20},
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
-//  {"TimeIncParam", SetTimeIncParam, 58, 0, 100},
-//  {"TimeBaseFactor", SetTimeBaseFactor, 0, 5, 80},
-//  {"TimeToGoOffset", SetTimeToGoOffset, 3, 0, 10}
 #endif
 };
 
