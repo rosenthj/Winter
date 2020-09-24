@@ -134,8 +134,8 @@ Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
-double_t kPVMoveConfidenceModifier = 0.81;
-double_t kPVMoveConfidenceLimit = 0.6;
+double_t kPVMoveConfidenceModifier = 0.90;
+double_t kPVMoveConfidenceLimit = 0.62;
 #else
 constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 790;
@@ -143,8 +143,8 @@ const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
-const double_t kPVMoveConfidenceModifier = 0.81;
-const double_t kPVMoveConfidenceLimit = 0.6;
+const double_t kPVMoveConfidenceModifier = 0.90;
+const double_t kPVMoveConfidenceLimit = 0.62;
 #endif
 
 // Parameters used to initialize the LMR reduction table
