@@ -110,6 +110,8 @@ std::vector<UCIOption> uci_options {
   {"LMPBasePV", search::SetLMPBasePV, 5, 1, 20},
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
+  {"PVMoveConfidenceModifier", search::SetPVMoveConfidenceModifier, 90, 70, 100},
+  {"PVMoveConfidenceLimit", search::SetPVMoveConfidenceLimit, 50, 0, 100},
 #endif
 };
 

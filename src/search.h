@@ -88,6 +88,8 @@ void SetLMPBasePV(int32_t value);
 void SetLMPScalar(int32_t value);
 void SetLMPQuadratic(int32_t value);
 void SetLMPDepth(int32_t value);
+void SetPVMoveConfidenceModifier(int32_t value);
+void SetPVMoveConfidenceLimit(int32_t value);
 #endif
 
 }

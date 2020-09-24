@@ -134,6 +134,8 @@ Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
+double_t kPVMoveConfidenceModifier = 0.81;
+double_t kPVMoveConfidenceLimit = 0.6;
 #else
 constexpr NScore kInitialAspirationDelta = 40;
 constexpr NScore kSNMPMargin = 790;
@@ -141,6 +143,8 @@ const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
+const double_t kPVMoveConfidenceModifier = 0.81;
+const double_t kPVMoveConfidenceLimit = 0.6;
 #endif
 
 // Parameters used to initialize the LMR reduction table
@@ -1320,7 +1324,7 @@ void Thread::search() {
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (!fixed_search_time) {
         if (last_best == moves[0]) {
-          time_factor = std::max(time_factor * 0.9, 0.5);
+          time_factor = std::max(time_factor * kPVMoveConfidenceModifier, kPVMoveConfidenceLimit);
           if (time_used.count() > (rsearch_duration.count() * time_factor)) {
             end_time = now();
             return;
@@ -2210,6 +2214,9 @@ void SetLMPQuadratic(int32_t value) {
   kLMPQuad = value;
   ResetLMP();
 }
+
+void SetPVMoveConfidenceModifier(int32_t value) { kPVMoveConfidenceModifier = value * 0.01; }
+void SetPVMoveConfidenceLimit(int32_t value) { kPVMoveConfidenceLimit = value * 0.01; }
 
 #endif
 
