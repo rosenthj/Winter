@@ -68,9 +68,13 @@ std::vector<std::string> split(const std::string &s, char delim) {
   return elems;
 }
 
-//bool IsTrue(std::string s) {
-//  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
-//}
+bool Equals(std::string string_a, std::string string_b) {
+  return string_a.compare(string_b) == 0;
+}
+
+bool IsTrue(std::string s) {
+  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
+}
 
 struct UCIOption {
 	std::string name;
@@ -86,14 +90,21 @@ struct UCIOption {
   }
 };
 
+struct UCICheck {
+  std::string name;
+  void (*func)(bool value);
+  bool default_value;
+  std::string to_string() const {
+    if (default_value)
+      return "option name " + name + " type check default true";
+    return "option name " + name + " type check default false";
+  }
+};
+
 std::vector<UCIOption> uci_options {
   {"Hash", table::SetTableSize, 32, 1, 104576},
   {"Threads", search::SetNumThreads, 1, 1, 256},
-// "\noption name Contempt type spin default 0 min -100 max 100"
-//   search::SetContempt(contempt);
-// "\noption name Armageddon type check default false"
-//   bool armageddon_setting = IsTrue(tokens[index++]);
-//   search::SetArmageddon(armageddon_setting);
+  {"Contempt", search::SetContempt, 0, -100, 100},
 #ifdef TUNE
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
   {"Futility", search::SetFutilityMargin, 560, 400, 1500},
@@ -111,6 +122,10 @@ std::vector<UCIOption> uci_options {
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
 #endif
+};
+
+std::vector<UCICheck> uci_check_options {
+  {"Armageddon", search::SetArmageddon, false},
 };
 
 const std::string kEngineIsReady = "readyok";
@@ -152,10 +167,6 @@ void Go(Board *board, Timer timer) {
     move = search::TimeSearch((*board), duration);
   }
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
-}
-
-bool Equals(std::string string_a, std::string string_b) {
-  return string_a.compare(string_b) == 0;
 }
 
 void Reply(std::string message) {
@@ -218,6 +229,9 @@ void Loop() {
       for (const UCIOption &option : uci_options) {
         Reply(option.to_string());
       }
+      for (const UCICheck &option : uci_check_options) {
+        Reply(option.to_string());
+      }
       Reply(kOk);
     }
     else if (Equals(command, "stop")) {
@@ -233,6 +247,14 @@ void Loop() {
         if (Equals(command, option.name)) {
           index++;
           int value = atoi(tokens[index++].c_str());
+          option.func(value);
+          break;
+        }
+      }
+      for (UCICheck &option : uci_check_options) {
+        if (Equals(command, option.name)) {
+          index++;
+          bool value = IsTrue(tokens[index++].c_str());
           option.func(value);
           break;
         }

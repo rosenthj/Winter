@@ -68,7 +68,7 @@ void LoadSearchVariablesHardCoded();
 void EvaluateCaptureMoveValue(int n);
 void EvaluateScoreDistributions(const int focus);
 
-void SetContempt(int contempt);
+void SetContempt(int32_t contempt);
 void SetArmageddon(bool armageddon);
 
 #ifdef TUNE

@@ -31,7 +31,7 @@ using Filter = Array2d<NetLayerType, 3, 3>;
 using DeconvFilter = Array2d<NetLayerType, 3, 3>;
 
 //using CReLULayerType = Vec<float, act_block_size>;
-std::array<float, 2> contempt = { 0.5, 0.5 };
+std::array<int32_t, 2> contempt = { 0, 0 };
 
 struct CNNHelper {
   std::vector<Square> our_p;
@@ -803,7 +803,7 @@ NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
   return out;
 }
 
-Score NetForward(NetLayerType &layer_one, float c = 0.5) {
+Score NetForward(NetLayerType &layer_one) {
   layer_one += bias_layer_one;
   layer_one.relu();
 
@@ -845,7 +845,10 @@ Score ScoreBoard(const Board &board) {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board, ec);
   }
   layer_one += cnn_out;
-  return NetForward(layer_one, contempt[board.get_turn()]);
+  if (contempt[board.get_turn()] != 0) {
+    return AddContempt(NetForward(layer_one), board.get_turn());
+  }
+  return NetForward(layer_one);
 }
 
 template<size_t size>
@@ -1324,5 +1327,48 @@ void EstimateFeatureImpact() {
 //  }
 }
 #endif
+
+void SetContempt(Color color, int32_t value) {
+  contempt[color] = value;
+  contempt[other_color(color)] = -value;
+  if (value == 0) {
+    contempt[other_color(color)] = 0;
+  }
+}
+
+std::array<Score, 2> GetDrawArray() {
+  if (contempt[kWhite] == 0) {
+    return std::array<Score, 2> { kDrawScore, kDrawScore };
+  }
+  return std::array<Score, 2> { AddContempt(kDrawScore, kWhite), AddContempt(kDrawScore, kBlack) };
+}
+
+Score AddContempt(Score score, Color color) {
+  assert(score.is_static_eval());
+  int32_t diff = score.win_draw - score.win;
+  if (contempt[color] > 0) { // Contempt is positive, draws are counted as losses
+    diff = (diff * contempt[color]) / 100;
+    return WDLScore { score.win, score.win_draw - diff };
+  }
+  // contempt is negative, draws are counted as wins
+  diff = -(diff * contempt[color]) / 100;
+  return WDLScore { score.win + diff, score.win_draw};
+}
+
+Score RemoveContempt(Score score, Color color) {
+  if (!score.is_static_eval() || contempt[color] == 0
+      || contempt[color] >= 100 || contempt[color] <= -100) {
+    return score;
+  }
+  int32_t diff = score.win_draw - score.win;
+  if (contempt[color] >= 0) {
+    int32_t orig_diff = (diff * 100) / (100 - contempt[color]);
+    diff = orig_diff - diff;
+    return WDLScore { score.win, score.win_draw + diff };
+  }
+  int32_t orig_diff = (diff * 100) / (100 + contempt[color]);
+  diff = orig_diff - diff;
+  return WDLScore { score.win - diff, score.win_draw };
+}
 
 }
