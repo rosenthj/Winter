@@ -52,6 +52,11 @@ void GenerateDatasetFromUCIGames(std::string filename, std::string out_name = "e
                                  size_t reroll_pct = 0);
 #endif
 
+void SetContempt(Color color, int32_t value);
+std::array<Score, 2> GetDrawArray();
+
+Score AddContempt(Score score, Color color);
+Score RemoveContempt(Score score, Color color);
 }
 
 // TODO: Move to external file
@@ -111,6 +116,5 @@ constexpr size_t kChanKingsIdx = kChanUncoveredPassedPawnsIdx + 1;
 constexpr size_t kChannelsPerSide = kChanKingsIdx + 1;
 constexpr size_t kNumChannels = 2 * kChannelsPerSide;
 }
-
 
 #endif /* NET_EVALUATION_H_ */
