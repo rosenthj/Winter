@@ -126,6 +126,7 @@ std::vector<UCIOption> uci_options {
 
 std::vector<UCICheck> uci_check_options {
   {"Armageddon", search::SetArmageddon, false},
+  {"UCI_ShowWDL", search::SetUCIShowWDL, true},
 };
 
 const std::string kEngineIsReady = "readyok";

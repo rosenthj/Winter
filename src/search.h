@@ -68,8 +68,9 @@ void LoadSearchVariablesHardCoded();
 void EvaluateCaptureMoveValue(int n);
 void EvaluateScoreDistributions(const int focus);
 
-void SetContempt(int32_t contempt);
 void SetArmageddon(bool armageddon);
+void SetContempt(int32_t contempt);
+void SetUCIShowWDL(bool show_wdl);
 
 #ifdef TUNE
 void SetInitialAspirationDelta(int32_t delta);

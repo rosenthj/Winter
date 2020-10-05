@@ -143,6 +143,7 @@ const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
+bool uci_show_wdl = true;
 
 // Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
@@ -777,6 +778,9 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
     result.win_draw += result.win;
     result.win = 0;
   }
+  if (result.win_draw < 0) {
+    result.win_draw = 0;
+  }
   return result;
 }
 
@@ -1223,8 +1227,9 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
     if (!score.is_mate_score()) {
       std::cout << " score cp ";
       std::cout << (net_evaluation::RemoveContempt(score, t.board.get_turn()).to_cp() / 8);
-      std::cout << " " << net_evaluation::RemoveContempt(score, t.board.get_turn()).get_uci_string();
-
+      if (uci_show_wdl) {
+        std::cout << " " << net_evaluation::RemoveContempt(score, t.board.get_turn()).get_uci_string();
+      }
     }
     else {
       if (score.is_disadvantage()) {
@@ -2124,6 +2129,10 @@ void SetContempt(int32_t contempt_) {
 
 void SetArmageddon(bool armageddon_) {
   armageddon = armageddon_;
+}
+
+void SetUCIShowWDL(bool show_wdl) {
+  uci_show_wdl = show_wdl;
 }
 
 #ifdef TUNE
