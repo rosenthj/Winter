@@ -1040,11 +1040,11 @@ bool Board::MoveInListCanRepeat(const std::vector<Move> moves) {
   return false;
 }
 
-int Board::CountRepetitions(size_t min_ply) const {
-  int repetitions = 1; //We count the current position as a "repetition"
-  int min_index = std::max(previous_hashes.size() - fifty_move_count, min_ply);
+int32_t Board::CountRepetitions(int32_t min_ply) const {
+  int32_t repetitions = 1; //We count the current position as a "repetition"
+  int32_t min_index = std::max(static_cast<int32_t>(previous_hashes.size()) - fifty_move_count, min_ply);
   HashType cur_hash = get_hash();
-  for (int index = previous_hashes.size()-2; index >= min_index; index-=2) {
+  for (int32_t index = previous_hashes.size()-2; index >= min_index; index-=2) {
     repetitions += (cur_hash == previous_hashes[index]);
   }
   return repetitions;

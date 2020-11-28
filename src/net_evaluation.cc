@@ -21,16 +21,17 @@ constexpr size_t cnn_dense_in = 4 * block_size;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
 using NetLayerType = Vec<float, block_size>;
+using FNetLayerType = Vec<SIMDFloat, block_size>;
 
 // CNN types
-using CNNLayerType = Array2d<Vec<float, block_size>, 8, 8>;
-using Filter = Array2d<Vec<float, block_size>, 3, 3>;
+using CNNLayerType = Array2d<NetLayerType, 8, 8>;
+using Filter = Array2d<NetLayerType, 3, 3>;
 // The net inputs are very sparse (less than 18/640)
 // so it makes sense to rely on deconvolution instead of regular conv.
-using DeconvFilter = Array2d<Vec<float, block_size>, 3, 3>;
+using DeconvFilter = Array2d<NetLayerType, 3, 3>;
 
 //using CReLULayerType = Vec<float, act_block_size>;
-std::array<float, 2> contempt = { 0.5, 0.5 };
+std::array<int32_t, 2> contempt = { 0, 0 };
 
 struct CNNHelper {
   std::vector<Square> our_p;
@@ -88,8 +89,8 @@ Array3d<NetLayerType, 5, 5, 10> cnn_l1_filters;
 // the output of the convolutions on the constant inputs.
 CNNLayerType cnn_input_bias;
 
-Array3d<NetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
-NetLayerType cnn_our_p_bias(0), cnn_our_k_bias(0), cnn_opp_p_bias(0), cnn_opp_k_bias(0);
+Array3d<FNetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
+NetLayerType cnn_our_p_bias, cnn_our_k_bias, cnn_opp_p_bias, cnn_opp_k_bias;
 
 std::vector<NetLayerType> cnn_dense_out(cnn_dense_in, 0);
 
@@ -752,11 +753,11 @@ T ScoreBoard(const Board &board, const EvalConstants &ec) {
   return score;
 }
 
-NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<NetLayerType, 3, 3, 16> &filters,
+NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<FNetLayerType, 3, 3, 16> &filters,
                             const NetLayerType &bias, Square s) {
   int h = GetSquareY(s);
   int w = GetSquareX(s);
-  NetLayerType result = bias;
+  FNetLayerType result(bias);
   for (size_t i = 0; i < 3; ++i) {
     if (h+i == 0 || h+i > 8) {
       continue;
@@ -766,12 +767,13 @@ NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<Ne
         continue;
       }
       for (size_t c = 0; c < prev_cnn_layer[0][0].size(); ++c) {
-        result += prev_cnn_layer[h+i-1][w+j-1][c] * filters[i][j][c];
+        //result += prev_cnn_layer[h+i-1][w+j-1][c] * filters[i][j][c];
+        result.FMA(filters[i][j][c], prev_cnn_layer[h+i-1][w+j-1][c]);
       }
     }
   }
   result.relu();
-  return result;
+  return result.to_simple_vec();
 }
 
 NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
@@ -807,7 +809,7 @@ NetLayerType NetForward(CNNLayerType &cnn_layer_one, const CNNHelper &helper) {
   return out;
 }
 
-Score NetForward(NetLayerType &layer_one, float c = 0.5) {
+Score NetForward(NetLayerType &layer_one) {
   layer_one += bias_layer_one;
   layer_one.relu();
 
@@ -861,19 +863,25 @@ Score ScoreBoard(const Board &board) {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board, ec);
   }
   layer_one += cnn_out;
-  return NetForward(layer_one, contempt[board.get_turn()]);
+  if (contempt[board.get_turn()] != 0) {
+    return AddContempt(NetForward(layer_one), board.get_turn());
+  }
+  return NetForward(layer_one);
 }
 
 template<size_t size>
-void init_cnn_weights(Array3d<NetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
+void init_cnn_weights(Array3d<FNetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
                       double multiplier = 1.0) {
   size_t idx = 0;
   for (size_t h = 0; h < cnn_filters.size(); ++h) {
     for (size_t w = 0; w < cnn_filters[0].size(); ++w) {
       for (size_t i = 0; i < cnn_filters[0][0].size(); ++i) {
+        NetLayerType tmp(0);
         for (size_t j = 0; j < cnn_filters[0][0][0].size(); ++j) {
-          cnn_filters[h][w][i][j] = weights[idx++] * multiplier;
+          tmp[j] = weights[idx++] * multiplier;
+          // cnn_filters[h][w][i][j] = weights[idx++] * multiplier;
         }
+        cnn_filters[h][w][i] = FNetLayerType(tmp);
       }
     }
   }
@@ -1339,5 +1347,48 @@ void EstimateFeatureImpact() {
 //  }
 }
 #endif
+
+void SetContempt(Color color, int32_t value) {
+  contempt[color] = value;
+  contempt[other_color(color)] = -value;
+  if (value == 0) {
+    contempt[other_color(color)] = 0;
+  }
+}
+
+std::array<Score, 2> GetDrawArray() {
+  if (contempt[kWhite] == 0) {
+    return std::array<Score, 2> { kDrawScore, kDrawScore };
+  }
+  return std::array<Score, 2> { AddContempt(kDrawScore, kWhite), AddContempt(kDrawScore, kBlack) };
+}
+
+Score AddContempt(Score score, Color color) {
+  assert(score.is_static_eval());
+  int32_t diff = score.win_draw - score.win;
+  if (contempt[color] > 0) { // Contempt is positive, draws are counted as losses
+    diff = (diff * contempt[color]) / 100;
+    return WDLScore { score.win, score.win_draw - diff };
+  }
+  // contempt is negative, draws are counted as wins
+  diff = -(diff * contempt[color]) / 100;
+  return WDLScore { score.win + diff, score.win_draw};
+}
+
+Score RemoveContempt(Score score, Color color) {
+  if (!score.is_static_eval() || contempt[color] == 0
+      || contempt[color] >= 100 || contempt[color] <= -100) {
+    return score;
+  }
+  int32_t diff = score.win_draw - score.win;
+  if (contempt[color] >= 0) {
+    int32_t orig_diff = (diff * 100) / (100 - contempt[color]);
+    diff = orig_diff - diff;
+    return WDLScore { score.win, score.win_draw + diff };
+  }
+  int32_t orig_diff = (diff * 100) / (100 + contempt[color]);
+  diff = orig_diff - diff;
+  return WDLScore { score.win - diff, score.win_draw };
+}
 
 }

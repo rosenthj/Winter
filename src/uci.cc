@@ -33,6 +33,7 @@
 #include "search.h"
 #include "transposition.h"
 #include "search_thread.h"
+#include <array>
 #include <cstdint>
 #include <vector>
 #include <sstream>
@@ -51,15 +52,29 @@ std::vector<std::string> &splits(const std::string &s, char delimeter,
   return elements;
 }
 
+// Returns a maximum time with margin of error for param clock time
+int32_t  maxtime(int32_t time) {
+  return std::max((8 * time) / 10, time - 100);
+}
+
+
+int32_t  get_base_time(int32_t  base, int32_t  inc, int32_t  to_go=22) {
+  return std::min(maxtime(base),((58 * base) / std::min(50, to_go) + 58 * inc) / 50);
+}
+
 std::vector<std::string> split(const std::string &s, char delim) {
   std::vector<std::string> elems;
   splits(s, delim, elems);
   return elems;
 }
 
-//bool IsTrue(std::string s) {
-//  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
-//}
+bool Equals(std::string string_a, std::string string_b) {
+  return string_a.compare(string_b) == 0;
+}
+
+bool IsTrue(std::string s) {
+  return Equals(s, "true") || Equals(s, "True") || Equals(s, "TRUE") || Equals(s, "1");
+}
 
 struct UCIOption {
 	std::string name;
@@ -75,14 +90,21 @@ struct UCIOption {
   }
 };
 
+struct UCICheck {
+  std::string name;
+  void (*func)(bool value);
+  bool default_value;
+  std::string to_string() const {
+    if (default_value)
+      return "option name " + name + " type check default true";
+    return "option name " + name + " type check default false";
+  }
+};
+
 std::vector<UCIOption> uci_options {
   {"Hash", table::SetTableSize, 32, 1, 104576},
   {"Threads", search::SetNumThreads, 1, 1, 256},
-// "\noption name Contempt type spin default 0 min -100 max 100"
-//   search::SetContempt(contempt);
-// "\noption name Armageddon type check default false"
-//   bool armageddon_setting = IsTrue(tokens[index++]);
-//   search::SetArmageddon(armageddon_setting);
+  {"Contempt", search::SetContempt, 0, -100, 100},
 #ifdef TUNE
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
   {"Futility", search::SetFutilityMargin, 560, 400, 1500},
@@ -95,15 +117,16 @@ std::vector<UCIOption> uci_options {
   {"LMRMultiplierPV", search::SetLMRMultiplierPV, 76, 0, 100},
   {"LMROffsetPVCap", search::SetLMROffsetPVCap, 50, -155, 100},
 //  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 23, 0, 100},
-//  {"LMP1", search::SetLMP1, 6, 1, 30},
-//  {"LMP2", search::SetLMP2, 7, 1, 30},
-//  {"LMP3", search::SetLMP3, 8, 1, 30},
-//  {"LMP4", search::SetLMP4, 22, 1, 30},
   {"LMPBaseNW", search::SetLMPBaseNW, 3, 1, 20},
   {"LMPBasePV", search::SetLMPBasePV, 5, 1, 20},
   {"LMPScalar", search::SetLMPScalar, 12, 0, 24},
   {"LMPQuadratic", search::SetLMPQuadratic, 4, 0, 16},
 #endif
+};
+
+std::vector<UCICheck> uci_check_options {
+  {"Armageddon", search::SetArmageddon, false},
+  {"UCI_ShowWDL", search::SetUCIShowWDL, true},
 };
 
 const std::string kEngineIsReady = "readyok";
@@ -112,24 +135,13 @@ const std::string kEngineAuthorPrefix = "id author ";
 const std::string kOk = "uciok";
 
 struct Timer {
-  Timer() {
-    for (Color color = kWhite; color <= kBlack; color++) {
-      time[color] = 0;
-      inc[color] = 0;
-    }
-    movetime = 0;
-    moves_to_go = 0;
-    search_depth = 0;
-    nodes = 0;
-  }
-  int time[2], inc[2], movetime;
+  std::array<int, 2> time;
+  std::array<int, 2> inc;
+  int movetime;
   size_t nodes;
-  Depth moves_to_go, search_depth;
+  Depth moves_to_go;
+  Depth search_depth;
 };
-
-int maxtime(int time) {
-  return std::max((8 * time) / 10, time - 100);
-}
 
 void Go(Board *board, Timer timer) {
   Move move = 0;
@@ -144,23 +156,18 @@ void Go(Board *board, Timer timer) {
     move = search::NodeSearch((*board), timer.nodes);
   }
   else {
-    if (timer.moves_to_go == 0) {
-      timer.moves_to_go = 40;
+    int time;
+    const Color color = board->get_turn();
+    if (timer.moves_to_go > 0) {
+      time = get_base_time(timer.time[color], timer.inc[color], timer.moves_to_go);
     }
-    Color color = board->get_turn();
-    int time = timer.time[color] + ((timer.time[color] * board->get_phase()) / kMaxPhase);
-    time = (6 * time) / 5;
-    time /= timer.moves_to_go + 8;
-    time = std::max(time, timer.time[color] / timer.moves_to_go + 4);
-    time += timer.inc[color];
-    Milliseconds duration = Milliseconds(maxtime(time));
+    else {
+      time = get_base_time(timer.time[color], timer.inc[color]);
+    }
+    Milliseconds duration = Milliseconds(time);
     move = search::TimeSearch((*board), duration);
   }
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
-}
-
-bool Equals(std::string string_a, std::string string_b) {
-  return string_a.compare(string_b) == 0;
 }
 
 void Reply(std::string message) {
@@ -223,6 +230,9 @@ void Loop() {
       for (const UCIOption &option : uci_options) {
         Reply(option.to_string());
       }
+      for (const UCICheck &option : uci_check_options) {
+        Reply(option.to_string());
+      }
       Reply(kOk);
     }
     else if (Equals(command, "stop")) {
@@ -238,6 +248,14 @@ void Loop() {
         if (Equals(command, option.name)) {
           index++;
           int value = atoi(tokens[index++].c_str());
+          option.func(value);
+          break;
+        }
+      }
+      for (UCICheck &option : uci_check_options) {
+        if (Equals(command, option.name)) {
+          index++;
+          bool value = IsTrue(tokens[index++].c_str());
           option.func(value);
           break;
         }
@@ -294,7 +312,7 @@ void Loop() {
     }
     else if (Equals(command, "go")) {
       search::end_search();
-      Timer timer;
+      Timer timer {};
       if (tokens.size() >= index+2) {
         while (tokens.size() >= index+2) {
           std::string arg = tokens[index++];

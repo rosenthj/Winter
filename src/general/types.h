@@ -184,37 +184,9 @@ inline float score_to_wpct(WDLScore score) {
   return score.to_wpct();
 }
 
-//// TODO remove this abomination once rest of code is ready.
-//inline WDLScore score_to_wdl_estimate(Score score) {
-//  return WDLScore::from_score(score);
-////  return WDLScore((score + kRescale) / 2);
-//  //float wpct = score_to_wpct(score);
-//  //return WDLScore(wpct, wpct);
-//}
-
-//inline NScore wpct_to_cp(float wpct) {
-//  constexpr float kEpsilon = 0.000001;
-//  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
-//  return std::round(std::log(wpct / (1-wpct)) * 1024);
-//}
-
-// Rounds score to next valid score
-//inline Score get_valid_score(Score score) {
-//  if (!is_valid_score(score) || score == kNoScore) {
-//    if (score < kMinScore) {
-//      return kMinScore;
-//    }
-//    if (score < kMinStaticEval) {
-//      return kMinStaticEval;
-//    }
-//    if (score > kMaxScore) {
-//      return kMaxScore;
-//    }
-//    assert(score > kMaxStaticEval);
-//    return kMaxStaticEval;
-//  }
-//  return score;
-//}
+inline Color other_color(Color color) {
+  return color ^ 0x1;
+}
 
 constexpr int kLowerBound = 1;
 constexpr int kUpperBound = 2;
