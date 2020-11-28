@@ -71,7 +71,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20112803; // Unused warning is expected.
+const int net_version = 20112804; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
