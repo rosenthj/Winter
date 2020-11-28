@@ -70,13 +70,13 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20051601; // Unused warning is expected.
+const int net_version = 20112800; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
-inline float sigmoid(float x) {
-  return 1 / (1 + std::exp(-x));
-}
+// inline float sigmoid(float x) {
+//  return 1 / (1 + std::exp(-x));
+//}
 
 // CNN Weights
 
@@ -103,8 +103,14 @@ NetLayerType bias_layer_two(0);
 
 NetLayerType win_weights(0);
 float win_bias;
-NetLayerType win_draw_weights(0);
-float win_draw_bias;
+
+NetLayerType draw_weights(0);
+float draw_bias;
+NetLayerType loss_weights(0);
+float loss_bias;
+
+// NetLayerType win_draw_weights(0);
+// float win_draw_bias;
 
 constexpr std::array<int, 64> kPSTindex = {
     0, 1, 2, 3, 3, 2, 1, 0,
@@ -812,12 +818,24 @@ Score NetForward(NetLayerType &layer_one, float c = 0.5) {
   layer_two.relu();
 
   float win = layer_two.dot(win_weights) + win_bias;
-  float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
+  float draw = layer_two.dot(draw_weights) + draw_bias;
+  float loss = layer_two.dot(loss_weights) + loss_bias;
+  
+  float max = std::max(win, std::max(draw, loss));
+  win = std::exp(win - max);
+  draw = std::exp(draw - max);
+  loss = std::exp(loss - max);
+  
+  float sum = win + draw + loss;
+  
+  return WDLScore::from_pct(win / sum, (win+draw) / sum);
+  
+  //float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
 
   //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
 
   //return wpct_to_score(wpct);
-  return WDLScore::from_pct(sigmoid(win), sigmoid(win_draw));
+  //return WDLScore::from_pct(sigmoid(win), sigmoid(win_draw));
 }
 
 Score ScoreBoard(const Board &board) {
@@ -966,9 +984,6 @@ void init_weights() {
   }
 
   for (size_t k = 0; k < block_size; ++k) {
-    win_weights[k]  = net_hardcode::output_weights[k + 0 * block_size];
-    win_draw_weights[k] = net_hardcode::output_weights[k + 1 * block_size];
-
     bias_layer_one[k] = net_hardcode::l1_bias[k];
     bias_layer_two[k] = net_hardcode::l2_bias[k];
   }
@@ -976,11 +991,16 @@ void init_weights() {
   const size_t out_block_size = win_weights.size();
   for (size_t k = 0; k < out_block_size; ++k) {
     win_weights[k]  = net_hardcode::output_weights[k + 0 * out_block_size];
-    win_draw_weights[k] = net_hardcode::output_weights[k + 1 * out_block_size];
+    draw_weights[k] = net_hardcode::output_weights[k + 1 * out_block_size];
+    loss_weights[k] = net_hardcode::output_weights[k + 2 * out_block_size];
+    
+    //win_draw_weights[k] = net_hardcode::output_weights[k + 1 * out_block_size];
   }
 
   win_bias = net_hardcode::bias_win;
-  win_draw_bias = net_hardcode::bias_win_draw;
+  draw_bias = net_hardcode::bias_draw;
+  loss_bias = net_hardcode::bias_loss;
+  //win_draw_bias = net_hardcode::bias_win_draw;
 }
 
 std::vector<int32_t> GetCNNInputs(const Board &board) {
