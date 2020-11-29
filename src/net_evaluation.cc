@@ -71,7 +71,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20112804; // Unused warning is expected.
+const int net_version = 20112900; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
@@ -1188,6 +1188,10 @@ void RerollCommonFeatureGames(std::vector<Game> &games, size_t reroll_pct) {
 
 std::vector<Game> LoadTrainingGamesForTraining(std::string filename, size_t reroll_pct) {
   std::vector<Game> games = data::LoadGames(30000000, filename);
+  size_t original_length = games.size();
+  for (size_t i = 0; i < original_length; ++i) {
+    games.emplace_back(games[i]);
+  }
   data::SetGamesToRandomQuiescent(games);
   for (int i = 0; i < 5; i++) {
 //    RerollCommonFeatureGames(games, reroll_pct);
