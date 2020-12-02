@@ -16,7 +16,7 @@
 using namespace net_features;
 
 // NN types
-constexpr size_t block_size = 16;
+constexpr size_t block_size = 32;
 constexpr size_t cnn_dense_in = 4 * block_size;
 // The (post-) activation block size is only needed if dimension is different from preactivation
 //constexpr size_t act_block_size = 2 * block_size;
@@ -71,7 +71,7 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 20112900; // Unused warning is expected.
+const int net_version = 20120200; // Unused warning is expected.
 
 constexpr bool kUseQueenActivity = false;
 
@@ -89,7 +89,7 @@ Array3d<NetLayerType, 5, 5, 10> cnn_l1_filters;
 // the output of the convolutions on the constant inputs.
 CNNLayerType cnn_input_bias;
 
-Array3d<FNetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
+Array3d<FNetLayerType, 3, 3, block_size> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
 NetLayerType cnn_our_p_bias, cnn_our_k_bias, cnn_opp_p_bias, cnn_opp_k_bias;
 
 std::vector<NetLayerType> cnn_dense_out(cnn_dense_in, 0);
@@ -99,7 +99,7 @@ std::vector<NetLayerType> cnn_dense_out(cnn_dense_in, 0);
 std::vector<NetLayerType> net_input_weights(kTotalNumFeatures, 0);
 NetLayerType bias_layer_one(0);
 
-std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
+std::vector<NetLayerType> second_layer_weights(block_size * block_size, 0);
 NetLayerType bias_layer_two(0);
 
 NetLayerType win_weights(0);
@@ -753,7 +753,7 @@ T ScoreBoard(const Board &board, const EvalConstants &ec) {
   return score;
 }
 
-NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<FNetLayerType, 3, 3, 16> &filters,
+NetLayerType FiltersForward(const CNNLayerType &prev_cnn_layer, const Array3d<FNetLayerType, 3, 3, block_size> &filters,
                             const NetLayerType &bias, Square s) {
   int h = GetSquareY(s);
   int w = GetSquareX(s);
@@ -870,7 +870,7 @@ Score ScoreBoard(const Board &board) {
 }
 
 template<size_t size>
-void init_cnn_weights(Array3d<FNetLayerType, 3, 3, 16> &cnn_filters, const std::array<float, size> &weights,
+void init_cnn_weights(Array3d<FNetLayerType, 3, 3, block_size> &cnn_filters, const std::array<float, size> &weights,
                       double multiplier = 1.0) {
   size_t idx = 0;
   for (size_t h = 0; h < cnn_filters.size(); ++h) {
