@@ -722,7 +722,7 @@ inline void AddCommonFeatures(T &score, const Board &board, const EvalConstants 
 namespace net_evaluation {
 
 void SetPHashSize(const size_t bytes) {
-  pawn_hash::size = bytes / 72;
+  pawn_hash::size = bytes / (4*block_size + 8);
   pawn_hash::table.resize(pawn_hash::size);
 }
 
