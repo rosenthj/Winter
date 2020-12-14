@@ -831,7 +831,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   bool strict_worsening = false;
 
   //Speculative pruning methods
-  if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
+  if (beta.is_static_eval() && !in_check) {
 
     //Set static eval from board and TT entry.
     if (valid_entry) {
@@ -862,7 +862,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     }
 
     //Null Move Pruning
-    if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
+    if (node_type == NodeType::kNW && static_eval >= beta && is_null_move_allowed(t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
