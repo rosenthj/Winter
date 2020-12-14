@@ -130,14 +130,14 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 
 #ifdef TUNE
 NScore kInitialAspirationDelta = 40;
-NScore kSNMPMargin = 790;
+NScore kSNMPMargin = 730;
 Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
 constexpr NScore kInitialAspirationDelta = 40;
-constexpr NScore kSNMPMargin = 790;
+constexpr NScore kSNMPMargin = 730;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
@@ -854,7 +854,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
-      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
+      NScore margin = kSNMPMargin * depth;
       if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;

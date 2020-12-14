@@ -108,7 +108,7 @@ std::vector<UCIOption> uci_options {
 #ifdef TUNE
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
   {"Futility", search::SetFutilityMargin, 560, 400, 1500},
-  {"SNMPMargin", search::SetSNMPMargin, 790, 500, 1500},
+  {"SNMPMargin", search::SetSNMPMargin, 730, 500, 1500},
   {"LMROffset", search::SetLMROffset, 16, 0, 100},
   {"LMRMultiplier", search::SetLMRMultiplier, 74, 0, 250},
   {"LMROffsetCap", search::SetLMROffsetCap, 33, -55, 100},
