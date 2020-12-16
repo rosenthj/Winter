@@ -935,8 +935,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     Depth e = 0;// Extensions
     if (i == 0 
-		&& depth >= settings::kSingularExtensionDepth-2
-		&& valid_entry
+        && depth >= settings::kSingularExtensionDepth-2
+        && valid_entry
         && entry.depth >= std::max(depth, settings::kSingularExtensionDepth) - 3
         && !(node_type == NodeType::kPV && moves.size() == 1)
         && entry.get_bound() != kUpperBound
