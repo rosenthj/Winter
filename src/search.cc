@@ -934,9 +934,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     const Move move = moves[i];
 
     Depth e = 0;// Extensions
-    if (i == 0 && depth >= settings::kSingularExtensionDepth && valid_entry
-        && entry.depth >= depth - 3 && !(node_type == NodeType::kPV && moves.size() == 1)
-        && entry.get_bound() != kUpperBound && entry.get_score(t.board).is_static_eval()
+    if (i == 0 
+        && depth >= settings::kSingularExtensionDepth-2
+        && valid_entry
+        && entry.depth >= std::max(depth, settings::kSingularExtensionDepth) - 3
+        && !(node_type == NodeType::kPV && moves.size() == 1)
+        && entry.get_bound() != kUpperBound
+        && entry.get_score(t.board).is_static_eval()
         && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval) {
       SortMovesML(moves, t, tt_entry);
       moves_sorted = true;
