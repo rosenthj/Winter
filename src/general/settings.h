@@ -70,7 +70,7 @@ const bool kUseScoreBasedPruning = true;
 const bool kUseNullMoves = true && kUseExtensions;
 const Depth kRepsForDraw = 2;
 const Depth kMaxDepth = 128;
-const Depth kSingularExtensionDepth = 9;
+const Depth kSingularExtensionDepth = 8;
 
 const bool kUseQS = true;
 

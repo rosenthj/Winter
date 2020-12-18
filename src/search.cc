@@ -6,7 +6,7 @@
  *
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2020 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -935,9 +935,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     Depth e = 0;// Extensions
     if (i == 0 
-        && depth >= settings::kSingularExtensionDepth-2
+        && depth >= settings::kSingularExtensionDepth
         && valid_entry
-        && entry.depth >= std::max(depth, settings::kSingularExtensionDepth) - 3
+        && entry.depth >= depth-2
         && !(node_type == NodeType::kPV && moves.size() == 1)
         && entry.get_bound() != kUpperBound
         && entry.get_score(t.board).is_static_eval()
