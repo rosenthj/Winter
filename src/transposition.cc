@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2020 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -83,15 +83,20 @@ void SetTableSize(const int32_t MB_total_int) {
 }
 
 size_t HashFunction(const HashType hash) {
-  return (hash % size) & ~(0x3);
+  size_t result = (hash % size) & ~(0x3);
+  assert(result < table.size() - 3);
+  return result;
 }
 
 size_t PVHashFunction(const HashType hash) {
-  return hash % size_pvt;
+  size_t result = hash % size_pvt;
+  assert(result < table_pv.size());
+  return result;
 }
 
 Entry GetMainEntryIdx(const HashType hash) {
   size_t idx = HashFunction(hash);
+  assert(idx + 3 < table.size());
   for (size_t i = 0; i < 3; ++i) {
     if (ValidateHash(table[idx+i], hash)) {
       return table[idx+i];
@@ -118,6 +123,7 @@ Entry GetEntry(const HashType hash) {
 
 size_t GetIdxToReplace(HashType hash) {
   size_t idx = HashFunction(hash);
+  assert(idx + 3 < table.size());
   if (ValidateHash(table[idx], hash)) {
     return idx;
   }
@@ -164,6 +170,7 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   size_t index_pv = PVHashFunction(hash);
 
   assert(index < table.size());
+  assert(index_pv < table_pv.size());
 
   HashType best_move_cast = best_move;
   Entry entry;
