@@ -168,6 +168,7 @@ void Go(Board *board, Timer timer) {
     move = search::TimeSearch((*board), duration);
   }
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
+  search::Threads.is_searching = false;
 }
 
 void Reply(std::string message) {

@@ -1381,7 +1381,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); ++helper_idx) {
     helpers[helper_idx].join();
   }
-  Threads.is_searching = false;
   return Threads.main_thread->moves[0];
 }
 
