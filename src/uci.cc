@@ -168,6 +168,7 @@ void Go(Board *board, Timer timer) {
     move = search::TimeSearch((*board), duration);
   }
   std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
+  search::Threads.is_searching = false;
 }
 
 void Reply(std::string message) {
@@ -188,7 +189,9 @@ void Loop() {
     if (Equals(command, "quit")) {
       //Resynchronise search threads:
       search::end_search();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      while (search::Threads.is_searching) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
       break;
     }
     else if (Equals(command, "gen_eval_csv")) {

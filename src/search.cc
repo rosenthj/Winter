@@ -1271,7 +1271,7 @@ void Thread::search() {
       break;
     }
 
-    if (id != 0 && depth > 4 && !Threads.ignorance_smp) {
+    if (id != 0 && depth > 4) {
       static std::mutex mutex;
       std::lock_guard<std::mutex> lock(mutex);
 
@@ -1332,6 +1332,7 @@ void Thread::search() {
 
 template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
+  Threads.is_searching = true;
   table::UpdateGeneration();
   if (armageddon) {
     net_evaluation::SetContempt(kWhite, 60);
@@ -1363,26 +1364,14 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   SortMovesML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->moves = moves;
   Threads.end_search = false;
-  Threads.ignorance_smp = false; // moves.size() > 10;
   std::vector<std::thread> helpers;
   for (Thread* t : Threads.helpers) {
     t->board.SetToSamePosition(board);
     t->root_height = board.get_num_made_moves();
     t->moves = moves;
-    if (Threads.ignorance_smp) {
-      if (t->id > 2 && (t->id)%2) {
-        std::shuffle(moves.begin(), moves.end(), rng);
-      }
-      t->moves.clear();
-      for (size_t idx = (t->id) % 2; idx < moves.size(); idx += 2) {
-        t->moves.push_back(moves[idx]);
-      }
-    }
-    else {
+    t->perturb_root_moves();
+    while(rng() % 2) {
       t->perturb_root_moves();
-      while(rng() % 2) {
-        t->perturb_root_moves();
-      }
     }
     t->max_depth = t->board.get_num_made_moves();
     helpers.emplace_back(std::thread(&Thread::search, t));

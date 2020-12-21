@@ -148,7 +148,7 @@ struct ThreadPool {
   size_t get_max_depth() const;
   void reset_node_count();
 
-  bool ignorance_smp;
+  bool is_searching;
   std::atomic_bool end_search;
   std::vector<Thread*> helpers;
   Thread* main_thread;
