@@ -168,9 +168,14 @@ Score last_search_score;
 
 bool print_info = true;
 
+struct MoveAndMoveScore {
+  Move move;
+  MoveScore move_score;
+};
+
 struct Sorter {
-  bool operator() (Move i, Move j) {
-    return (i >> 16) > (j >> 16);
+  bool operator() (MoveAndMoveScore i, MoveAndMoveScore j) {
+    return i.move_score > j.move_score;
   };
 };
 
@@ -227,12 +232,15 @@ MoveScore get_move_priority(const Move move, search::Thread &t, const Move best)
 }
 
 void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
+  std::vector<MoveAndMoveScore> moves_and_scores(moves.size());
+  
   for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
+    moves_and_scores[i].move = moves[i];
+    moves_and_scores[i].move_score = get_move_priority(moves[i], t, best_move);
   }
-  std::sort(moves.begin(), moves.end(), Sorter());
+  std::sort(moves_and_scores.begin(), moves_and_scores.end(), Sorter());
   for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] &= 0xFFFFL;
+    moves[i] = moves_and_scores[i].move;
   }
 }
 
@@ -471,22 +479,25 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
 // Sorten moves according to weights given by some classifier
 void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_move = kNullMove) {
   MoveOrderInfo info(t.board, best_move);
+  std::vector<MoveAndMoveScore> moves_and_scores(moves.size());
 
   //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
     for (size_t i = 0; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<MoveScore, true>(moves[i], t, info)) << 16);
+      moves_and_scores[i].move = moves[i];
+      moves_and_scores[i].move_score = GetMoveWeight<MoveScore, true>(moves[i], t, info);
     }
   }
   else {
     for (size_t i = 0; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<MoveScore, false>(moves[i], t, info)) << 16);
+      moves_and_scores[i].move = moves[i];
+      moves_and_scores[i].move_score = GetMoveWeight<MoveScore, false>(moves[i], t, info);
     }
   }
 
-  std::sort(moves.begin(), moves.end(), Sorter());
+  std::sort(moves_and_scores.begin(), moves_and_scores.end(), Sorter());
   for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] &= 0xFFFFL;
+    moves[i] = moves_and_scores[i].move;
   }
 }
 
