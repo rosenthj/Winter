@@ -168,7 +168,7 @@ int32_t Thread::get_continuation_score(const Move move) const {
 ThreadPool::ThreadPool() {
   main_thread = new Thread();
   main_thread->id = 0;
-  ignorance_smp = false;
+  is_searching = false;
 }
 
 void ThreadPool::set_num_threads(size_t num_threads) {
