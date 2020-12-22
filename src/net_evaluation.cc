@@ -192,6 +192,15 @@ template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index
   s.FMA(net_input_weights[index], value);
 }
 
+template<typename T> inline
+void AddFeature(T &s, const int index) {
+  s[index] += 1;
+}
+
+template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
+  s += net_input_weights[index];
+}
+
 // TODO refactor AddFeaturePair to utilize AddFeature instead.
 template<typename T, Color our_color> inline
 void AddFeaturePair(T &s, const int index, const int value_white, const int value_black) {
@@ -439,7 +448,7 @@ inline void ScoreKnights(T &score, const Board &board, const EvalConstants &ec,
 
   for (BitBoard pieces = board.get_piece_bitboard(color, kKnight); pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
-    AddFeature<T>(score, offset + kKnightPSTIdx + kPSTindex[piece_square], 1);
+    AddFeature<T>(score, offset + kKnightPSTIdx + kPSTindex[piece_square]);
     AddFeature<T>(score, offset + kKingAttackDistance + kKnight - 1,
         magic::GetSquareDistance(piece_square, ec.king_squares[not_color]));
 //      int relative_x = GetSquareX(piece_square) - GetSquareX(enemy_king_square) + 7;
@@ -451,7 +460,7 @@ inline void ScoreKnights(T &score, const Board &board, const EvalConstants &ec,
     counter.safe += bitops::PopCount(attack_map
                                            & ec.checks.safe[color][kKnight-kKnight]);
     AddFeature<T>(score, offset + kKnightSquaresIndex +
-                  bitops::PopCount(attack_map & ~(ec.c_pieces[color] | ec.covered_once[not_color])), 1);
+                  bitops::PopCount(attack_map & ~(ec.c_pieces[color] | ec.covered_once[not_color])));
     AddFeature<T>(score, offset + kMinorAttackIndex,
         bitops::PopCount(attack_map & ec.major_pieces[not_color]));
     if (attack_map & enemy_king_zone) {
@@ -481,7 +490,7 @@ inline void ScoreBishops(T &score, const Board &board, const EvalConstants &ec,
 //          magic::GetSquareDistance(piece_square, king_squares[not_color]));
     int relative_x = GetSquareX(piece_square) - GetSquareX(enemy_king_square) + 7;
     int relative_y = GetSquareY(piece_square) - GetSquareY(enemy_king_square) + 7;
-    AddFeature<T>(score, offset + kBishopVsKingPosition + relative_king_map[relative_x + 15 * relative_y], 1);
+    AddFeature<T>(score, offset + kBishopVsKingPosition + relative_king_map[relative_x + 15 * relative_y]);
     BitBoard attack_map = magic::GetAttackMap<kBishop>(piece_square, ec.all_pieces)
         & (~ec.covered_once[not_color] | (ec.c_pieces[not_color] ^ ec.pawn_bb[not_color]));
     counter.unsafe += bitops::PopCount(attack_map
@@ -494,7 +503,7 @@ inline void ScoreBishops(T &score, const Board &board, const EvalConstants &ec,
       counter.king_zone_attacks[kBishop - kKnight]++;
     }
     AddFeature<T>(score, offset + kBishopMobility
-                  + bitops::PopCount(attack_map & ~ec.c_pieces[color]), 1);
+                  + bitops::PopCount(attack_map & ~ec.c_pieces[color]));
     abstract_targets |= magic::GetAttackMap<kBishop>(piece_square, ec.hard_block[color]);
   }
   bishop_targets &= ~ec.c_pieces[color];
@@ -516,7 +525,7 @@ inline void ScoreRooks(T &score, const Board &board, const EvalConstants &ec,
 
     BitBoard file = magic::GetSquareFile(piece_square);
     if (!(file & ec.all_pawns_bb)) {
-      AddFeature<T>(score, offset + kRookOpenFile, 1);
+      AddFeature<T>(score, offset + kRookOpenFile);
     }
 
     AddFeature<T>(score, offset + kKingAttackDistance + kRook - 1,
@@ -534,7 +543,7 @@ inline void ScoreRooks(T &score, const Board &board, const EvalConstants &ec,
     }
     BitBoard abstract_attack = attack_map ^
         magic::GetAttackMap<kRook>(piece_square, ec.hard_block[color]);
-    AddFeature<T>(score, offset + kRookMobility + bitops::PopCount(attack_map), 1);
+    AddFeature<T>(score, offset + kRookMobility + bitops::PopCount(attack_map));
     AddFeature<T>(score, offset + kRook + kAbstractActivityIndex,
         bitops::PopCount(abstract_attack));
   }
@@ -561,7 +570,7 @@ inline void ScoreQueens(T &score, const Board &board, const EvalConstants &ec,
       counter.king_attack_count++;
       counter.king_zone_attacks[kQueen - kKnight]++;
     }
-    AddFeature<T>(score, offset + kQueenMobility + std::min(bitops::PopCount(attack_map), 24), 1);
+    AddFeature<T>(score, offset + kQueenMobility + std::min(bitops::PopCount(attack_map), 24));
     if (kUseQueenActivity) {
       BitBoard abstract_attack = attack_map ^
           magic::GetAttackMap<kQueen>(piece_square, ec.hard_block[color]);
@@ -636,8 +645,8 @@ inline void AddPawnCounts(T &score, const Board &board) {
   constexpr Color opponent_color = our_color ^ 0x1;
   constexpr size_t offset = kSideDependentFeatureCount;
 
-  AddFeature<T>(score, kPawnCountIdx + board.get_piece_count(our_color, kPawn), 1);
-  AddFeature<T>(score, kPawnCountIdx + offset + board.get_piece_count(opponent_color, kPawn), 1);
+  AddFeature<T>(score, kPawnCountIdx + board.get_piece_count(our_color, kPawn));
+  AddFeature<T>(score, kPawnCountIdx + offset + board.get_piece_count(opponent_color, kPawn));
 }
 
 template<typename T>
@@ -674,9 +683,9 @@ template<typename T, Color color, Color our_color>
 inline void AddPieceCountFeatures(T &score, const Board &board) {
   constexpr size_t offset = color == our_color ? 0 : kSideDependentFeatureCount;
 
-  AddFeature<T>(score, kKnightCountIdx + offset + std::min(board.get_piece_count(color, kKnight), 2), 1);
-  AddFeature<T>(score, kBishopCountIdx + offset + std::min(board.get_piece_count(color, kBishop), 2), 1);
-  AddFeature<T>(score, kRookCountIdx + offset + std::min(board.get_piece_count(color, kRook), 2), 1);
+  AddFeature<T>(score, kKnightCountIdx + offset + std::min(board.get_piece_count(color, kKnight), 2));
+  AddFeature<T>(score, kBishopCountIdx + offset + std::min(board.get_piece_count(color, kBishop), 2));
+  AddFeature<T>(score, kRookCountIdx + offset + std::min(board.get_piece_count(color, kRook), 2));
 }
 
 template<typename T, Color our_color>
@@ -691,7 +700,7 @@ inline void AddCommonFeatures(T &score, const Board &board) {
 
   if (board.get_piece_count(kWhite, kBishop) == 1 && board.get_piece_count(kBlack, kBishop) == 1
       && bitops::PopCount(board.get_piecetype_bitboard(kBishop) & bitops::light_squares) == 1) {
-    AddFeature<T>(score, kOppositeColoredBishops, 1);
+    AddFeature<T>(score, kOppositeColoredBishops);
   }
 }
 
