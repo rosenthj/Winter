@@ -312,6 +312,14 @@ inline void AddPawnMoves(const BitBoard pawn_bb, const BitBoard empty,
     }
     AddNonPromotionMovesLoop(double_push, 2 * d_forward, moves, kDoublePawnMove);
   }
+  else {
+    const BitBoard back_rank_bb = point_of_view == kWhite ? bitops::eighth_rank : bitops::first_rank;
+    BitBoard single_push = bitops::Dir<forward>(pawn_bb) & empty & back_rank_bb;
+    if (move_gen_type == MoveGenType::InCheck) {
+      single_push &= critical;
+    }
+    AddPawnMovesLoop<Quiescent, move_gen_type, point_of_view>(single_push, d_forward, moves, kNormalMove);
+  }
   BitBoard e_captures = bitops::Dir<f_east>(pawn_bb) & enemy_pieces;
   if (move_gen_type == MoveGenType::InCheck) {
     e_captures &= critical;
