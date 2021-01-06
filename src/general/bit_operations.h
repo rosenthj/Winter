@@ -73,7 +73,7 @@ constexpr BitBoard fourth_rank  = first_rank << (3 * 8);
 constexpr BitBoard fifth_rank   = first_rank << (4 * 8);
 constexpr BitBoard sixth_rank   = first_rank << (5 * 8);
 constexpr BitBoard seventh_rank = first_rank << (6 * 8);
-constexpr BitBoard eigth_rank   = first_rank << (7 * 8);
+constexpr BitBoard eighth_rank   = first_rank << (7 * 8);
 
 constexpr BitBoard odd_ranks = first_rank | third_rank | fifth_rank | seventh_rank;
 constexpr BitBoard even_ranks = ~odd_ranks;

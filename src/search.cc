@@ -62,6 +62,9 @@ int kNodeCountSampleAt = 1000;
 const int kMaxDepthSampled = 32;
 #endif
 
+//std::vector<double_t> fail_high(47);
+//std::vector<double_t> all(47);
+
 int32_t contempt = 0;
 bool armageddon = false;
 std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
@@ -213,18 +216,50 @@ inline Time get_infinite_time() {
 }
 #endif
 
-MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
+size_t get_move_priority_idx(const Move move, search::Thread &t, const Move best) {
   if (move == best)
-    return 20000;
+    return qs_move_features::kPWIHashMove;
   else if (GetMoveType(move) > kCapture) {
-    return 11000;
+    return qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece));
   }
   else if (GetMoveType(move) == kCapture) {
-    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+    return qs_move_features::kPWICapture
+           + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+           + GetPieceType(t.board.get_piece(GetMoveSource(move)));
+    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  return qs_move_features::kNumQSMoveProbabilityFeatures;
 }
+
+MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
+  if (move == best)
+    return hardcode::qs_params[qs_move_features::kPWIHashMove];
+  else if (GetMoveType(move) > kCapture) {
+    return hardcode::qs_params[qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece))];
+  }
+  else if (GetMoveType(move) == kCapture) {
+    return hardcode::qs_params[qs_move_features::kPWICapture
+                               + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                               + GetPieceType(t.board.get_piece(GetMoveSource(move)))];
+    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  }
+  return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+}
+
+//MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
+//  if (move == best)
+//    return 20000;
+//  else if (GetMoveType(move) > kCapture) {
+//    return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+//  }
+//  else if (GetMoveType(move) == kCapture) {
+//    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+//                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+//  }
+//  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+//}
 
 void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
   for (size_t i = 0; i < moves.size(); ++i) {
@@ -657,9 +692,12 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     }
     return lower_bound_score;
   }
+  
+  //Move best_move = 0;
 
   //Sort move list
   if (valid_hash) {
+    //best_move = entry.get_best_move();
     SortMoves(moves, t, entry.get_best_move());
     //SortMovesML(moves, board, entry.best_move);
   }
@@ -667,13 +705,18 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     SortMoves(moves, t, 0);
     //SortMovesML(moves, board, 0);
   }
-
+  
+  //std::vector<size_t> move_priorities(47);
   //Move loop
   for (Move move : moves) {
+    //size_t move_priority_idx = get_move_priority_idx(move, t, best_move);
+    //if (!in_check) {
+    //  move_priorities[move_priority_idx]++;
+    //}
     //SEE pruning
     //Exception for checking moves: -16.03 +/- 10.81
     if (!in_check && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
-        continue;
+      continue;
     }
 
     //Make move, search and unmake
@@ -682,6 +725,15 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     t.board.UnMake();
 
     if (score > lower_bound_score) {
+      
+      //if (!in_check) {
+      //  fail_high[move_priority_idx]++;
+      //  for (size_t i = 0; i < 46; ++i) {
+      //    all[i] += move_priorities[i];
+      //    move_priorities[i] = 0;
+      //  }
+      //}
+      
       //Return beta if we fail high
       if (score >= beta) {
         //table::SaveEntry(board, move, score, 0);
@@ -2200,5 +2252,19 @@ void SetLMPQuadratic(int32_t value) {
 }
 
 #endif
+
+//void PrintSample() {
+//  for (size_t i = 0; i < 45; ++i) {
+//    double_t d = fail_high[i] / all[i];
+//    size_t count = 100;
+//    for (size_t j = 0; j < 45; ++j) {
+//      if (d > fail_high[j] / all[j]) {
+//        count++;
+//      }
+//    }
+//    std::cout << count << ", ";
+//  }
+//  std::cout << std::endl;
+//}
 
 }

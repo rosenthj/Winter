@@ -191,5 +191,14 @@ const std::array<FeatureInfo, 21> kFeatureInfos = {{
 
 }
 
+namespace qs_move_features {
+
+const size_t kPWIHashMove = 0;
+const size_t kPWIPromotion = kPWIHashMove + 1;
+const size_t kPWICapture = kPWIPromotion + 8;
+const size_t kNumQSMoveProbabilityFeatures = kPWICapture + 6 * 6;
+
+}
+
 
 #endif /* SRC_GENERAL_FEATURE_INDEXES_H_ */

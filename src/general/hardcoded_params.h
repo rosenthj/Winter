@@ -295,6 +295,19 @@ constexpr std::array<int, 117> search_params_in_check = {
     2     // CMH
 };
 
+constexpr std::array<int, 45> qs_params = {
+    132,                          // Hash Move
+    104, 100, 100, 115,           // Promotion Capture
+    100, 100, 100, 112,           // Promotion
+    105, 101, 103, 108, 110, 102, // Capture Pawn
+    116, 119, 111, 106, 114, 122, // Capture Knight
+    120, 121, 123, 107, 109, 118, // Capture Bishop
+    126, 113, 124, 125, 117, 128, // Capture Rook
+    133, 129, 130, 131, 127, 100, // Capture Queen
+    100, 100, 100, 100, 100, 100, // Capture King
+    //B1210887, B17-88196534
+};
+
 }
 
 #endif /* SRC_GENERAL_HARDCODED_PARAMS_H_ */
