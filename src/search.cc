@@ -232,34 +232,34 @@ size_t get_move_priority_idx(const Move move, search::Thread &t, const Move best
   return qs_move_features::kNumQSMoveProbabilityFeatures;
 }
 
+//MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
+  //if (move == best)
+    //return hardcode::qs_params[qs_move_features::kPWIHashMove];
+  //else if (GetMoveType(move) > kCapture) {
+    //return hardcode::qs_params[qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece))];
+  //}
+  //else if (GetMoveType(move) == kCapture) {
+    //return hardcode::qs_params[qs_move_features::kPWICapture
+                               //+ 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                               //+ GetPieceType(t.board.get_piece(GetMoveSource(move)))];
+    ////return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+    ////            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  //}
+  //return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+//}
+
 MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
   if (move == best)
-    return hardcode::qs_params[qs_move_features::kPWIHashMove];
+    return 20000;
   else if (GetMoveType(move) > kCapture) {
-    return hardcode::qs_params[qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece))];
+    return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
   }
   else if (GetMoveType(move) == kCapture) {
-    return hardcode::qs_params[qs_move_features::kPWICapture
-                               + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                               + GetPieceType(t.board.get_piece(GetMoveSource(move)))];
-    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
 }
-
-//MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
-//  if (move == best)
-//    return 20000;
-//  else if (GetMoveType(move) > kCapture) {
-//    return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
-//  }
-//  else if (GetMoveType(move) == kCapture) {
-//    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-//                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-//  }
-//  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
-//}
 
 void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
   for (size_t i = 0; i < moves.size(); ++i) {
