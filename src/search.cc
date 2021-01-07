@@ -252,13 +252,13 @@ MoveScore get_move_priority(const Move move, search::Thread &t, const Move best)
   if (move == best)
     return 20000;
   else if (GetMoveType(move) > kCapture) {
-    return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+    return 1000 + (GetMoveType(move) == kQueenPromotion ? 100 * kQueen + 50 : -50) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
   }
   else if (GetMoveType(move) == kCapture) {
-    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+    return 1000 + 100 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
                 - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
 }
 
 void SortMoves(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
