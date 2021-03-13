@@ -599,6 +599,10 @@ inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score 
 }
 #endif
 
+NScore get_score_pot(const search::Thread &t, const WDLScore static_eval, const Move move) {
+  return static_eval.to_nscore() + kProbCutPieceTargetValues[GetPieceType(t.board.get_piece(GetMoveDestination(move)))];
+}
+
 }
 
 namespace search {
@@ -977,22 +981,26 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   }
   else if (node_type != NodeType::kPV
             && depth >= 5
+            && moves_sorted
             && beta.is_static_eval()
             && static_eval.is_static_eval()
-            && beta.to_nscore() + kProbCutMargin <= kMaxStaticEval.to_nscore()
-            && GetMoveType(moves[0]) == kCapture) {
-    NScore score_pot = static_eval.to_nscore() + kProbCutPieceTargetValues[GetPieceType(t.board.get_piece(GetMoveDestination(moves[0])))];
-    if (score_pot >= beta.to_nscore() + kProbCutMargin) {
-      Score pBeta = beta + WDLScore{kProbCutMargin / 2, kProbCutMargin / 2};
-      pBeta = pBeta.get_valid_score();
-      Score pAlpha = pBeta.get_previous_score();
-      t.board.Make(moves[0]);
-      Score result = -AlphaBeta<node_type, Mode>(t, -pBeta, -pAlpha, depth - 3);
-      t.board.UnMake();
-      if (result >= pBeta) {
-        return result;
+            && beta.to_nscore() + kProbCutMargin <= kMaxStaticEval.to_nscore()) {
+    Score pBeta = beta + WDLScore{kProbCutMargin / 2, kProbCutMargin / 2};
+    pBeta = pBeta.get_valid_score();
+    Score pAlpha = pBeta.get_previous_score();
+    for (int i = 0; i < moves.size(); ++i) {
+      if (GetMoveType(moves[i]) == kCapture && get_score_pot(t, static_eval, moves[i]) >= beta.to_nscore() + kProbCutMargin) {
+        t.board.Make(moves[i]);
+        Score result = -AlphaBeta<node_type, Mode>(t, -pBeta, -pAlpha, depth - 3);
+        t.board.UnMake();
+        if (result >= pBeta) {
+          return result;
+        }
       }
+      
+      
     }
+
   }
             
 
