@@ -140,8 +140,9 @@ int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
 constexpr NScore kInitialAspirationDelta = 40;
-constexpr NScore kProbCutMargin = 1000;
-constexpr std::array<NScore, 7> kProbCutPieceTargetValues { 400, 1000, 1000, 1500, 2500, 0, 0 };
+constexpr NScore kProbCutMargin = 650;
+constexpr NScore kPCBase = 750;
+constexpr std::array<NScore, 7> kProbCutPieceTargetValues { kPCBase, 3 * kPCBase, 3 * kPCBase, 5 * kPCBase, 8 * kPCBase, 0, 0 };
 constexpr NScore kSNMPMargin = 790;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
@@ -975,9 +976,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     depth++;
   }
   else if (node_type != NodeType::kPV
-            && depth >= 4
+            && depth >= 5
             && beta.is_static_eval()
             && static_eval.is_static_eval()
+            && beta.to_nscore() + kProbCutMargin <= kMaxStaticEval.to_nscore()
             && GetMoveType(moves[0]) == kCapture) {
     NScore score_pot = static_eval.to_nscore() + kProbCutPieceTargetValues[GetPieceType(t.board.get_piece(GetMoveDestination(moves[0])))];
     if (score_pot >= beta.to_nscore() + kProbCutMargin) {
