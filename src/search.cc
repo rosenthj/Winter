@@ -140,6 +140,8 @@ int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
 constexpr NScore kInitialAspirationDelta = 40;
+constexpr NScore kProbCutMargin = 1000;
+constexpr std::array<NScore, 7> kProbCutPieceTargetValues { 400, 1000, 1000, 1500, 2500, 0, 0 };
 constexpr NScore kSNMPMargin = 790;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
@@ -258,6 +260,10 @@ MoveScore get_move_priority(const Move move, search::Thread &t, const Move best)
     return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
                 - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
+  //else if (GetMoveType(move) == kEnPassant) {
+  //  return 1000 + 10 * kPawn - kPawn;
+  //}
+  //assert(t.board.InCheck());
   return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
 }
 
@@ -968,6 +974,25 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   if (node_type == NodeType::kPV && moves.size() == 1) {
     depth++;
   }
+  else if (node_type != NodeType::kPV
+            && depth >= 4
+            && beta.is_static_eval()
+            && static_eval.is_static_eval()
+            && GetMoveType(moves[0]) == kCapture) {
+    NScore score_pot = static_eval.to_nscore() + kProbCutPieceTargetValues[GetPieceType(t.board.get_piece(GetMoveDestination(moves[0])))];
+    if (score_pot >= beta.to_nscore() + kProbCutMargin) {
+      Score pBeta = beta + WDLScore{kProbCutMargin / 2, kProbCutMargin / 2};
+      pBeta = pBeta.get_valid_score();
+      Score pAlpha = pBeta.get_previous_score();
+      t.board.Make(moves[0]);
+      Score result = -AlphaBeta<node_type, Mode>(t, -pBeta, -pAlpha, depth - 3);
+      t.board.UnMake();
+      if (result >= pBeta) {
+        return result;
+      }
+    }
+  }
+            
 
   //Init checking squares for efficient detection of checking moves.
   //Moves detected always give check, but only direct checks are detected.
