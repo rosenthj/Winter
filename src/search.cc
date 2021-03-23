@@ -53,23 +53,16 @@ enum class NodeType {
   kPV, kNW
 };
 
-const int kNormalSearchMode = 0;
-const int kSamplingSearchMode = 1;
-const int kSamplingEvalMode = 2;
 int kNodeCountSampleAt = 1000;
 //int kNodeCountSampleEvalAt = 5000;
 #ifdef SAMPLE_SEARCH
 const int kMaxDepthSampled = 32;
 #endif
 
-//std::vector<double_t> fail_high(47);
-//std::vector<double_t> all(47);
-
 int32_t contempt = 0;
 bool armageddon = false;
 std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
 
-int rsearch_mode;
 Milliseconds rsearch_duration;
 Depth rsearch_depth;
 
@@ -624,7 +617,6 @@ Board get_sampled_board() {
   return sampled_board;
 }
 
-template<int Mode>
 Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   assert(beta > alpha);
   t.nodes++;
@@ -656,14 +648,6 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   bool in_check = t.board.InCheck();
   Score static_eval = kMinScore;
   if (!in_check) {
-//    if (Mode == kSamplingEvalMode) {
-//      evaluation_nodes++;
-//      if (evaluation_nodes == kNodeCountSampleEvalAt) {
-//        sampled_board.SetToSamePosition(board);
-//        end_search_time();
-//      }
-//    }
-
     static_eval = net_evaluation::ScoreBoard(t.board);
 //    std::cout << "QS Eval return: (w:" << static_eval.win << ", wd:" << static_eval.win_draw << ")" << std::endl;
     if (valid_hash && entry.get_bound() == kLowerBound && static_eval < entry.get_score(t.board)) {
@@ -706,13 +690,8 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     //SortMovesML(moves, board, 0);
   }
   
-  //std::vector<size_t> move_priorities(47);
   //Move loop
   for (Move move : moves) {
-    //size_t move_priority_idx = get_move_priority_idx(move, t, best_move);
-    //if (!in_check) {
-    //  move_priorities[move_priority_idx]++;
-    //}
     //SEE pruning
     //Exception for checking moves: -16.03 +/- 10.81
     if (!in_check && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
@@ -721,18 +700,10 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
     //Make move, search and unmake
     t.board.Make(move);
-    Score score = -QuiescentSearch<Mode>(t, -beta, -alpha);
+    Score score = -QuiescentSearch(t, -beta, -alpha);
     t.board.UnMake();
 
     if (score > lower_bound_score) {
-      
-      //if (!in_check) {
-      //  fail_high[move_priority_idx]++;
-      //  for (size_t i = 0; i < 46; ++i) {
-      //    all[i] += move_priorities[i];
-      //    move_priorities[i] = 0;
-      //  }
-      //}
       
       //Return beta if we fail high
       if (score >= beta) {
@@ -835,7 +806,7 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
   return result;
 }
 
-template<NodeType node_type, int Mode>
+template<NodeType node_type>
 Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   assert(alpha.is_valid());
   assert(beta.is_valid());
@@ -859,7 +830,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       t.nodes++;
       return net_evaluation::ScoreBoard(t.board);
     }
-    return QuiescentSearch<Mode>(t, alpha, beta);
+    return QuiescentSearch(t, alpha, beta);
   }
 
   // To avoid counting nodes twice if all we do is fall through to QSearch,
@@ -918,7 +889,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
-      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -beta, -alpha,
+      Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                     depth - R);
       t.board.UnMake();
       if (score >= beta) {
@@ -941,13 +912,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     }
     return draw_score[t.board.get_turn()];
   }
-
-//  if (Mode == kSamplingSearchMode && node_type == NodeType::kNW && depth <= kMaxDepthSampled) {
-//    sample_nodes++;
-//    if (sample_nodes >= kNodeCountSampleAt && (!in_check || sample_nodes >= kNodeCountSampleAt + 100)) {
-//      return sample_node_and_return_alpha(t.board, depth, node_type, alpha);
-//    }
-//  }
 
   Move tt_entry = kNullMove;
   if (valid_entry) {
@@ -1039,15 +1003,15 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     Score score;
     if (i == 0) {
       //First move gets searched at full depth and window
-      score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e);
+      score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
     }
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
-      score = -AlphaBeta<NodeType::kNW, Mode>(t, -alpha_nw, -alpha,
+      score = -AlphaBeta<NodeType::kNW>(t, -alpha_nw, -alpha,
                                               depth - 1 + e - reduction);
       //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (node_type == NodeType::kPV || reduction > 0)) {
-        score = -AlphaBeta<node_type, Mode>(t, -beta, -alpha, depth - 1 + e);
+        score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
       }
     }
     assert(score.is_valid());
@@ -1129,7 +1093,7 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   for(size_t i = 1; i < moves.size(); ++i) {
     t.set_move(moves[i]);
     t.board.Make(moves[i]);
-    Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(t, -rBeta, -rAlpha, rDepth);
+    Score score = -AlphaBeta<NodeType::kNW>(t, -rBeta, -rAlpha, rDepth);
     t.board.UnMake();
     if (score >= rBeta) {
       return std::make_pair(false, score);
@@ -1138,7 +1102,6 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   return std::make_pair(true, rAlpha);
 }
 
-template<int Mode>
 Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
                      Depth current_depth, std::vector<Move> &moves) {
   assert(original_alpha.is_valid());
@@ -1159,7 +1122,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
     t.set_move(moves[i]);
     t.board.Make(moves[i]);
     if (i == 0) {
-      Score score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
+      Score score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
       assert(score.is_valid());
       if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
         score = draw_score[t.board.get_turn()];
@@ -1180,10 +1143,10 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
 //          reduction = (2 * reduction) / 3;
 //        }
       }
-      Score score = -AlphaBeta<NodeType::kNW, Mode>(t, -get_next_score(alpha),
+      Score score = -AlphaBeta<NodeType::kNW>(t, -get_next_score(alpha),
                                                     -alpha, current_depth - 1 - reduction);
       if (score > alpha) {
-        score = -AlphaBeta<NodeType::kPV, Mode>(t, -beta, -alpha, current_depth - 1);
+        score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
       }
       if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
         score = draw_score[t.board.get_turn()];
@@ -1213,10 +1176,9 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
   return lower_bound_score;
 }
 
-template<int Mode>
 inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores, std::vector<Move> &moves) {
   if (current_depth <= 4) {
-    return RootSearchLoop<Mode>(t, kMinScore, kMaxScore, current_depth, moves);
+    return RootSearchLoop(t, kMinScore, kMaxScore, current_depth, moves);
   }
   else {
     Score score = previous_scores.back();
@@ -1226,7 +1188,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     SortMovesML(moves, t, moves[0]);
 //    assert(is_valid_score(alpha));
 //    assert(is_valid_score(beta));
-    score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
+    score = RootSearchLoop(t, alpha, beta, current_depth, moves);
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta.win > 0 && delta.win_draw > 0);
       if (score <= alpha) {
@@ -1252,7 +1214,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
 //      assert(is_valid_score(alpha));
 //      assert(is_valid_score(beta));
       assert(score > alpha && score < beta);
-      score = RootSearchLoop<Mode>(t, alpha, beta, current_depth, moves);
+      score = RootSearchLoop(t, alpha, beta, current_depth, moves);
       delta *= 2;
     }
     return score;
@@ -1343,16 +1305,7 @@ void Thread::search() {
 
     current_depth = depth;
 
-    if (rsearch_mode == kNormalSearchMode) {
-      score = PVS<kNormalSearchMode>(*this, current_depth, previous_scores, moves);
-    }
-    else if (rsearch_mode == kSamplingSearchMode) {
-      score = PVS<kSamplingSearchMode>(*this, current_depth, previous_scores, moves);
-    }
-    else {
-      assert(rsearch_mode == kSamplingEvalMode);
-      score = PVS<kSamplingEvalMode>(*this, current_depth, previous_scores, moves);
-    }
+    score = PVS(*this, current_depth, previous_scores, moves);
 
     if(!finished(*this)) {
       last_search_score = score;
@@ -1382,7 +1335,6 @@ void Thread::search() {
   }
 }
 
-template<int Mode>
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
   Threads.is_searching = true;
   table::UpdateGeneration();
@@ -1399,7 +1351,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.reset_depths();
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
-  rsearch_mode = Mode;
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   assert(moves.size() != 0);
   if (moves.size() == 1 && !fixed_search_time) {
@@ -1451,25 +1402,25 @@ size_t get_num_nodes() {
 Move DepthSearch(Board board, Depth depth) {
   fixed_search_time = true;
   max_nodes = kInfiniteNodes;
-  return RootSearch<kNormalSearchMode>(board, depth);
+  return RootSearch(board, depth);
 }
 
 Move FixedTimeSearch(Board board, Milliseconds duration) {
   fixed_search_time = true;
   max_nodes = kInfiniteNodes;
-  return RootSearch<kNormalSearchMode>(board, 1000, duration);
+  return RootSearch(board, 1000, duration);
 }
 
 Move TimeSearch(Board board, Milliseconds duration) {
   fixed_search_time = false;
   max_nodes = kInfiniteNodes;
-  return RootSearch<kNormalSearchMode>(board, 1000, duration);
+  return RootSearch(board, 1000, duration);
 }
 
 Move NodeSearch(Board board, size_t num_nodes) {
   fixed_search_time = true;
   max_nodes = num_nodes;
-  return RootSearch<kNormalSearchMode>(board, 1000);
+  return RootSearch(board, 1000);
 }
 
 void end_search() {
@@ -1523,7 +1474,7 @@ void TrainSearchParams(bool from_scratch) {
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(150));
+    RootSearch(board, 128, Milliseconds(150));
     if (sampled_alpha == kMinScore) {
       continue;
     }
@@ -1548,10 +1499,10 @@ void TrainSearchParams(bool from_scratch) {
     size_t low = 0, high = 0;
     for (size_t i = 0; i < moves.size(); ++i) {
       Threads.main_thread->board.Make(moves[i]);
-      Score score = -AlphaBeta<NodeType::kNW, kNormalSearchMode>(*Threads.main_thread,
-                                                                 -get_next_score(sampled_alpha),
-                                                                 -sampled_alpha,
-                                                                 sampled_depth - 1);
+      Score score = -AlphaBeta<NodeType::kNW>(*Threads.main_thread,
+                                              -get_next_score(sampled_alpha),
+                                              -sampled_alpha,
+                                              sampled_depth - 1);
       Threads.main_thread->board.UnMake();
       scores[i] = score;
       if (score > sampled_alpha) {
@@ -1588,10 +1539,10 @@ void TrainSearchParams(bool from_scratch) {
       }
       else {
         Threads.main_thread->board.SetToSamePosition(sampled_board);
-        score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
-                                                             -get_next_score(sampled_alpha),
-                                                             -sampled_alpha,
-                                                             sampled_depth - 1);
+        score = -AlphaBeta<NodeType::kPV>(*Threads.main_thread,
+                                          -get_next_score(sampled_alpha),
+                                          -sampled_alpha,
+                                          sampled_depth - 1);
       }
       sampled_board.UnMake();
       double target = 0;
@@ -1744,7 +1695,7 @@ void CreateSearchParamDataset() {
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(7500));
+    RootSearch(board, 128, Milliseconds(7500));
     if (sampled_alpha == kMinScore) {
       continue;
     }
@@ -1775,7 +1726,7 @@ void CreateSearchParamDataset() {
         continue;
       }
       sampled_board.Make(moves[i]);
-      RootSearch<kNormalSearchMode>(sampled_board, 6, Milliseconds(100));
+      RootSearch(sampled_board, 6, Milliseconds(100));
       Score score = -last_search_score;
 //      Threads.main_thread->board.SetToSamePosition(sampled_board);
 //      Score score = -AlphaBeta<NodeType::kPV, kNormalSearchMode>(*Threads.main_thread,
@@ -1830,12 +1781,12 @@ void CreateSearchParamDataset() {
 
 Score QSearch(Board &board) {
   Threads.main_thread->board.SetToSamePosition(board);
-  return QuiescentSearch<kNormalSearchMode>((*Threads.main_thread), kMinScore, kMaxScore);
+  return QuiescentSearch((*Threads.main_thread), kMinScore, kMaxScore);
 }
 
 Board SampleEval(Board board) {
   evaluation_nodes = 0;
-  RootSearch<kSamplingEvalMode>(board, 128, Milliseconds(5000));
+  RootSearch(board, 128, Milliseconds(5000));
   return sampled_board;
 }
 
@@ -1972,7 +1923,7 @@ void EvaluateScoreDistributions(const int focus) {
     Board board = game.board;
     sample_nodes = 0;
     sampled_alpha = kMinScore;
-    RootSearch<kSamplingSearchMode>(board, 128, Milliseconds(150));
+    RootSearch(board, 128, Milliseconds(150));
     if (sampled_alpha == kMinScore || sampled_board.InCheck()) {
       continue;
     }
