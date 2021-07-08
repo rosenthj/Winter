@@ -16,11 +16,13 @@ The makefile will assume you are making a native build, but if you are making a 
 Winter does not rely on any external libraries aside from the Standard Template Library. All algorithms have been implemented from scratch. As of Winter 0.6.2 I have started to build an external codebase for neural network training.
 
 ### Compiling for ANDROID
-Building for Android is now very easy just follow the instruction,
-Download and extract Android's NDK.
-`$ export PATH=$PATH:$HOME/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin`
-`$ cd Winter/src`
-`$ make ARCH=aarch64`(64-bit) or `$ make ARCH=armv7a`(32-bit)
+Compiling for android is only a bit more complicated than compiling for Linux. Follow the following instructions.
+1. Download and extract Android's NDK.
+2. Export your NDK path. For example
+    `$ export PATH=$PATH:$HOME/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin`
+3. Switch to the Winter root directory `$ cd Winter`
+4. Get the sse2neon header file. `$ wget -O src/learning/sse2neon.h https://raw.githubusercontent.com/DLTcollab/sse2neon/master/sse2neon.h`
+5. Build!`$ make ARCH=aarch64`(64-bit) or `$ make ARCH=armv7a`(32-bit)
 `$ aarch64-linux-android-strip Winter`
 
 ## Contempt

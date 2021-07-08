@@ -3,3 +3,5 @@ Jonathan Maurer
 Jonas Kuratli
 
 Logo made by Kan under CC-SA 2.5
+Android support added by Anurag Singh.
+Android support relies on the efforts from the sse2neon project: https://github.com/DLTcollab/sse2neon
