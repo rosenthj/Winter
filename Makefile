@@ -1,8 +1,20 @@
 #If you have clang, it seems to generate a faster compile as of the beginning of 2018
 #CC=g++
+
+all:
+ifeq ($(ARCH), aarch64)
+CC=aarch64-linux-android21-clang++
+CFLAGS=-c -DNDEBUG -D_ARM -O3 -flto -Wall -Wno-sign-compare -m64 -march=armv8-a+fp+simd+crypto+crc -std=c++14 -Isrc -Isrc/general -Isrc/learning
+LDFLAGS= -flto -Wall -pie -lm -static-libstdc++
+else ifeq ($(ARCH), armv7a)
+CC=armv7a-linux-androideabi16-clang++
+CFLAGS=-c -DNDEBUG -D_ARM -O3 -flto -Wall -Wno-sign-compare -m32 -mthumb -mfloat-abi=softfp -march=armv7-a -mfpu=neon -std=c++14 -Isrc -Isrc/general -Isrc/learning
+LDFLAGS= -flto -Wall -pie -lm -static-libstdc++
+else
 CC=clang++
-CFLAGS=-c -DNDEBUG -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++14 -Isrc -Isrc/general -Isrc/learning
-LDFLAGS=-flto -Wall
+CFLAGS=-c -DNDEBUG -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++14 -Isrc -Isrc/general -Isrc/learning  
+LDFLAGS= -flto -Wall -lpthread
+endif
 SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXE:=Winter
@@ -10,7 +22,7 @@ EXE:=Winter
 all: $(SOURCES) $(EXE)
 
 $(EXE): $(OBJECTS) 
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lpthread
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ 
 
 .cc.o:
 	$(CC) $(CFLAGS) $< -o $@

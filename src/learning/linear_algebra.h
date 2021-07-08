@@ -277,7 +277,12 @@ inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
 }
 
 #else
+#if !defined(_ARM)
 #include <xmmintrin.h>
+#else
+#include "sse2neon.h"
+#endif
+
 using SIMDFloat = __m128;
 constexpr size_t kSIMDWidth = 4;
 

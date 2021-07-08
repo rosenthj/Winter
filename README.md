@@ -15,6 +15,14 @@ The makefile will assume you are making a native build, but if you are making a 
 
 Winter does not rely on any external libraries aside from the Standard Template Library. All algorithms have been implemented from scratch. As of Winter 0.6.2 I have started to build an external codebase for neural network training.
 
+### Compiling for ANDROID
+Building for Android is now very easy just follow the instruction,
+Download and extract Android's NDK.
+`$ export PATH=$PATH:$HOME/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin`
+`$ cd Winter/src`
+`$ make ARCH=aarch64`(64-bit) or `$ make ARCH=armv7a`(32-bit)
+`$ aarch64-linux-android-strip Winter`
+
 ## Contempt
 Winter versions 0.7 and later have support for contempt settings. In most engines contempt is used to reduce the number of draws and thus increase performance against weaker engines, often at the cost of performance in self play or against stronger opposition.
 
