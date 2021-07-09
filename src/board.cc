@@ -155,6 +155,17 @@ namespace {
 
 constexpr std::array<NScore, 7> see_values = { 100, 300, 300, 450, 900, 10000, 0 };
 
+std::array<BitBoard, 4> get_castling_relevant_bbs(const BitBoard king_bb,
+                                                  const BitBoard kside_rook_bb,
+                                                  const BitBoard qside_rook_bb) {
+  return std::array<BitBoard, 4> {
+    king_bb | kside_rook_bb,
+    king_bb | qside_rook_bb,
+    (king_bb | kside_rook_bb) << (7 * 8),
+    (king_bb | qside_rook_bb) << (7 * 8)
+  };
+}
+
 constexpr std::array<BitBoard, 4> castling_relevant_bbs = {
     bitops::e1_bitboard | bitops::h1_bitboard,
     bitops::e1_bitboard | bitops::a1_bitboard,
@@ -167,6 +178,30 @@ constexpr std::array<BitBoard, 4> castling_check_bbs = {
     (bitops::e1_bitboard | bitops::f1_bitboard | bitops::g1_bitboard) << (7 * 8),
     (bitops::e1_bitboard | bitops::d1_bitboard | bitops::c1_bitboard) << (7 * 8)
 };
+
+std::array<BitBoard, 4> get_castling_empty_bbs(const BitBoard king_bb,
+                                                  const BitBoard kside_rook_bb,
+                                                  const BitBoard qside_rook_bb) {
+  BitBoard kside_empty = king_bb;
+  while (! (kside_empty & kside_rook_bb)) {
+    kside_empty |= kside_empty << 1;
+  }
+  kside_empty &= ~(king_bb | kside_rook_bb);
+  
+  BitBoard qside_empty = king_bb;
+  while (! (qside_empty & qside_rook_bb)) {
+    qside_empty |= qside_empty << 1;
+  }
+  qside_empty &= ~(king_bb | qside_rook_bb);
+  
+  return std::array<BitBoard, 4> {
+    kside_empty,
+    qside_empty,
+    kside_empty << (7 * 8),
+    qside_empty << (7 * 8)
+  };
+}
+
 constexpr std::array<BitBoard, 4> castling_empty_bbs = {
     bitops::f1_bitboard | bitops::g1_bitboard,
     bitops::b1_bitboard | bitops::c1_bitboard | bitops::d1_bitboard,
