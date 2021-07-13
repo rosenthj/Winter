@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2021 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -95,6 +95,28 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
+struct PerftTest {
+  std::string fen;
+  std::vector<Depth> depths;
+  std::vector<size_t> results;
+};
+
+PerftTest string_to_perft_test(const std::string input) {
+  std::vector<std::string> parts = split(input, ';');
+  PerftTest output;
+  output.fen = parts[0];
+  for (size_t i = 1; i < parts.size(); ++i) {
+    std::vector<std::string> tokens = split(parts[i], ' ');
+    tokens[0].erase(0,1);
+    output.depths.emplace_back(std::stoi(tokens[0]));
+    std::string target = tokens[1];
+    //target.erase(std::remove_if(target.begin(), target.end(), std::isspace), target.end());
+    output.results.emplace_back(std::stol(target));
+  }
+  return output;
+}
+
+
 }
 
 namespace benchmark {
@@ -183,7 +205,51 @@ void SymmetrySuite() {
   }
 }
 
+void PerftSuite(std::string filename) {
+  std::vector<PerftTest> test_sets;
+  std::string line; 
+  std::ifstream file(filename);
+  while(std::getline(file, line)) {
+    test_sets.emplace_back(string_to_perft_test(line));
+  }
+    Time start = now();
+  size_t test_sets_passed = 0;
+  for (size_t i = 0; i < test_sets.size(); i++) {
+    bool passed = true;
+    for (size_t idx = 0; idx < test_sets[i].depths.size(); ++idx) {
+      Board board(test_sets[i].fen);
+      if (search::Perft(board, test_sets[i].depths[idx]) != test_sets[i].results[idx]) {
+        std::cout << "\033[31mFailed set " << i << " on input ("
+            << test_sets[i].depths[idx] << "," << test_sets[i].results[idx] << ")\033[0m"<< std::endl;
+        passed = false;
+        break;
+      }
+    }
+    if (passed) {
+      test_sets_passed++;
+      std::cout << "\033[32mPassed set " << i << "\033[0m"<< std::endl;
+    }
+    else {
+    }
+  }
+  Time end = now();
+  auto total_time = std::chrono::duration_cast<Milliseconds>(end-start);
+
+  if (test_sets_passed == test_sets.size()) {
+    std::cout << "\033[32mPassed " << test_sets_passed << "/" << test_sets.size()
+        << " test sets\033[0m"<< std::endl;
+  }
+  else {
+    std::cout << "\033[31mPassed " << test_sets_passed << "/" << test_sets.size()
+        << " test sets\033[0m"<< std::endl;
+  }
+
+  std::cout << "Elapsed Time: " << total_time.count() << std::endl;
+}
+
 void PerftSuite() {
+  std::cout << "Currently not supported" << std::endl;
+  return;
   std::vector<PerftTestSet> test_sets;
   std::string line;
   std::ifstream file("./tests/perft.test");

@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2021 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ double MoveOrderTest();
 int TimeToDepthSuite();
 double EntropyLossTimedSuite(Milliseconds time_per_position);
 double EntropyLossNodeSuite(size_t nodes_per_position);
+void PerftSuite(std::string filename);
 void PerftSuite();
 void SymmetrySuite();
 double ZuriChessDatasetLoss();
