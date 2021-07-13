@@ -609,34 +609,38 @@ void Board::evaluate_castling_rights(std::string fen_code){
     for(int i = 0; i < len; ++i) {
       char c = fen_code[i];
       if (c <= 'H') {
-        BitBoard king_bb = bitops::BitBoardToSquare(get_piece_bitboard(kWhite, kKing));
+        BitBoard king_bb = get_piece_bitboard(kWhite, kKing);
         assert(king_bb < bitops::h1_bitboard && king_bb != bitops::a1_bitboard);
         BitBoard rook_bb = bitops::a1_bitboard << (c - 'A');
         if (king_bb < rook_bb) {
           castling_rights |= kWSCastle;
           castling_rook_origins[0] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[0] = bitops::BitBoardToSquare(king_bb);
           set_chess960_castling_arrays(king_bb, bitops::g1_bitboard, rook_bb, bitops::f1_bitboard, 0);
         }
         else {
           assert(king_bb > rook_bb);
           castling_rights |= kWLCastle;
           castling_rook_origins[1] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[1] = bitops::BitBoardToSquare(king_bb);
           set_chess960_castling_arrays(king_bb, bitops::c1_bitboard, rook_bb, bitops::d1_bitboard, 1);
         }
       }
       else {
-        BitBoard king_bb = bitops::BitBoardToSquare(get_piece_bitboard(kBlack, kKing));
+        BitBoard king_bb = get_piece_bitboard(kBlack, kKing);
         assert(king_bb < bitops::h8_bitboard && king_bb > bitops::a8_bitboard);
         BitBoard rook_bb = bitops::a8_bitboard << (c - 'a');
         if (king_bb < rook_bb) {
           castling_rights |= kBSCastle;
           castling_rook_origins[2] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[2] = bitops::BitBoardToSquare(king_bb);
           set_chess960_castling_arrays(king_bb, bitops::g8_bitboard, rook_bb, bitops::f8_bitboard, 2);
         }
         else {
           assert(king_bb > rook_bb);
           castling_rights |= kBLCastle;
           castling_rook_origins[3] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[3] = bitops::BitBoardToSquare(king_bb);
           set_chess960_castling_arrays(king_bb, bitops::c8_bitboard, rook_bb, bitops::d8_bitboard, 3);
         }
       }
@@ -754,26 +758,13 @@ void Board::Make(const Move move) {
     en_passant = GetMoveDestination(move) - 8 + (2*8) * get_turn();
     break;
   case kCastle:
-    if (false) {
-      MovePiece(GetMoveSource(move),GetMoveDestination(move));
-      if (GetMoveDestination(move) < GetMoveSource(move)) {
-        //Queen-side castling
-        MovePiece(GetMoveSource(move)-4, GetMoveSource(move)-1);
-      }
-      else {
-        //King-side castling
-        MovePiece(GetMoveSource(move)+3, GetMoveSource(move)+1);
-      }
-    }
-    else {
-      int castling_type = (2 * turn);
-      castling_type += (GetMoveSource(move) > GetMoveDestination(move));
-      assert(GetMoveSource(move) == castling_king_origins[castling_type]);
-      Piece king = RemovePiece(castling_king_origins[castling_type]);
-      assert(GetPieceType(king) == kKing);
-      MovePiece(castling_rook_origins[castling_type], castling_rook_des[castling_type]);
-      AddPiece(castling_king_des[castling_type], king);
-    }
+    int castling_type = (2 * turn);
+    castling_type += (GetMoveSource(move) > GetMoveDestination(move));
+    assert(GetMoveSource(move) == castling_king_origins[castling_type]);
+    Piece king = RemovePiece(castling_king_origins[castling_type]);
+    assert(GetPieceType(king) == kKing);
+    MovePiece(castling_rook_origins[castling_type], castling_rook_des[castling_type]);
+    AddPiece(castling_king_des[castling_type], king);
     break;
   case kEnPassant:
     RemovePiece(GetMoveDestination(move) - 8 + (2*8) * get_turn());
@@ -824,24 +815,11 @@ void Board::UnMake() {
     AddPiece(GetMoveDestination(move) - 8 + (2*8) * get_turn(), GetPiece(get_not_turn(), kPawn));
     break;
   case kCastle:
-    if (!settings::get_chess960_mode()) {
-      AddPiece(GetMoveSource(move), RemovePiece(GetMoveDestination(move)));
-      if (GetMoveDestination(move) < GetMoveSource(move)) {
-        //Queen-side castling
-        MovePiece(GetMoveSource(move)-1, GetMoveSource(move)-4);
-      }
-      else {
-        //King-side castling
-        MovePiece(GetMoveSource(move)+1, GetMoveSource(move)+3);
-      }
-    }
-    else {
-      int castling_type = (2 * turn) + (GetMoveSource(move) > GetMoveDestination(move));
-      Piece king = RemovePiece(castling_king_des[castling_type]);
-        assert(GetPieceType(king) == kKing);
-      MovePiece(castling_rook_des[castling_type], castling_rook_origins[castling_type]);
-      AddPiece(castling_king_origins[castling_type], king);
-    }
+    int castling_type = (2 * turn) + (GetMoveSource(move) > GetMoveDestination(move));
+    Piece king = RemovePiece(castling_king_des[castling_type]);
+    assert(GetPieceType(king) == kKing);
+    MovePiece(castling_rook_des[castling_type], castling_rook_origins[castling_type]);
+    AddPiece(castling_king_origins[castling_type], king);
     break;
   default:
     if (GetMoveType(move) >= kKnightPromotion) {
