@@ -603,8 +603,11 @@ void set_chess960_castling_arrays(const BitBoard king_bb, const BitBoard king_de
 
 void Board::evaluate_castling_rights(std::string fen_code){
   castling_rights = 0;
-
-  int len = fen_code.length();  
+  if (fen_code[0] == '-') {
+    return;
+  }
+  
+  int len = fen_code.length();
   if (settings::get_chess960_mode()) {
     for(int i = 0; i < len; ++i) {
       char c = fen_code[i];
@@ -758,13 +761,17 @@ void Board::Make(const Move move) {
     en_passant = GetMoveDestination(move) - 8 + (2*8) * get_turn();
     break;
   case kCastle:
-    int castling_type = (2 * turn);
-    castling_type += (GetMoveSource(move) > GetMoveDestination(move));
-    assert(GetMoveSource(move) == castling_king_origins[castling_type]);
-    Piece king = RemovePiece(castling_king_origins[castling_type]);
-    assert(GetPieceType(king) == kKing);
-    MovePiece(castling_rook_origins[castling_type], castling_rook_des[castling_type]);
-    AddPiece(castling_king_des[castling_type], king);
+    {
+      int castling_type = (2 * turn);
+      castling_type += (GetMoveSource(move) > GetMoveDestination(move));
+      assert(GetMoveSource(move) == castling_king_origins[castling_type]);
+      Piece king = RemovePiece(castling_king_origins[castling_type]);
+      assert(GetPieceType(king) == kKing);
+      if (castling_rook_des[castling_type] != castling_rook_origins[castling_type]) {
+        MovePiece(castling_rook_origins[castling_type], castling_rook_des[castling_type]);
+      }
+      AddPiece(castling_king_des[castling_type], king);
+    }
     break;
   case kEnPassant:
     RemovePiece(GetMoveDestination(move) - 8 + (2*8) * get_turn());
@@ -815,11 +822,15 @@ void Board::UnMake() {
     AddPiece(GetMoveDestination(move) - 8 + (2*8) * get_turn(), GetPiece(get_not_turn(), kPawn));
     break;
   case kCastle:
-    int castling_type = (2 * turn) + (GetMoveSource(move) > GetMoveDestination(move));
-    Piece king = RemovePiece(castling_king_des[castling_type]);
-    assert(GetPieceType(king) == kKing);
-    MovePiece(castling_rook_des[castling_type], castling_rook_origins[castling_type]);
-    AddPiece(castling_king_origins[castling_type], king);
+    {
+      int castling_type = (2 * turn) + (GetMoveSource(move) > GetMoveDestination(move));
+      Piece king = RemovePiece(castling_king_des[castling_type]);
+      assert(GetPieceType(king) == kKing);
+      if (castling_rook_des[castling_type] != castling_rook_origins[castling_type]) {
+        MovePiece(castling_rook_des[castling_type], castling_rook_origins[castling_type]);
+      }
+      AddPiece(castling_king_origins[castling_type], king);
+    }
     break;
   default:
     if (GetMoveType(move) >= kKnightPromotion) {
@@ -952,7 +963,7 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
           }
         }
         else {
-          if (move_gen_type == MoveGenType::Normal) {
+          if (move_gen_type == MoveGenType::Normal && (right % 2) != 1) {
             legal_moves.emplace_back(GetMove(king_square, castling_rook_origins[right], kCastle));
           }
           else {
