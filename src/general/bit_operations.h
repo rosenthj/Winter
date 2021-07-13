@@ -45,6 +45,26 @@ constexpr BitBoard f1_bitboard = a1_bitboard << 5;
 constexpr BitBoard g1_bitboard = a1_bitboard << 6;
 constexpr BitBoard h1_bitboard = a1_bitboard << 7;
 
+constexpr BitBoard a8_bitboard = a1_bitboard << (7 * 8);
+constexpr BitBoard b8_bitboard = b1_bitboard << (7 * 8);
+constexpr BitBoard c8_bitboard = c1_bitboard << (7 * 8);
+constexpr BitBoard d8_bitboard = d1_bitboard << (7 * 8);
+constexpr BitBoard e8_bitboard = e1_bitboard << (7 * 8);
+constexpr BitBoard f8_bitboard = f1_bitboard << (7 * 8);
+constexpr BitBoard g8_bitboard = g1_bitboard << (7 * 8);
+constexpr BitBoard h8_bitboard = h1_bitboard << (7 * 8);
+
+enum SquareIdx {
+  a1, b1, c1, d1, e1, f1, g1, h1,
+  a2, b2, c2, d2, e2, f2, g2, h2,
+  a3, b3, c3, d3, e3, f3, g3, h3,
+  a4, b4, c4, d4, e4, f4, g4, h4,
+  a5, b5, c5, d5, e5, f5, g5, h5,
+  a6, b6, c6, d6, e6, f6, g6, h6,
+  a7, b7, c7, d7, e7, f7, g7, h7,
+  a8, b8, c8, d8, e8, f8, g8, h8
+};
+
 constexpr BitBoard a_file = a1_bitboard            | a1_bitboard << (1 * 8)
                           | a1_bitboard << (2 * 8) | a1_bitboard << (3 * 8)
                           | a1_bitboard << (4 * 8) | a1_bitboard << (5 * 8)
@@ -191,6 +211,12 @@ inline int NumberOfTrailingZeros(const BitBoard x) {
   //return _tzcnt_u64(x);
   return __builtin_ctzll(x);
 }
+
+// return the square for a single bit bitboard
+inline int BitBoardToSquare(const BitBoard x) {
+  return NumberOfTrailingZeros(x);
+}
+
 // return the leading number of zeros
 inline int NumberOfLeadingZeros(const BitBoard x) {
   //return _lzcnt_u64(x);

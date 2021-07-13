@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2021 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -127,6 +127,7 @@ std::vector<UCIOption> uci_options {
 std::vector<UCICheck> uci_check_options {
   {"Armageddon", search::SetArmageddon, false},
   {"UCI_ShowWDL", search::SetUCIShowWDL, true},
+  {"UCI_Chess960", settings::set_chess960_mode, false},
 };
 
 const std::string kEngineIsReady = "readyok";

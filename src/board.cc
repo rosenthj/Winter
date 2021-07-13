@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 
 namespace hash {
 
@@ -155,27 +156,49 @@ namespace {
 
 constexpr std::array<NScore, 7> see_values = { 100, 300, 300, 450, 900, 10000, 0 };
 
-constexpr std::array<BitBoard, 4> castling_relevant_bbs = {
+std::array<BitBoard, 4> castling_relevant_bbs = {
     bitops::e1_bitboard | bitops::h1_bitboard,
     bitops::e1_bitboard | bitops::a1_bitboard,
     (bitops::e1_bitboard | bitops::h1_bitboard) << (7 * 8),
     (bitops::e1_bitboard | bitops::a1_bitboard) << (7 * 8)
 };
-constexpr std::array<BitBoard, 4> castling_check_bbs = {
+
+std::array<BitBoard, 4> castling_check_bbs = {
     bitops::e1_bitboard | bitops::f1_bitboard | bitops::g1_bitboard,
     bitops::e1_bitboard | bitops::d1_bitboard | bitops::c1_bitboard,
     (bitops::e1_bitboard | bitops::f1_bitboard | bitops::g1_bitboard) << (7 * 8),
     (bitops::e1_bitboard | bitops::d1_bitboard | bitops::c1_bitboard) << (7 * 8)
 };
-constexpr std::array<BitBoard, 4> castling_empty_bbs = {
+
+std::array<BitBoard, 4> castling_empty_bbs = {
     bitops::f1_bitboard | bitops::g1_bitboard,
     bitops::b1_bitboard | bitops::c1_bitboard | bitops::d1_bitboard,
     (bitops::f1_bitboard | bitops::g1_bitboard) << (7 * 8),
     (bitops::b1_bitboard | bitops::c1_bitboard | bitops::d1_bitboard) << (7 * 8)
 };
 
-constexpr BitBoard all_castling_squares = castling_relevant_bbs[0] | castling_relevant_bbs[1]
-                                        | castling_relevant_bbs[2] | castling_relevant_bbs[3];
+std::array<Square, 4> castling_rook_origins = {
+  bitops::SquareIdx::h1, bitops::SquareIdx::a1,
+  bitops::SquareIdx::h8, bitops::SquareIdx::a8
+};
+
+constexpr std::array<Square, 4> castling_rook_des = {
+  bitops::SquareIdx::f1, bitops::SquareIdx::d1,
+  bitops::SquareIdx::f8, bitops::SquareIdx::d8
+};
+
+std::array<Square, 4> castling_king_origins = {
+  bitops::SquareIdx::e1, bitops::SquareIdx::e1,
+  bitops::SquareIdx::e8, bitops::SquareIdx::e8
+};
+
+constexpr std::array<Square, 4> castling_king_des = {
+  bitops::SquareIdx::g1, bitops::SquareIdx::c1,
+  bitops::SquareIdx::g8, bitops::SquareIdx::c8
+};
+
+BitBoard all_castling_squares = castling_relevant_bbs[0] | castling_relevant_bbs[1]
+                              | castling_relevant_bbs[2] | castling_relevant_bbs[3];
 
 //Define helper functions for move history information
 void SaveEnPassant(MoveHistoryInformation &info, Square ep) {
@@ -553,10 +576,82 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   fifty_move_count = atoi(fen_tokens[4].c_str());
 }
 
+BitBoard eval_castling_helper(const BitBoard origin_bb, const BitBoard des) {
+  BitBoard res = origin_bb;
+  BitBoard pointer = origin_bb;
+  while (pointer < des) {
+    pointer <<= 1;
+    res |= pointer;
+  }
+  while (pointer > des) {
+    pointer >>= 1;
+    res |= pointer;
+  }
+  return res;
+}
+
+void set_chess960_castling_arrays(const BitBoard king_bb, const BitBoard king_des,
+                                  const BitBoard rook_bb, const BitBoard rook_des, const int idx) {
+  assert(idx >= 0 && idx < 4);
+  BitBoard check_not_allowed = eval_castling_helper(king_bb, king_des);
+  castling_check_bbs[idx] = check_not_allowed;
+  BitBoard must_be_empty = check_not_allowed | eval_castling_helper(rook_bb, rook_des);
+  must_be_empty &= ~(king_bb | rook_bb);
+  castling_empty_bbs[idx] = must_be_empty;
+  castling_relevant_bbs[idx] = king_bb | rook_bb;
+}
+
 void Board::evaluate_castling_rights(std::string fen_code){
   castling_rights = 0;
-
+  if (fen_code[0] == '-') {
+    return;
+  }
+  
   int len = fen_code.length();
+  if (settings::get_chess960_mode()) {
+    for(int i = 0; i < len; ++i) {
+      char c = fen_code[i];
+      if (c <= 'H') {
+        BitBoard king_bb = get_piece_bitboard(kWhite, kKing);
+        assert(king_bb < bitops::h1_bitboard && king_bb != bitops::a1_bitboard);
+        BitBoard rook_bb = bitops::a1_bitboard << (c - 'A');
+        if (king_bb < rook_bb) {
+          castling_rights |= kWSCastle;
+          castling_rook_origins[0] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[0] = bitops::BitBoardToSquare(king_bb);
+          set_chess960_castling_arrays(king_bb, bitops::g1_bitboard, rook_bb, bitops::f1_bitboard, 0);
+        }
+        else {
+          assert(king_bb > rook_bb);
+          castling_rights |= kWLCastle;
+          castling_rook_origins[1] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[1] = bitops::BitBoardToSquare(king_bb);
+          set_chess960_castling_arrays(king_bb, bitops::c1_bitboard, rook_bb, bitops::d1_bitboard, 1);
+        }
+      }
+      else {
+        BitBoard king_bb = get_piece_bitboard(kBlack, kKing);
+        assert(king_bb < bitops::h8_bitboard && king_bb > bitops::a8_bitboard);
+        BitBoard rook_bb = bitops::a8_bitboard << (c - 'a');
+        if (king_bb < rook_bb) {
+          castling_rights |= kBSCastle;
+          castling_rook_origins[2] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[2] = bitops::BitBoardToSquare(king_bb);
+          set_chess960_castling_arrays(king_bb, bitops::g8_bitboard, rook_bb, bitops::f8_bitboard, 2);
+        }
+        else {
+          assert(king_bb > rook_bb);
+          castling_rights |= kBLCastle;
+          castling_rook_origins[3] = bitops::BitBoardToSquare(rook_bb);
+          castling_king_origins[3] = bitops::BitBoardToSquare(king_bb);
+          set_chess960_castling_arrays(king_bb, bitops::c8_bitboard, rook_bb, bitops::d8_bitboard, 3);
+        }
+      }
+    }
+    all_castling_squares = castling_relevant_bbs[0] | castling_relevant_bbs[1] | castling_relevant_bbs[2] | castling_relevant_bbs[3];
+    return;
+  }
+  
   for(int i = 0; i < len; ++i){
     char c = fen_code[i];
     switch (c){
@@ -647,7 +742,7 @@ void Board::SwapTurn() {
 void Board::Make(const Move move) {
   MoveHistoryInformation information = 0;
   previous_hashes.emplace_back(get_hash());
-  if (!settings::kUseNullMoves || move != kNullMove) {
+  if (move != kNullMove && GetMoveType(move) != kCastle) {
     SaveMovingPiece(information, RemovePiece(GetMoveDestination(move)));
     MovePiece(GetMoveSource(move),GetMoveDestination(move));
   }
@@ -666,13 +761,16 @@ void Board::Make(const Move move) {
     en_passant = GetMoveDestination(move) - 8 + (2*8) * get_turn();
     break;
   case kCastle:
-    if (GetMoveDestination(move) < GetMoveSource(move)) {
-      //Queen-side castling
-      MovePiece(GetMoveSource(move)-4, GetMoveSource(move)-1);
-    }
-    else {
-      //King-side castling
-      MovePiece(GetMoveSource(move)+3, GetMoveSource(move)+1);
+    {
+      int castling_type = (2 * turn);
+      castling_type += (GetMoveSource(move) > GetMoveDestination(move));
+      assert(GetMoveSource(move) == castling_king_origins[castling_type]);
+      Piece king = RemovePiece(castling_king_origins[castling_type]);
+      assert(GetPieceType(king) == kKing);
+      if (castling_rook_des[castling_type] != castling_rook_origins[castling_type]) {
+        MovePiece(castling_rook_origins[castling_type], castling_rook_des[castling_type]);
+      }
+      AddPiece(castling_king_des[castling_type], king);
     }
     break;
   case kEnPassant:
@@ -709,7 +807,7 @@ void Board::UnMake() {
   MoveHistoryInformation info = move_history_information.back();
   move_history_information.pop_back();
   previous_hashes.pop_back();
-  if (move != kNullMove) {
+  if (move != kNullMove && GetMoveType(move) != kCastle) {
     AddPiece(GetMoveSource(move), RemovePiece(GetMoveDestination(move)));
     Piece piece = GetMovingPiece(info);
     if (GetPieceType(piece) != kNoPiece) {
@@ -724,13 +822,14 @@ void Board::UnMake() {
     AddPiece(GetMoveDestination(move) - 8 + (2*8) * get_turn(), GetPiece(get_not_turn(), kPawn));
     break;
   case kCastle:
-    if (GetMoveDestination(move) < GetMoveSource(move)) {
-      //Queen-side castling
-      MovePiece(GetMoveSource(move)-1, GetMoveSource(move)-4);
-    }
-    else {
-      //King-side castling
-      MovePiece(GetMoveSource(move)+1, GetMoveSource(move)+3);
+    {
+      int castling_type = (2 * turn) + (GetMoveSource(move) > GetMoveDestination(move));
+      Piece king = RemovePiece(castling_king_des[castling_type]);
+      assert(GetPieceType(king) == kKing);
+      if (castling_rook_des[castling_type] != castling_rook_origins[castling_type]) {
+        MovePiece(castling_rook_des[castling_type], castling_rook_origins[castling_type]);
+      }
+      AddPiece(castling_king_origins[castling_type], king);
     }
     break;
   default:
@@ -854,12 +953,22 @@ std::vector<Move> Board::GetMoves(const BitBoard critical) {
       if ((castling_rights & (0x1 << right))
           && !(castling_check_bbs[right] & in_check)
           && !(castling_empty_bbs[right] & all_pieces)) {
-        Square destination = king_square + 2 - (right%2)*4;
-        if (move_gen_type == MoveGenType::Normal) {
-          legal_moves.emplace_back(GetMove(king_square, destination, kCastle));
+        if (!settings::get_chess960_mode()) {
+          Square destination = king_square + 2 - (right%2)*4;
+          if (move_gen_type == MoveGenType::Normal) {
+            legal_moves.emplace_back(GetMove(king_square, destination, kCastle));
+          }
+          else {
+            moves.emplace_back(GetMove(king_square, destination, kCastle));
+          }
         }
         else {
-          moves.emplace_back(GetMove(king_square, destination, kCastle));
+          if (move_gen_type == MoveGenType::Normal && (right % 2) != 1) {
+            legal_moves.emplace_back(GetMove(king_square, castling_rook_origins[right], kCastle));
+          }
+          else {
+            moves.emplace_back(GetMove(king_square, castling_rook_origins[right], kCastle));
+          }
         }
       }
     }
@@ -1256,3 +1365,51 @@ Board Board::copy() const {
   return result;
 }
 
+namespace settings {
+
+bool chess960_setting = false;
+
+void set_chess960_mode(bool chess960_mode) {
+  chess960_setting = chess960_mode;
+  if (!chess960_setting) {
+    castling_relevant_bbs = {
+      bitops::e1_bitboard | bitops::h1_bitboard,
+      bitops::e1_bitboard | bitops::a1_bitboard,
+      (bitops::e1_bitboard | bitops::h1_bitboard) << (7 * 8),
+      (bitops::e1_bitboard | bitops::a1_bitboard) << (7 * 8)
+    };
+  
+    castling_check_bbs = {
+      bitops::e1_bitboard | bitops::f1_bitboard | bitops::g1_bitboard,
+      bitops::e1_bitboard | bitops::d1_bitboard | bitops::c1_bitboard,
+      (bitops::e1_bitboard | bitops::f1_bitboard | bitops::g1_bitboard) << (7 * 8),
+      (bitops::e1_bitboard | bitops::d1_bitboard | bitops::c1_bitboard) << (7 * 8)
+    };
+
+    castling_empty_bbs = {
+      bitops::f1_bitboard | bitops::g1_bitboard,
+      bitops::b1_bitboard | bitops::c1_bitboard | bitops::d1_bitboard,
+      (bitops::f1_bitboard | bitops::g1_bitboard) << (7 * 8),
+      (bitops::b1_bitboard | bitops::c1_bitboard | bitops::d1_bitboard) << (7 * 8)
+    };
+    
+    castling_rook_origins = {
+      bitops::SquareIdx::h1, bitops::SquareIdx::a1,
+      bitops::SquareIdx::h8, bitops::SquareIdx::a8
+    };
+    
+    castling_king_origins = {
+      bitops::SquareIdx::e1, bitops::SquareIdx::e1,
+      bitops::SquareIdx::e8, bitops::SquareIdx::e8
+    };
+    
+    all_castling_squares = castling_relevant_bbs[0] | castling_relevant_bbs[1]
+                              | castling_relevant_bbs[2] | castling_relevant_bbs[3];
+  }
+}
+
+bool get_chess960_mode() {
+  return chess960_setting;
+}
+
+}
