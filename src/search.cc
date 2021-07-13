@@ -876,8 +876,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     strict_worsening = t.strict_worsening();
 
     //Static Null Move Pruning
-    if (depth <= 5) {
-      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
+    if (depth <= (5 - 2 * (node_type == NodeType::kPV))) {
+      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * (depth + 1 * (node_type == NodeType::kPV));
       if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
