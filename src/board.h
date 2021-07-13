@@ -162,4 +162,11 @@ private:
   int32_t fifty_move_count;
 };
 
+namespace settings {
+
+void set_chess960_mode(bool chess960_mode);
+bool get_chess960_mode();
+
+}
+
 #endif /* BOARD_H_ */
