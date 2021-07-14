@@ -756,7 +756,7 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   Square opp_des = GetMoveDestination(move);
   PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
   // TODO deal with promotion situations
-  const int32_t score = std::min(depth * depth, 200);
+  const int32_t score = std::min(depth * depth, 512);
 
   for (size_t i = 0; i < quiets.size() - 1; ++i) {
     Square src = GetMoveSource(quiets[i]);
