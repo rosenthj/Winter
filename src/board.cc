@@ -670,7 +670,12 @@ Board::Board(std::string fen) {
 }
 
 void Board::SetStartBoard() {
-  SetBoard({"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-"});
+  if (!settings::get_chess960_mode()) {
+    SetBoard({"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-"});
+  }
+  else {
+    SetBoard({"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "HAha", "-"});
+  }
 }
 
 void Board::SetToSamePosition(const Board &board) {
