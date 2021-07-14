@@ -1042,8 +1042,15 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
       //Update Counter Move
       if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
-        const Square last_destination = GetMoveDestination(t.board.get_last_move());
-        PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+        PieceType last_moved_piece = kNoPiece;
+        const Move last_move = t.board.get_last_move();
+        const Square last_destination = GetMoveDestination(last_move);
+        if (GetMoveType(last_move) == kCastle) {
+          last_moved_piece = kKing;
+        }
+        else {
+          last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+        }
         assert(last_moved_piece != kNoPiece);
         t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination] = move;
       }
