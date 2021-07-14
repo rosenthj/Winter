@@ -410,8 +410,8 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
                                          moving_piece, destination);
       AddFeature<T, in_check>(move_weight, kPWICMH, score / 1000);
       AddFeature<T, in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 1000);
-      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 1000);
-      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score_t2(color, source, destination) / 1000);
+      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 2000);
+      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score_t2(color, source, destination) / 2000);
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
