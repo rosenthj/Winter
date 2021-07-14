@@ -411,6 +411,7 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
       AddFeature<T, in_check>(move_weight, kPWICMH, score / 1000);
       AddFeature<T, in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 1000);
       AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 1000);
+      AddFeature<T, in_check>(move_weight, kPWIHistory, t.get_history_score_t2(color, source, destination) / 1000);
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
@@ -747,7 +748,8 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
                                        const std::vector<Move> &moves,
                                        const table::Entry &entry);
 
-void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+template<bool t2>
+void update_counter_move_history_helper(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
@@ -757,6 +759,7 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
   // TODO deal with promotion situations
   const int32_t score = std::min(depth * depth, 512);
+  const int32_t score_t2 = std::min((depth-2) * (depth-2), 512);
 
   for (size_t i = 0; i < quiets.size() - 1; ++i) {
     Square src = GetMoveSource(quiets[i]);
@@ -764,6 +767,9 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
     PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
     t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
     t.update_history_score(color, src, des, -score);
+    if (t2) {
+      t.update_history_score_t2(color, src, des, -score_t2);
+    }
   }
   size_t i = quiets.size() - 1;
   Square src = GetMoveSource(quiets[i]);
@@ -771,6 +777,9 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
   t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
   t.update_history_score(color, src, des, score);
+  if (t2) {
+    t.update_history_score_t2(color, src, des, score_t2);
+  }
 
   if (t.get_height() < 2) {
     return;
@@ -792,6 +801,15 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   des = GetMoveDestination(quiets[i]);
   piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
   t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
+}
+
+void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+  if (depth > 2) {
+    update_counter_move_history_helper<true>(t, quiets, depth);
+  }
+  else {
+    update_counter_move_history_helper<false>(t, quiets, depth);
+  }
 }
 
 inline const Score get_singular_beta(Score beta, Depth depth) {

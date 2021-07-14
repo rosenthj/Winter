@@ -60,6 +60,7 @@ struct Thread {
         }
         for (Square des = 0; des < kBoardSize; ++des) {
           history[c][src][des] = 0;
+          history_t2[c][src][des] = 0;
         }
       }
     }
@@ -97,8 +98,10 @@ struct Thread {
   }
 
   int32_t get_history_score(const Color color, const Square src, const Square des) const;
-
   void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
+  
+  int32_t get_history_score_t2(const Color color, const Square src, const Square des) const;
+  void update_history_score_t2(const Color color, const Square src, const Square des, const int32_t score);
 
   template<int moves_ago>
   int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
@@ -127,6 +130,7 @@ struct Thread {
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
   Array3d<int32_t, 2, 64, 64> history;
+  Array3d<int32_t, 2, 64, 64> history_t2;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   Depth root_height;
