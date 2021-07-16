@@ -24,22 +24,21 @@
  *      Author: Jonathan Rosenthal
  */
 
-#include "benchmark.h"
+#include "board.h"
 #include "commands.h"
-#include "uci.h"
 #include "general/settings.h"
 #include "general/types.h"
-#include "board.h"
-#include "net_evaluation.h"
 #include "search.h"
-#include "transposition.h"
 #include "search_thread.h"
+#include "transposition.h"
+#include "uci.h"
+
 #include <array>
 #include <cstdint>
-#include <vector>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include <thread>
+#include <vector>
 
 namespace {
 
