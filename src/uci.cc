@@ -24,21 +24,21 @@
  *      Author: Jonathan Rosenthal
  */
 
-#include "benchmark.h"
-#include "uci.h"
+#include "board.h"
+#include "commands.h"
 #include "general/settings.h"
 #include "general/types.h"
-#include "board.h"
-#include "net_evaluation.h"
 #include "search.h"
-#include "transposition.h"
 #include "search_thread.h"
+#include "transposition.h"
+#include "uci.h"
+
 #include <array>
 #include <cstdint>
-#include <vector>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -101,7 +101,7 @@ struct UCICheck {
   }
 };
 
-std::vector<UCIOption> uci_options {
+const std::vector<UCIOption> uci_options {
   {"Hash", table::SetTableSize, 32, 1, 104576},
   {"Threads", search::SetNumThreads, 1, 1, 256},
   {"Contempt", search::SetContempt, 0, -100, 100},
@@ -124,7 +124,7 @@ std::vector<UCIOption> uci_options {
 #endif
 };
 
-std::vector<UCICheck> uci_check_options {
+const std::vector<UCICheck> uci_check_options {
   {"Armageddon", search::SetArmageddon, false},
   {"UCI_ShowWDL", search::SetUCIShowWDL, true},
   {"UCI_Chess960", settings::set_chess960_mode, false},
@@ -176,6 +176,181 @@ void Reply(std::string message) {
   std::cout << message << std::endl;
 }
 
+struct UCICommand {
+  std::string name;
+  void (*func)(Board &board, const std::vector<std::string> args);
+};
+
+using StrArgs = std::vector<std::string>;
+
+bool quit_flag = false;
+
+void UCIQuit(Board &board, const StrArgs args) {
+  search::end_search();
+  while (search::Threads.is_searching) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  quit_flag = true;
+}
+
+void UCIIsReady(Board &board, const StrArgs) {
+  Reply(kEngineIsReady);
+}
+
+void UCIGo(Board &board, const StrArgs tokens) {
+  int index = 1;
+  search::end_search();
+  Timer timer {};
+  if (tokens.size() >= index+2) {
+    while (tokens.size() >= index+2) {
+      std::string arg = tokens[index++];
+      if(Equals(arg, "depth")){
+        timer.search_depth = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "movetime")){
+        timer.movetime = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "wtime")){
+        timer.time[kWhite] = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "btime")){
+        timer.time[kBlack] = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "winc")){
+        timer.inc[kWhite] = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "binc")){
+        timer.inc[kBlack] = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "movestogo")){
+        timer.moves_to_go = atoi(tokens[index++].c_str());
+      }
+      else if(Equals(arg, "nodes")){
+        timer.nodes = atol(tokens[index++].c_str());
+      }
+    }
+  }
+  else if (tokens.size() == index+1 && Equals(tokens[index], "infinite")) {
+    std::string arg = tokens[index++];
+    timer.movetime = 24 * 60 * 60 * 1000;
+  }
+  else{
+    timer.search_depth = 6;
+  }
+  std::thread t(Go, &board, timer);
+  t.detach();
+}
+
+void UCINewGame(Board &board, const StrArgs) {
+  board = Board();
+}
+
+void UCISetOption(Board &board, const StrArgs tokens) {
+  int index = 2;
+  std::string command = tokens[index++];
+  for (const UCIOption &option : uci_options) {
+    if (Equals(command, option.name)) {
+      index++;
+      int value = atoi(tokens[index++].c_str());
+      option.func(value);
+      break;
+    }
+  }
+  for (const UCICheck &option : uci_check_options) {
+    if (Equals(command, option.name)) {
+      index++;
+      bool value = IsTrue(tokens[index++].c_str());
+      option.func(value);
+      break;
+    }
+  }
+}
+
+void UCIPosition(Board &board, const StrArgs tokens) {
+  int index = 1;
+  if (index < tokens.size()) {
+    std::string arg = tokens[index++];
+    if (Equals(arg, "startpos")) {
+      board.SetStartBoard();
+      if (index < tokens.size()){
+        arg = tokens[index++];
+      }
+    }
+    else if (Equals(arg, "fen")) {
+      std::vector<std::string> fen_tokens;
+      while (index < tokens.size()) {
+        arg = tokens[index++];
+        if (Equals(arg, "moves")) {
+          break;
+        }
+        fen_tokens.emplace_back(arg);
+      }
+      board.SetBoard(fen_tokens);
+    }
+    if (Equals(arg, "moves")) {
+      while (index < tokens.size()) {
+        Move move = parse::StringToMove(tokens[index++]);
+        std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
+        for (unsigned int i = 0; i < moves.size(); i++) {
+          if (GetMoveSource(moves[i]) == GetMoveSource(move)
+              && GetMoveDestination(moves[i]) == GetMoveDestination(move)
+              && (GetMoveType(moves[i]) < kKnightPromotion
+                  || GetMoveType(moves[i]) == GetMoveType(move))) {
+            board.Make(moves[i]);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+void UCIStop(Board &board , const StrArgs) {
+  search::end_search();
+}
+
+void UCIUci(Board &board, const StrArgs) {
+  Reply(kEngineNamePrefix + settings::engine_name + " "
+        + settings::engine_version + " " + settings::compile_arch);
+  Reply(kEngineAuthorPrefix + settings::engine_author);
+  for (const UCIOption &option : uci_options) {
+    Reply(option.to_string());
+  }
+  for (const UCICheck &option : uci_check_options) {
+    Reply(option.to_string());
+  }
+  Reply(kOk);
+}
+
+const std::vector<UCICommand> uci_commands {
+  // UCI Commands
+  {"go", UCIGo},
+  {"quit", UCIQuit},
+  {"isready", UCIIsReady},
+  {"position", UCIPosition},
+  {"setoption", UCISetOption},
+  {"stop", UCIStop},
+  {"uci", UCIUci},
+  {"ucinewgame", UCINewGame},
+  // Non-Standard Commands
+  {"benchmark", commands::Benchmark},
+  {"benchmark_move_order", commands::BenchmarkMoveOrder},
+  {"benchmark_node", commands::BenchmarkNode},
+  {"can_repeat", commands::CheckIfRepetitionPossible},
+  {"evaluate", commands::EvaluateBoard},
+  {"fen", commands::GetFEN},
+  {"gen_eval_csv", commands::GenEvalCSV},
+  {"perft", commands::Perft},
+  {"perft_test", commands::PerftTest}, 
+  {"print", commands::PrintBoard},
+  {"print_bitboards", commands::PrintBitboards},
+  {"print_moves", commands::PrintMoves},
+  {"print_moves_sorted", commands::PrintMovesSorted},
+  {"see", commands::SEE},
+  {"symmetry_test", commands::SymmetryTest},
+  {"isdraw", commands::CheckIfDraw},
+};
+
 }
 
 namespace uci {
@@ -183,236 +358,18 @@ namespace uci {
 void Loop() {
   Board board;
   std::string in;
-  while (std::getline(std::cin, in)) {
-    std::vector<std::string> tokens = split(in, ' ');
-    unsigned int index = 0;
-    std::string command = tokens[index++];
-    if (Equals(command, "quit")) {
-      //Resynchronise search threads:
-      search::end_search();
-      while (search::Threads.is_searching) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
-      break;
-    }
-    else if (Equals(command, "gen_eval_csv")) {
-#ifdef EVAL_TRAINING
-      if (tokens.size() < 2 || tokens.size() > 3) {
-        std::cout << "invalid number of arguments, expected 1 or 2 got " << (tokens.size()-1) << std::endl;
-      }
-      if (tokens.size() == 2) {
-        net_evaluation::GenerateDatasetFromUCIGames(tokens[index++]);
-      }
-      if (tokens.size() == 3) {
-        std::string filename = tokens[index++];
-        std::string out = tokens[index++];
-        net_evaluation::GenerateDatasetFromUCIGames(filename, out);
-      }
-#else
-      std::cout << "Command not supported in this build. Recompile with -DEVAL_TRAINING" << std::endl;
-#endif
-    }
-    else if (Equals(command, "isready")) {
-      Reply(kEngineIsReady);
-    }
-    else if (Equals(command, "print")) {
-      board.Print();
-    }
-    else if (Equals(command, "print_bitboards")) {
-      board.PrintBitBoards();
-    }
-    else if (Equals(command, "isdraw")) {
-      std::cout << board.IsDraw() << std::endl;
-    }
-    else if (Equals(command, "evaluate")) {
-      std::cout << net_evaluation::ScoreBoard(board).to_nscore() << std::endl;
-    }
-    else if (Equals(command, "uci")) {
-      Reply(kEngineNamePrefix + settings::engine_name + " "
-          + settings::engine_version + " " + settings::compile_arch);
-      Reply(kEngineAuthorPrefix + settings::engine_author);
-      for (const UCIOption &option : uci_options) {
-        Reply(option.to_string());
-      }
-      for (const UCICheck &option : uci_check_options) {
-        Reply(option.to_string());
-      }
-      Reply(kOk);
-    }
-    else if (Equals(command, "stop")) {
-      search::end_search();
-    }
-    else if (Equals(command, "ucinewgame")) {
-      board = Board();
-    }
-    else if (Equals(command, "setoption")) {
-      index++;
-      command = tokens[index++];
-      for (UCIOption &option : uci_options) {
-        if (Equals(command, option.name)) {
-          index++;
-          int value = atoi(tokens[index++].c_str());
-          option.func(value);
-          break;
-        }
-      }
-      for (UCICheck &option : uci_check_options) {
-        if (Equals(command, option.name)) {
-          index++;
-          bool value = IsTrue(tokens[index++].c_str());
-          option.func(value);
-          break;
-        }
+  while (!quit_flag && std::getline(std::cin, in)) {
+    std::vector<std::string> args = split(in, ' ');
+    std::string command = args[0];
+    bool command_found = false;
+    for (UCICommand uci_command : uci_commands) {
+      if (Equals(command, uci_command.name)) {
+        command_found = true;
+        uci_command.func(board, args);
+        break;
       }
     }
-    else if (Equals(command, "print_moves")) {
-      std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-      for (unsigned int i = 0; i < moves.size(); i++) {
-        std::cout << parse::MoveToString(moves[i]) << std::endl;
-      }
-    }
-    else if (Equals(command, "print_moves_sorted")) {
-      std::vector<Move> moves = search::GetSortedMovesML(board);
-      for (unsigned int i = 0; i < moves.size(); i++) {
-        std::cout << parse::MoveToString(moves[i]) << std::endl;
-      }
-    }
-    else if (Equals(command, "position")) {
-      if (index < tokens.size()) {
-        std::string arg = tokens[index++];
-        if (Equals(arg, "startpos")) {
-          board.SetStartBoard();
-          if (index < tokens.size()){
-            arg = tokens[index++];
-          }
-        }
-        else if (Equals(arg, "fen")) {
-          std::vector<std::string> fen_tokens;
-          while (index < tokens.size()) {
-            arg = tokens[index++];
-            if (Equals(arg, "moves")) {
-              break;
-            }
-            fen_tokens.emplace_back(arg);
-          }
-          board.SetBoard(fen_tokens);
-        }
-        if (Equals(arg, "moves")) {
-          while (index < tokens.size()) {
-            Move move = parse::StringToMove(tokens[index++]);
-            std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-            for (unsigned int i = 0; i < moves.size(); i++) {
-              if (GetMoveSource(moves[i]) == GetMoveSource(move)
-                  && GetMoveDestination(moves[i]) == GetMoveDestination(move)
-                  && (GetMoveType(moves[i]) < kKnightPromotion
-                      || GetMoveType(moves[i]) == GetMoveType(move))) {
-                board.Make(moves[i]);
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-    else if (Equals(command, "go")) {
-      search::end_search();
-      Timer timer {};
-      if (tokens.size() >= index+2) {
-        while (tokens.size() >= index+2) {
-          std::string arg = tokens[index++];
-          if(Equals(arg, "depth")){
-            timer.search_depth = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "movetime")){
-            timer.movetime = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "wtime")){
-            timer.time[kWhite] = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "btime")){
-            timer.time[kBlack] = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "winc")){
-            timer.inc[kWhite] = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "binc")){
-            timer.inc[kBlack] = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "movestogo")){
-            timer.moves_to_go = atoi(tokens[index++].c_str());
-          }
-          else if(Equals(arg, "nodes")){
-            timer.nodes = atol(tokens[index++].c_str());
-          }
-        }
-      }
-      else if (tokens.size() == index+1 && Equals(tokens[index], "infinite")) {
-        std::string arg = tokens[index++];
-        timer.movetime = 24 * 60 * 60 * 1000;
-      }
-      else{
-        timer.search_depth = 6;
-      }
-      std::thread t(Go, &board, timer);
-      t.detach();
-    }
-    else if (Equals(command, "see")) {
-      Move move = parse::StringToMove(tokens[index]);
-      std::cout << board.NonNegativeSEE(move) << std::endl;
-    }
-    else if (Equals(command, "perft")) {
-      Depth depth = atoi(tokens[index++].c_str());
-      std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-      uint64_t sum = 0;
-      Time begin = now();
-      for (Move move : moves) {
-        board.Make(move);
-        long perft_result = search::Perft(board, depth-1);
-        board.UnMake();
-        std::cout << parse::MoveToString(move) << " depth: " << (depth-1)
-            << " perft: " << perft_result << std::endl;
-        sum += perft_result;
-      }
-      std::cout << "Ended perft" << std::endl;
-      Time end = now();
-      auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
-      std::cout << "depth: " << depth << " perft: " << sum << " time: " << time_used.count()
-          << " nps: " << ((sum * 1000) / (time_used.count() + 1)) << std::endl;
-    }
-    else if (Equals(command, "perft_test")) {
-      benchmark::PerftSuite();
-    }
-    else if (Equals(command, "symmetry_test")) {
-      benchmark::SymmetrySuite();
-    }
-    else if (Equals(command, "benchmark")) {
-      int ms = atoi(tokens[index++].c_str());
-      benchmark::EntropyLossTimedSuite(Milliseconds(ms));
-    }
-    else if (Equals(command, "benchmark_node")) {
-      long n = atol(tokens[index++].c_str());
-      benchmark::EntropyLossNodeSuite(n);
-    }
-    else if (Equals(command, "benchmark_move_order")) {
-      benchmark::MoveOrderTest();
-    }
-    else if (Equals(command, "fen")) {
-      std::vector<std::string> fen = board.GetFen();
-      for (std::string fen_token : fen) {
-        std::cout << fen_token << " ";
-      }
-      std::cout << std::endl;
-    }
-    else if (Equals(command, "can_repeat")) {
-      std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-      if (board.MoveInListCanRepeat(moves)) {
-        std::cout << "yes" << std::endl;
-      }
-      else {
-        std::cout << "no" << std::endl;
-      }
-    }
-    else {
+    if (!command_found) {
       Reply("Received unknown command: " + command);
     }
   }
