@@ -45,9 +45,9 @@ Thread::Thread() {
 }
 
 void Thread::perturb_root_moves() {
-  for (int i = moves.size()-1; i > 0; i--) {
+  for (int i = moves_with_info.size()-1; i > 0; i--) {
     if (rng() % 2) {
-      std::swap(moves[i-1], moves[i]);
+      std::swap(moves_with_info[i-1], moves_with_info[i]);
     }
   }
 }
@@ -169,11 +169,12 @@ void Thread::set_moves(const std::vector<Move> &moves) {
   moves_with_info.clear();
   moves_with_info.reserve(moves.size());
   for (Move move : moves) {
-    moves_with_info.emplace_back(move, 0, 0);
+    MoveWithSubtreeInfo move_w_info {move, 0, 0};
+    moves_with_info.emplace_back(move_w_info);
   }
 }
 
-std::vector<Move> Thread::get_root_moves() {
+std::vector<Move> Thread::get_root_moves() const {
   std::vector<Move> moves;
   moves.reserve(moves_with_info.size());
   for (const MoveWithSubtreeInfo move_with_info : moves_with_info) {

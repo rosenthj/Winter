@@ -1110,7 +1110,7 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
 }
 
 Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
-                     Depth current_depth, std::vector<Move> &moves) {
+                     Depth current_depth, std::vector<MoveWithSubtreeInfo> &moves) {
   assert(original_alpha.is_valid());
   assert(beta.is_valid());
   assert(original_alpha < beta);
@@ -1118,7 +1118,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
   Score alpha = original_alpha;
   Score lower_bound_score = kMinScore;
   //const bool in_check = board.InCheck();
-  if (settings::kRepsForDraw == 3 && alpha < draw_score[t.board.get_turn()].get_previous_score() && t.board.MoveInListCanRepeat(moves)) {
+  if (settings::kRepsForDraw == 3 && alpha < draw_score[t.board.get_turn()].get_previous_score() && t.board.MoveInListCanRepeat(t.get_root_moves())) {
     if (beta <= draw_score[t.board.get_turn()]) {
       return draw_score[t.board.get_turn()];
     }
@@ -1126,8 +1126,9 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
   }
   const bool in_check = t.board.InCheck();
   for (size_t i = 0; i < moves.size(); ++i) {
-    t.set_move(moves[i]);
-    t.board.Make(moves[i]);
+    size_t nodes_start = t.nodes;
+    t.set_move(moves[i].move);
+    t.board.Make(moves[i].move);
     if (i == 0) {
       Score score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
       assert(score.is_valid());
@@ -1140,12 +1141,14 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
       }
       alpha = std::max(score, alpha);
       lower_bound_score = std::max(score, lower_bound_score);
+      
+      moves[i].count = t.nodes - nodes_start;
     }
     else {
       Depth reduction = 0;
       if (!in_check && !t.board.InCheck() && i > 2) {
         //Late Move Reduction factor
-        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2, GetMoveType(moves[i]) > kDoublePawnMove);
+        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2, GetMoveType(moves[i].move) > kDoublePawnMove);
 //        if (GetMoveType(moves[i]) > kDoublePawnMove) {
 //          reduction = (2 * reduction) / 3;
 //        }
@@ -1160,6 +1163,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
       }
       lower_bound_score = std::max(score, lower_bound_score);
       t.board.UnMake();
+      moves[i].count = t.nodes - nodes_start;
       if (finished(t)) {
         Threads.end_search = true;
         return lower_bound_score;
@@ -1177,13 +1181,21 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
     }
   }
   if (t.id == 0) {
-    table::SavePVEntry(t.board, moves[0], lower_bound_score, current_depth);
+    table::SavePVEntry(t.board, moves[0].move, lower_bound_score, current_depth);
     //table::SavePVEntry(t.board, moves[0]);
   }
   return lower_bound_score;
 }
 
-inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores, std::vector<Move> &moves) {
+inline void reorder_moves_based_on_subtree(std::vector<MoveWithSubtreeInfo> &moves) {
+  for (size_t i = moves.size() - 1; i > 1; --i) {
+    if (moves[i].count > moves[i-1].count) {
+      std::swap(moves[i], moves[i-1]);
+    }
+  }
+}
+
+inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores, std::vector<MoveWithSubtreeInfo> &moves) {
   if (current_depth <= 4) {
     return RootSearchLoop(t, kMinScore, kMaxScore, current_depth, moves);
   }
@@ -1192,6 +1204,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
+    reorder_moves_based_on_subtree(moves);
     // SortMovesML(moves, t, moves[0]);
 //    assert(is_valid_score(alpha));
 //    assert(is_valid_score(beta));
@@ -1312,7 +1325,7 @@ void Thread::search() {
 
     current_depth = depth;
 
-    score = PVS(*this, current_depth, previous_scores, moves);
+    score = PVS(*this, current_depth, previous_scores, moves_with_info);
 
     if(!finished(*this)) {
       last_search_score = score;
@@ -1322,11 +1335,11 @@ void Thread::search() {
       }
       Time end = now();
 
-      PrintUCIInfoString(*this, current_depth, begin, end, score, moves[0]);
+      PrintUCIInfoString(*this, current_depth, begin, end, score, moves_with_info[0].move);
 
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (!fixed_search_time) {
-        if (last_best == moves[0]) {
+        if (last_best == moves_with_info[0].move) {
           time_factor = std::max(time_factor * 0.9, 0.5);
           if (time_used.count() > (rsearch_duration.count() * time_factor)) {
             end_time = now();
@@ -1334,7 +1347,7 @@ void Thread::search() {
           }
         }
         else {
-          last_best = moves[0];
+          last_best = moves_with_info[0].move;
           time_factor = 1.0;
         }
       }
@@ -1372,13 +1385,15 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.main_thread->root_height = board.get_num_made_moves();
   Threads.main_thread->max_depth = board.get_num_made_moves();
   SortMovesML(moves, *Threads.main_thread, tt_move);
-  Threads.main_thread->moves = moves;
+  // Threads.main_thread->moves = moves;
+  Threads.main_thread->set_moves(moves);
   Threads.end_search = false;
   std::vector<std::thread> helpers;
   for (Thread* t : Threads.helpers) {
     t->board.SetToSamePosition(board);
     t->root_height = board.get_num_made_moves();
-    t->moves = moves;
+    // t->moves_w = moves;
+    t->set_moves(moves);
     t->perturb_root_moves();
     while(rng() % 2) {
       t->perturb_root_moves();
@@ -1391,7 +1406,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); ++helper_idx) {
     helpers[helper_idx].join();
   }
-  return Threads.main_thread->moves[0];
+  return Threads.main_thread->moves_with_info[0].move;
 }
 
 void set_print_info(bool print_info_) {
