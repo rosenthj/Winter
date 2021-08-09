@@ -43,6 +43,12 @@ struct PieceTypeAndDestination {
   Square des;
 };
 
+struct MoveWithSubtreeInfo {
+  Move move;
+  Depth depth;
+  size_t count;
+};
+
 struct Thread {
   Thread();
 
@@ -116,13 +122,16 @@ struct Thread {
   PieceTypeAndDestination get_previous_move(Depth moves_ago) const;
 
   Depth get_height() const;
+  
+  void set_moves(const std::vector<Move> &moves);
+  std::vector<Move> get_root_moves() const;
 
   //Multithreading objects
   int id;
 
   //Data for search local to the thread
   Board board;
-  std::vector<Move> moves;
+  std::vector<MoveWithSubtreeInfo> moves_with_info;
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;

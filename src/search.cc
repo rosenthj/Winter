@@ -1192,7 +1192,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
-    SortMovesML(moves, t, moves[0]);
+    // SortMovesML(moves, t, moves[0]);
 //    assert(is_valid_score(alpha));
 //    assert(is_valid_score(beta));
     score = RootSearchLoop(t, alpha, beta, current_depth, moves);

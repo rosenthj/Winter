@@ -165,6 +165,23 @@ int32_t Thread::get_continuation_score(const Move move) const {
   return continuation_history[idx][pt_and_des.pt][pt_and_des.des][piece_type][des];
 }
 
+void Thread::set_moves(const std::vector<Move> &moves) {
+  moves_with_info.clear();
+  moves_with_info.reserve(moves.size());
+  for (Move move : moves) {
+    moves_with_info.emplace_back(move, 0, 0);
+  }
+}
+
+std::vector<Move> Thread::get_root_moves() {
+  std::vector<Move> moves;
+  moves.reserve(moves_with_info.size());
+  for (const MoveWithSubtreeInfo move_with_info : moves_with_info) {
+    moves.emplace_back(move_with_info.move);
+  }
+  return moves;
+}
+
 ThreadPool::ThreadPool() {
   main_thread = new Thread();
   main_thread->id = 0;
