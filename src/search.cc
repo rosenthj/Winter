@@ -1131,6 +1131,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
     t.board.Make(moves[i].move);
     if (i == 0) {
       Score score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
+      moves[i].depth = current_depth;
       assert(score.is_valid());
       if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
         score = draw_score[t.board.get_turn()];
@@ -1155,8 +1156,12 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
       }
       Score score = -AlphaBeta<NodeType::kNW>(t, -get_next_score(alpha),
                                                     -alpha, current_depth - 1 - reduction);
+      moves[i].depth = current_depth - reduction;
+      // moves[i].count = t.nodes - nodes_start;
       if (score > alpha) {
+        // nodes_start = t.nodes;
         score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
+        moves[i].depth = current_depth;
       }
       if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
         score = draw_score[t.board.get_turn()];
@@ -1189,7 +1194,7 @@ Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
 
 inline void reorder_moves_based_on_subtree(std::vector<MoveWithSubtreeInfo> &moves) {
   for (size_t i = moves.size() - 1; i > 1; --i) {
-    if (moves[i].count > moves[i-1].count) {
+    if (moves[i].count > moves[i-1].count) { //  && moves[i].depth == moves[i-1].depth) {
       std::swap(moves[i], moves[i-1]);
     }
   }
