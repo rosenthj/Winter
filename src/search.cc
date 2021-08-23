@@ -943,8 +943,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   Score alpha_nw = alpha.get_next_score();
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
-    if (i == 1 && !moves_sorted) {
-      SortMovesML(moves, t, tt_entry);
+    if (i == 1 && (!moves_sorted || depth > 5)) {
+      SortMovesML(moves, t, moves[0]);
       moves_sorted = true;
     }
     const Move move = moves[i];
