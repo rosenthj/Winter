@@ -85,6 +85,14 @@ struct WDLScore {
     return WDLScore{static_cast<int32_t>(win * scale),
                     static_cast<int32_t>(win_draw * scale)};
   }
+  
+  static WDLScore from_pct_valid(const float win, const float win_draw) {
+    if (win <= win_draw) {
+      return from_pct(win, win_draw);
+    }
+    float win_ = win / (win + (1-win_draw));
+    return from_pct(win_, win_);
+  }
 
   static WDLScore from_pct(const float win, const float win_draw) {
     return WDLScore{static_cast<int32_t>(std::round(win * scale)),
