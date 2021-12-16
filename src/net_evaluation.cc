@@ -819,7 +819,7 @@ Score NetForward(NetLayerType &layer_one) {
   //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
 
   //return wpct_to_score(wpct);
-  return WDLScore::from_pct(sigmoid(win), sigmoid(win_draw));
+  return WDLScore::from_pct_valid(sigmoid(win), sigmoid(win_draw));
 }
 
 Score ScoreBoard(const Board &board) {
