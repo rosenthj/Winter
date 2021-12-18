@@ -816,10 +816,7 @@ Score NetForward(NetLayerType &layer_one) {
   float win = layer_two.dot(win_weights) + win_bias;
   float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
 
-  //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
-
-  //return wpct_to_score(wpct);
-  return WDLScore::from_pct_valid(sigmoid(win), sigmoid(win_draw));
+  return WDLScore::from_pct(sigmoid(win), sigmoid(win_draw));
 }
 
 Score ScoreBoard(const Board &board) {
