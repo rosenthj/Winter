@@ -556,6 +556,15 @@ inline bool sufficient_bounds(const Board &board, const table::Entry &entry,
           || (entry.get_bound() == kUpperBound && score <= alpha));
 }
 
+inline bool odds_good_enough(const Board &board, const table::Entry &entry,
+                             const Score alpha, const Score beta,
+                             const Depth depth) {
+   Score score = entry.get_score(board);
+   return entry.depth == depth-1
+          && (entry.get_bound() != kUpperBound && score >= beta)
+          && odds_worse(score, beta) < 0.01;
+}
+
 inline bool is_null_move_allowed(const Board &board, const Depth depth) {
   return settings::kUseNullMoves && depth > 1
       && board.has_non_pawn_material(board.get_turn());
@@ -840,12 +849,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   //Transposition Table Probe
   table::Entry entry = table::GetEntry(t.board.get_hash());
   bool valid_entry = table::ValidateHash(entry,t.board.get_hash());
-  if (node_type != NodeType::kPV && valid_entry
-      && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
-//    if (entry.get_best_move() != kNullMove && GetMoveType(entry.get_best_move()) < kCapture) {
-//      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
-//    }
-    return entry.get_score(t.board);
+  if (node_type != NodeType::kPV && valid_entry) {
+    if (sufficient_bounds(t.board, entry, alpha, beta, depth)) {
+      return entry.get_score(t.board);
+    }
+    else if (depth >= 2 && odds_good_enough(t.board, entry, alpha, beta, depth)) {
+      return entry.get_score(t.board);
+    }
   }
 
   const bool in_check = t.board.InCheck();

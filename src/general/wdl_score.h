@@ -102,6 +102,16 @@ struct WDLScore {
   void print() const;
 };
 
+inline float odds_worse(const WDLScore lhs, const WDLScore rhs) {
+  const float loss_p_lhs = lhs.get_loss_probability();
+  const float draw_p_lhs = lhs.get_draw_probability();
+  
+  const float better_than_loss_p_rhs = rhs.get_win_draw_probability();
+  const float better_than_draw_p_rhs = rhs.get_win_probability();
+  
+  return loss_p_lhs * better_than_loss_p_rhs + draw_p_lhs * better_than_draw_p_rhs;
+}
+
 inline bool contempt_greater(const WDLScore lhs, const WDLScore rhs,
                                        int32_t contempt_factor) {
   assert(contempt_factor >= 0);
