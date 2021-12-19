@@ -104,7 +104,7 @@ struct UCICheck {
 const std::vector<UCIOption> uci_options {
   {"Hash", table::SetTableSize, 32, 1, 104576},
   {"Threads", search::SetNumThreads, 1, 1, 256},
-  {"Contempt", search::SetContempt, 0, -100, 100},
+  {"Contempt", search::SetContempt, 5, -100, 100},
 #ifdef TUNE
   {"AspirationDelta", search::SetInitialAspirationDelta, 40, 10, 800},
   {"Futility", search::SetFutilityMargin, 560, 400, 1500},
