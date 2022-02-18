@@ -1,8 +1,8 @@
-#include "cnn_net_weights.h"
 #include "data.h"
 #include "net_evaluation.h"
 #include "evaluation/net_features.h"
-#include "net_weights.h"
+#include "evaluation/cnn_net_weights.h"
+#include "evaluation/net_weights.h"
 #include "general/magic.h"
 #include "general/types.h"
 

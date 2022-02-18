@@ -25,6 +25,8 @@
 #ifndef NET_FEATURES_H_
 #define NET_FEATURES_H_
 
+#include "../general/types.h"
+
 namespace net_features {
 
 // TODO: remove outdated features
