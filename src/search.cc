@@ -497,22 +497,22 @@ T GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
 }
 
 // Sorten moves according to weights given by some classifier
-void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_move = kNullMove) {
+void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_move = kNullMove, const size_t start_idx = 0) {
   MoveOrderInfo info(t.board, best_move);
 
   //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
-    for (size_t i = 0; i < moves.size(); ++i) {
+    for (size_t i = start_idx; i < moves.size(); ++i) {
       moves[i] |= ((10000 + GetMoveWeight<MoveScore, true>(moves[i], t, info)) << 16);
     }
   }
   else {
-    for (size_t i = 0; i < moves.size(); ++i) {
+    for (size_t i = start_idx; i < moves.size(); ++i) {
       moves[i] |= ((10000 + GetMoveWeight<MoveScore, false>(moves[i], t, info)) << 16);
     }
   }
 
-  std::sort(moves.begin(), moves.end(), Sorter());
+  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
   for (size_t i = 0; i < moves.size(); ++i) {
     moves[i] &= 0xFFFFL;
   }
@@ -943,8 +943,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   Score alpha_nw = alpha.get_next_score();
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
-    if (i == 1 && !moves_sorted) {
-      SortMovesML(moves, t, tt_entry);
+    if (i == 1 && (!moves_sorted || depth >= 5)) {
+      Move move = moves[0];
+      SortMovesML(moves, t, tt_entry, i);
+      assert(moves[0] == move);
       moves_sorted = true;
     }
     const Move move = moves[i];
