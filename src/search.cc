@@ -512,7 +512,7 @@ void SortMovesML(std::vector<Move> &moves, search::Thread &t, const Move best_mo
     }
   }
 
-  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
+  std::stable_sort(moves.begin()+start_idx, moves.end(), Sorter());
   for (size_t i = 0; i < moves.size(); ++i) {
     moves[i] &= 0xFFFFL;
   }
