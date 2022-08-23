@@ -557,12 +557,6 @@ inline bool sufficient_bounds(const Board &board, const table::Entry &entry,
           || (entry.get_bound() == kUpperBound && score <= alpha));
 }
 
-inline bool is_null_move_allowed(const Board &board, const Depth depth) {
-  return settings::kUseNullMoves && depth > 1
-      && board.has_non_pawn_material(board.get_turn());
-      //&& board.get_phase() > 1 * piece_phases[kQueen];// && !board.InCheck();
-}
-
 #ifdef UNUSED
 //This tested negative, may revisit in the future.
 inline bool cutoff_is_prefetchable(Board &board, const Score alpha, const Score beta,
@@ -886,7 +880,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     }
 
     //Null Move Pruning
-    if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
+    if (settings::kUseNullMoves &&
+        static_eval >= beta && 
+        t.board.has_non_pawn_material(t.board.get_turn())) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
