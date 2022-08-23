@@ -881,7 +881,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     //Null Move Pruning
     if (settings::kUseNullMoves &&
-        static_eval >= beta && 
+        static_eval >= beta &&
+        depth >= 3 &&
         t.board.has_non_pawn_material(t.board.get_turn())) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
