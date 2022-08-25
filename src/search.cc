@@ -808,7 +808,7 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
 }
 
 template<NodeType node_type>
-Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
+Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, size_t checks=0) {
   assert(alpha.is_valid());
   assert(beta.is_valid());
   assert(beta > alpha);
@@ -850,6 +850,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   }
 
   const bool in_check = t.board.InCheck();
+  checks += in_check & (depth < 3);
+  if (checks >= 2) {
+      checks = 0;
+      depth++;
+  }
   Score static_eval = alpha;
   t.set_static_score(kNoScore);
   bool strict_worsening = false;
@@ -1004,15 +1009,15 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     Score score;
     if (i == 0) {
       //First move gets searched at full depth and window
-      score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
+      score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e, checks);
     }
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
       score = -AlphaBeta<NodeType::kNW>(t, -alpha_nw, -alpha,
-                                              depth - 1 + e - reduction);
+                                              depth - 1 + e - reduction, checks);
       //Research with full depth if our initial search indicates an improvement over Alpha
       if (score > alpha && (node_type == NodeType::kPV || reduction > 0)) {
-        score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
+        score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e, checks);
       }
     }
     assert(score.is_valid());
