@@ -14,10 +14,10 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "d16r2_ep5.bin");
+INCBIN(float_t, NetWeights, "d64r2_ep5.bin");
 
 // NN types
-constexpr size_t block_size = 16;
+constexpr size_t block_size = 64;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
 
@@ -957,7 +957,7 @@ Score ScoreBoard(const Board &board) {
 
 void init_weights() {
   // Init regular net weights
-  net_input_weights = std::vector<NetLayerType>(772 * 16 / block_size);
+  net_input_weights = std::vector<NetLayerType>(772);
   for (size_t i = 0; i < 772; ++i) {
     for (size_t k = 0; k < block_size; ++k) {
       //size_t j = i * block_size;
@@ -966,21 +966,21 @@ void init_weights() {
     }
   }
   
-  size_t offset = 772 * 16;
+  size_t offset = 772 * block_size;
   for (size_t k = 0; k < block_size; ++k) {
     bias_layer_one[k] = gNetWeightsData[offset+k];
   }
-  offset += 16;
+  offset += block_size;
   
   output_weights = std::vector<NetLayerType>(3);
-  for (size_t i = 0; i < 16; ++i) {
+  for (size_t i = 0; i < block_size; ++i) {
     //size_t j = i * block_size;
     for (size_t k = 0; k < 3; ++k) {
       //output_weights[i][k] = gNetWeightsData[offset+j+k];
-      output_weights[k][i] = gNetWeightsData[offset+i+16*k];
+      output_weights[k][i] = gNetWeightsData[offset+i+block_size*k];
     }
   }
-  offset += 48;
+  offset += 3 * block_size;
   
   for (size_t k = 0; k < 3; ++k) {
     output_bias[k] = gNetWeightsData[offset+k];
