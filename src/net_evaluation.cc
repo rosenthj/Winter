@@ -14,12 +14,18 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "d64r2_ep5.bin");
+INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
+//INCBIN(float_t, NetWeights, "f128r4_ep2.bin");
+// f128r3_ep2 -> 128i
+// f128r4_ep2 -> 128j
 
 // NN types
-constexpr size_t block_size = 64;
+constexpr size_t block_size = 128;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
+
+constexpr bool use_pk_net = true;
+//constexpr size_t 
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -54,11 +60,10 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 }
 
 namespace {
-const int net_version = 01; // Unused warning is expected.
 
-inline float sigmoid(float x) {
-  return 1 / (1 + std::exp(-x));
-}
+//inline float sigmoid(float x) {
+//  return 1 / (1 + std::exp(-x));
+//}
 
 
 //Array3d<FNetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
@@ -714,7 +719,7 @@ inline void AddPieceType(T &score, const Board &board, const PieceType pt) {
 
 template<typename T, Color color, Color our_color>
 inline void ScorePieces(T &score, const Board &board) {
-  for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
+  for (PieceType piece_type = kKnight; piece_type <= kQueen; ++piece_type) {
       AddPieceType<T, color, our_color>(score, board, piece_type);
       //std::cout << score[0] << std::endl;
   }
@@ -737,6 +742,24 @@ inline void ScoreCastlingRights(T &score, const Board &board) {
   if (castling_rights & (kWSCastle << offset_them)) {
       AddFeature<T>(score, 771);
   }
+}
+
+template<typename T, Color our_color>
+inline T _ScorePawnsAndKings(const Board &board) {
+  T score = init<T>();
+  AddPieceType<T, kWhite, our_color>(score, board, kPawn);
+  AddPieceType<T, kWhite, our_color>(score, board, kKing);
+  AddPieceType<T, kBlack, our_color>(score, board, kPawn);
+  AddPieceType<T, kBlack, our_color>(score, board, kKing);
+  return score;
+}
+
+template<typename T>
+inline T ScorePawnsAndKings(const Board &board) {
+  if (board.get_turn() == kWhite) {
+    return _ScorePawnsAndKings<T,kWhite>(board);
+  }
+  return _ScorePawnsAndKings<T,kBlack>(board);
 }
 
 }
@@ -900,13 +923,16 @@ Score NetForward(NetLayerType &layer_one) {
 
 Score ScoreBoard(const Board &board) {
   //const EvalConstants ec(board);
-  //HashType p_hash = board.get_pawn_hash();
-  //pawn_hash::PawnEntry entry = pawn_hash::GetEntry(p_hash);
-  //NetLayerType cnn_out;
-  //if (pawn_hash::ValidateHash(entry, p_hash)) {
-  //  cnn_out = entry.output;
-  //}
-  //else {
+  HashType p_hash = board.get_pawn_hash();
+  pawn_hash::PawnEntry entry = pawn_hash::GetEntry(p_hash);
+  NetLayerType cnn_out;
+  if (pawn_hash::ValidateHash(entry, p_hash)) {
+    cnn_out = entry.output;
+  }
+  else {
+    cnn_out = ScorePawnsAndKings<NetLayerType>(board); // TODO implement
+    pawn_hash::SaveEntry(cnn_out, p_hash);
+  }
   //  CNNHelper helper;
   //  CNNLayerType cnn_input = GetSuperStaticRawFeatures<CNNLayerType>(board, ec, helper);
   //  cnn_out = NetForward(cnn_input, helper);
@@ -921,7 +947,7 @@ Score ScoreBoard(const Board &board) {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board);
   }
   // std::cout << layer_one[0] << std::endl;
-  //layer_one += cnn_out;
+  layer_one += cnn_out;
   if (contempt[board.get_turn()] != 0) {
     return AddContempt(NetForward(layer_one), board.get_turn());
   }
