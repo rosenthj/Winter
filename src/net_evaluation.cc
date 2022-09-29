@@ -1,7 +1,5 @@
-#include "cnn_net_weights.h"
 #include "data.h"
 #include "net_evaluation.h"
-#include "net_weights.h"
 #include "general/magic.h"
 #include "general/types.h"
 #include "incbin/incbin.h"
@@ -14,18 +12,20 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
+INCBIN(float_t, NetWeights, "f128rS_ep2.bin");
+//INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
 //INCBIN(float_t, NetWeights, "f128r4_ep2.bin");
 // f128r3_ep2 -> 128i
 // f128r4_ep2 -> 128j
+
 
 // NN types
 constexpr size_t block_size = 128;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
 
-constexpr bool use_pk_net = true;
-//constexpr size_t 
+constexpr bool use_pk_net = false;
+constexpr size_t pk_l2_layer_size = use_pk_net ? block_size : 0;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -65,6 +65,10 @@ namespace {
 //  return 1 / (1 + std::exp(-x));
 //}
 
+// PK weights
+
+NetLayerType pk_layer_one_bias(0);
+std::vector<NetLayerType> pk_layer_two_weights(pk_l2_layer_size, 0);
 
 //Array3d<FNetLayerType, 3, 3, 16> cnn_our_p_filters, cnn_our_k_filters, cnn_opp_p_filters, cnn_opp_k_filters;
 //NetLayerType cnn_our_p_bias, cnn_our_k_bias, cnn_opp_p_bias, cnn_opp_k_bias;
@@ -175,11 +179,13 @@ template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index
 template<typename T> inline
 void AddFeature(T &s, const int index) {
   assert(index >= 0);
+  assert(index < 772);
   s[index]++;
 }
 
 template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
   assert(index >= 0);
+  assert(index < 772);
   s += net_input_weights[index];
 }
 
@@ -729,18 +735,20 @@ template<typename T, Color color>
 inline void ScoreCastlingRights(T &score, const Board &board) {
   constexpr int offset_us = color == kWhite ? 0 : 2;
   constexpr int offset_them = color == kWhite? 2 : 0;
+  constexpr size_t base_castling_right_idx = 12 * 64;
+  
   const CastlingRights castling_rights = board.get_castling_rights();
   if (castling_rights & (kWLCastle << offset_us)) {
-      AddFeature<T>(score, 768);
+      AddFeature<T>(score, base_castling_right_idx + 0);
   }
   if (castling_rights & (kWSCastle << offset_us)) {
-      AddFeature<T>(score, 769);
+      AddFeature<T>(score, base_castling_right_idx + 1);
   }
     if (castling_rights & (kWLCastle << offset_them)) {
-      AddFeature<T>(score, 770);
+      AddFeature<T>(score, base_castling_right_idx + 2);
   }
   if (castling_rights & (kWSCastle << offset_them)) {
-      AddFeature<T>(score, 771);
+      AddFeature<T>(score, base_castling_right_idx + 3);
   }
 }
 
@@ -886,6 +894,22 @@ T ScoreBoard(const Board &board) {
   //return WDLScore::from_pct_valid(sigmoid(win), sigmoid(win_draw));
 //}
 
+NetLayerType PKNetForward(NetLayerType &pk_layer_one) {
+  if (!use_pk_net) {
+    return pk_layer_one;
+  }
+  pk_layer_one += pk_layer_one_bias;
+  pk_layer_one.relu();
+  
+  NetLayerType layer_two = NetLayerType(0);
+  for (size_t i = 0; i < pk_layer_one.size(); ++i) {
+    layer_two.FMA(pk_layer_two_weights[i], pk_layer_one[i]);
+    // layer_two[i] = pk_layer_one.dot(pk_layer_two_weights[i]);
+  }
+  
+  return layer_two;
+}
+
 Score NetForward(NetLayerType &layer_one) {
   layer_one += bias_layer_one;
   layer_one.relu();
@@ -930,7 +954,8 @@ Score ScoreBoard(const Board &board) {
     cnn_out = entry.output;
   }
   else {
-    cnn_out = ScorePawnsAndKings<NetLayerType>(board); // TODO implement
+    NetLayerType pk_in = ScorePawnsAndKings<NetLayerType>(board);
+    cnn_out = PKNetForward(pk_in);
     pawn_hash::SaveEntry(cnn_out, p_hash);
   }
   //  CNNHelper helper;
@@ -981,23 +1006,79 @@ Score ScoreBoard(const Board &board) {
 //  }
 //}
 
-void init_weights() {
-  // Init regular net weights
-  net_input_weights = std::vector<NetLayerType>(772);
-  for (size_t i = 0; i < 772; ++i) {
+std::vector<NetLayerType> load_weights(size_t in_size, size_t &offset) {
+  std::vector<NetLayerType> weights = std::vector<NetLayerType>(in_size);
+  for (size_t i = 0; i < in_size; ++i) {
     for (size_t k = 0; k < block_size; ++k) {
-      //size_t j = i * block_size;
-      //net_input_weights[i][k] = gNetWeightsData[j+k];
-      net_input_weights[i][k] = gNetWeightsData[i + 772 * k];
+      weights[i][k] = gNetWeightsData[offset + i + in_size * k];
     }
   }
+  offset += in_size * block_size;
+  return weights;
+}
+
+void init_weights() {
+  // Init regular net weights
   
-  size_t offset = 772 * block_size;
-  for (size_t k = 0; k < block_size; ++k) {
-    bias_layer_one[k] = gNetWeightsData[offset+k];
+  size_t offset = 0;
+  
+  if (use_pk_net) {
+    std::vector<NetLayerType> l1_weights = load_weights(8*64 + 4, offset);
+    
+    for (size_t k = 0; k < block_size; ++k) {
+      bias_layer_one[k] = gNetWeightsData[offset+k];
+    }
+    offset += block_size;
+    
+    // PK l1 weights
+    std::vector<NetLayerType> pk_l1_weights = load_weights(4*64, offset);
+    net_input_weights = std::vector<NetLayerType>(772);
+    for (PieceType pt = kPawn; pt <= kKing; ++pt) {
+      for (Color color = kWhite; color <= kBlack; ++color) {
+        for (Square square = 0; square < 64; ++square) {
+          size_t idx = (pt + 6 * color) * 64 + square;
+          if (pt == kKing || pt == kPawn) {
+            net_input_weights.at(idx) = pk_l1_weights.at(((pt/kKing)  + 2 * color) * 64 + square);
+          }
+          else {
+            net_input_weights.at(idx) = l1_weights.at(((pt-1) + 4 * color) * 64 + square);
+          }
+        }
+      }
+    }
+    for (size_t i=0; i < 4; ++i) {
+      net_input_weights.at(12*64+i) = l1_weights.at(8*64+i);
+    }
+    
+    // PK l1 bias
+    for (size_t k = 0; k < block_size; ++k) {
+      pk_layer_one_bias[k] = gNetWeightsData[offset+k];
+    }
+    offset += block_size;
+    
+    // PK l2 weights
+    pk_layer_two_weights = std::vector<NetLayerType>(block_size);
+    for (size_t i = 0; i < block_size; ++i) {
+      for (size_t k = 0; k < block_size; ++k) {
+        pk_layer_two_weights[i][k] = gNetWeightsData[offset + i + block_size * k];
+      }
+    }
+    //std::cout << pk_layer_two_weights[0][0] << " " << pk_layer_two_weights[0][1] << std::endl;
+    offset += block_size * block_size;
   }
-  offset += block_size;
+  else {
+    // L1 Weights
+    net_input_weights = load_weights(772, offset);
   
+    // L1 Bias
+    for (size_t k = 0; k < block_size; ++k) {
+      bias_layer_one[k] = gNetWeightsData[offset+k];
+    }
+    offset += block_size;
+  }
+  
+  
+  // Output Weights
   output_weights = std::vector<NetLayerType>(3);
   for (size_t i = 0; i < block_size; ++i) {
     //size_t j = i * block_size;
@@ -1008,6 +1089,7 @@ void init_weights() {
   }
   offset += 3 * block_size;
   
+  // Output Bias
   for (size_t k = 0; k < 3; ++k) {
     output_bias[k] = gNetWeightsData[offset+k];
   }
