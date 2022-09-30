@@ -25,7 +25,7 @@ $(EXE): $(OBJECTS)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS)
 
 .cc.o:
-	$(CC) -o $@ $(CFLAGS) $<
+	$(CC) $< -o $@ $(CFLAGS)
 
 clean: clean-src clean-general clean-learning
 
