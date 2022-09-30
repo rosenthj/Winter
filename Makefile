@@ -22,10 +22,10 @@ EXE:=Winter
 all: $(SOURCES) $(EXE)
 
 $(EXE): $(OBJECTS) 
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ 
+	$(CC) -o $@ $(LDFLAGS) $(OBJECTS)
 
 .cc.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) -o $@ $(CFLAGS) $<
 
 clean: clean-src clean-general clean-learning
 
