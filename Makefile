@@ -1,17 +1,17 @@
 #If you have clang, it seems to generate a faster compile as of the beginning of 2018
-#CC=g++
+#CXX=g++
 
 all:
 ifeq ($(ARCH), aarch64)
-CC=aarch64-linux-android21-clang++
+CXX=aarch64-linux-android21-clang++
 CFLAGS=-c -DNDEBUG -D_ARM -O3 -flto -Wall -Wno-sign-compare -m64 -march=armv8-a+fp+simd+crypto+crc -std=c++14 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS= -flto -Wall -pie -lm -static-libstdc++
 else ifeq ($(ARCH), armv7a)
-CC=armv7a-linux-androideabi16-clang++
+CXX=armv7a-linux-androideabi16-clang++
 CFLAGS=-c -DNDEBUG -D_ARM -O3 -flto -Wall -Wno-sign-compare -m32 -mthumb -mfloat-abi=softfp -march=armv7-a -mfpu=neon -std=c++14 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS= -flto -Wall -pie -lm -static-libstdc++
 else
-CC=clang++
+CXX=clang++
 CFLAGS=-c -DNDEBUG -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++14 -Isrc -Isrc/general -Isrc/learning  
 LDFLAGS= -flto -Wall -lpthread
 endif
@@ -22,10 +22,10 @@ EXE:=Winter
 all: $(SOURCES) $(EXE)
 
 $(EXE): $(OBJECTS) 
-	$(CC) -o $@ $(LDFLAGS) $(OBJECTS)
+	$(CXX) -o $@ $(LDFLAGS) $(OBJECTS)
 
 .cc.o:
-	$(CC) $< -o $@ $(CFLAGS)
+	$(CXX) $< -o $@ $(CFLAGS)
 
 clean: clean-src clean-general clean-learning
 
