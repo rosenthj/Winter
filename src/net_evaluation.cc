@@ -12,7 +12,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f144rS03_ep5.bin"); // o
+INCBIN(float_t, NetWeights, "f144rS03_ep8.bin");
 //INCBIN(float_t, NetWeights, "f128rS01_ep4.bin"); // n
 //INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
 //INCBIN(float_t, NetWeights, "f128r4_ep2.bin");
