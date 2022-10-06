@@ -13,11 +13,6 @@
 #include <cmath>
 
 INCBIN(float_t, NetWeights, "f144rS04_ep8.bin");
-//INCBIN(float_t, NetWeights, "f128rS01_ep4.bin"); // n
-//INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
-//INCBIN(float_t, NetWeights, "f128r4_ep2.bin");
-// f128r3_ep2 -> 128i
-// f128r4_ep2 -> 128j
 
 
 // NN types
