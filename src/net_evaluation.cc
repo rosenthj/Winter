@@ -12,16 +12,11 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f128rS06_ep7.bin"); // o
-//INCBIN(float_t, NetWeights, "f128rS01_ep4.bin"); // n
-//INCBIN(float_t, NetWeights, "f128r3_ep2.bin");
-//INCBIN(float_t, NetWeights, "f128r4_ep2.bin");
-// f128r3_ep2 -> 128i
-// f128r4_ep2 -> 128j
+INCBIN(float_t, NetWeights, "f144rS04_ep8.bin");
 
 
 // NN types
-constexpr size_t block_size = 128;
+constexpr size_t block_size = 144;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
 
