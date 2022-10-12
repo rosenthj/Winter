@@ -12,7 +12,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f144rS10_ep7.bin");
+INCBIN(float_t, NetWeights, "f144rS11_ep8.bin");
 
 
 // NN types
