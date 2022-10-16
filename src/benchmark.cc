@@ -125,7 +125,6 @@ double MoveOrderTest() {
   std::cout << "Running move order benchmark!" << std::endl;
   std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
   double count = 0, top_1 = 0, top_2 = 0, top_3 = 0, top_5 = 0, top_half = 0;
-  double top_1r = 0, top_2r = 0, top_3r = 0, top_5r = 0, top_halfr = 0;
   search::clear_killers_and_counter_moves();
 
   for (size_t idx = 0; idx < games.size(); idx++) {
@@ -154,12 +153,6 @@ double MoveOrderTest() {
       if (i <= moves.size() / 2)
         top_half++;
       count++;
-
-      top_1r += 1.0 / moves.size();
-      top_2r += 2.0 / moves.size();
-      top_3r += 3.0 / moves.size();
-      top_5r += 5.0 / moves.size();
-      top_halfr += (moves.size() / 2) / ((double)moves.size());
 
       game.forward();
     }

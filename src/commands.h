@@ -28,7 +28,6 @@ void SEE(Board &board, const StrArgs tokens);
 void Perft(Board &board, const StrArgs tokens);
 void GetFEN(Board &board, const StrArgs);
 void CheckIfRepetitionPossible(Board &board, const StrArgs);
-void GenEvalCSV(Board &board, const StrArgs);
 void PrintBitboards(Board &board, const StrArgs);
 void EvaluateBoard(Board &board, const StrArgs);
 

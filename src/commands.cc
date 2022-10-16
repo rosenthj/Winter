@@ -97,24 +97,6 @@ void CheckIfRepetitionPossible(Board &board, const StrArgs) {
   }
 }
 
-void GenEvalCSV(Board &board, const StrArgs) {
-#ifdef EVAL_TRAINING
-  if (tokens.size() < 2 || tokens.size() > 3) {
-    std::cout << "invalid number of arguments, expected 1 or 2 got " << (tokens.size()-1) << std::endl;
-  }
-  if (tokens.size() == 2) {
-    net_evaluation::GenerateDatasetFromUCIGames(tokens[index++]);
-  }
-  if (tokens.size() == 3) {
-    std::string filename = tokens[index++];
-    std::string out = tokens[index++];
-    net_evaluation::GenerateDatasetFromUCIGames(filename, out);
-  }
-#else
-  std::cout << "Command not supported in this build. Recompile with -DEVAL_TRAINING" << std::endl;
-#endif
-}
-
 void PrintBitboards(Board &board, const StrArgs) {
   board.PrintBitBoards();
 }

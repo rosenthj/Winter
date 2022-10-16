@@ -339,7 +339,6 @@ const std::vector<UCICommand> uci_commands {
   {"can_repeat", commands::CheckIfRepetitionPossible},
   {"evaluate", commands::EvaluateBoard},
   {"fen", commands::GetFEN},
-  {"gen_eval_csv", commands::GenEvalCSV},
   {"perft", commands::Perft},
   {"perft_test", commands::PerftTest}, 
   {"print", commands::PrintBoard},

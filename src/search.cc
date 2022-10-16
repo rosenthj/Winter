@@ -209,21 +209,21 @@ inline Time get_infinite_time() {
 }
 #endif
 
-size_t get_move_priority_idx(const Move move, search::Thread &t, const Move best) {
-  if (move == best)
-    return qs_move_features::kPWIHashMove;
-  else if (GetMoveType(move) > kCapture) {
-    return qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece));
-  }
-  else if (GetMoveType(move) == kCapture) {
-    return qs_move_features::kPWICapture
-           + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-           + GetPieceType(t.board.get_piece(GetMoveSource(move)));
-    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-  }
-  return qs_move_features::kNumQSMoveProbabilityFeatures;
-}
+//size_t get_move_priority_idx(const Move move, search::Thread &t, const Move best) {
+//  if (move == best)
+//    return qs_move_features::kPWIHashMove;
+//  else if (GetMoveType(move) > kCapture) {
+//    return qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece));
+//  }
+//  else if (GetMoveType(move) == kCapture) {
+//    return qs_move_features::kPWICapture
+//           + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+//           + GetPieceType(t.board.get_piece(GetMoveSource(move)));
+//    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+//    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+//  }
+//  return qs_move_features::kNumQSMoveProbabilityFeatures;
+//}
 
 //MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
   //if (move == best)

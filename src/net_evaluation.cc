@@ -1,14 +1,8 @@
-#include "data.h"
 #include "net_evaluation.h"
-#include "general/magic.h"
 #include "general/types.h"
 #include "incbin/incbin.h"
 
-#include <random>
-#include <algorithm>
 #include <array>
-#include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 
@@ -25,9 +19,6 @@ constexpr size_t pk_l2_layer_size = use_pk_net ? block_size : 0;
 std::array<int32_t, 2> contempt = { 0, 0 };
 
 namespace pawn_hash {
-
-// long hits = 0;
-// long misses = 0;
 
 struct PawnEntry {
   NetLayerType output;
@@ -56,10 +47,6 @@ bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
 
 namespace {
 
-//inline float sigmoid(float x) {
-//  return 1 / (1 + std::exp(-x));
-//}
-
 // PK weights
 
 NetLayerType pk_layer_one_bias(0);
@@ -81,14 +68,14 @@ T init() {
   return T(0);
 }
 
-template<typename T> inline
-void AddFeature(T &s, const int index, const int value) {
-  s[index] += value;
-}
+//template<typename T> inline
+//void AddFeature(T &s, const int index, const int value) {
+//  s[index] += value;
+//}
 
-template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index, const int value) {
-  s.FMA(net_input_weights[index], value);
-}
+//template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index, const int value) {
+//  s.FMA(net_input_weights[index], value);
+//}
 
 template<typename T> inline
 void AddFeature(T &s, const int index) {
@@ -122,7 +109,6 @@ template<typename T, Color color, Color our_color>
 inline void ScorePieces(T &score, const Board &board) {
   for (PieceType piece_type = kKnight; piece_type <= kQueen; ++piece_type) {
       AddPieceType<T, color, our_color>(score, board, piece_type);
-      //std::cout << score[0] << std::endl;
   }
 }
 
@@ -187,25 +173,6 @@ T ScoreBoard(const Board &board) {
   return score;
 }
 
-//Score NetForward(NetLayerType &layer_one) {
-  //layer_one += bias_layer_one;
-  //layer_one.relu();
-
-  //NetLayerType layer_two = bias_layer_two;
-  //for (size_t i = 0; i < layer_one.size(); ++i) {
-    //layer_two.FMA(second_layer_weights[i], layer_one[i]);
-  //}
-  //layer_two.relu();
-
-  //float win = layer_two.dot(win_weights) + win_bias;
-  //float win_draw = layer_two.dot(win_draw_weights) + win_draw_bias;
-
-  ////float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
-
-  ////return wpct_to_score(wpct);
-  //return WDLScore::from_pct_valid(sigmoid(win), sigmoid(win_draw));
-//}
-
 NetLayerType PKNetForward(NetLayerType &pk_layer_one) {
   if (!use_pk_net) {
     return pk_layer_one;
@@ -216,7 +183,6 @@ NetLayerType PKNetForward(NetLayerType &pk_layer_one) {
   NetLayerType layer_two = NetLayerType(0);
   for (size_t i = 0; i < pk_layer_one.size(); ++i) {
     layer_two.FMA(pk_layer_two_weights[i], pk_layer_one[i]);
-    // layer_two[i] = pk_layer_one.dot(pk_layer_two_weights[i]);
   }
   
   return layer_two;
@@ -233,7 +199,6 @@ Score NetForward(NetLayerType &layer_one) {
       outcomes[i] = std::exp(outcomes[i]);
       sum += outcomes[i];
   }
-  // std::cout << sum << std::endl;
   
   for (size_t i = 0; i < 3; ++i) {
       outcomes[i] /= sum;
@@ -245,16 +210,12 @@ Score NetForward(NetLayerType &layer_one) {
   //}
   //layer_two.relu();
   
-  // std::cout << outcomes[0] << " " << outcomes[1] << " " << outcomes[2] << std::endl;
-
   float win = outcomes[0];
   float win_draw = outcomes[0] + outcomes[1];
   return WDLScore::from_pct_valid(win, win_draw);
 
   //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
-
   //return wpct_to_score(wpct);
-  //return WDLScore::from_pct_valid(sigmoid(win), sigmoid(win_draw));
 }
 
 Score ScoreBoard(const Board &board) {
@@ -342,7 +303,6 @@ void init_weights() {
         pk_layer_two_weights[i][k] = gNetWeightsData[offset + i + block_size * k];
       }
     }
-    //std::cout << pk_layer_two_weights[0][0] << " " << pk_layer_two_weights[0][1] << std::endl;
     offset += block_size * block_size;
   }
   else {
@@ -362,7 +322,6 @@ void init_weights() {
   for (size_t i = 0; i < block_size; ++i) {
     //size_t j = i * block_size;
     for (size_t k = 0; k < 3; ++k) {
-      //output_weights[i][k] = gNetWeightsData[offset+j+k];
       output_weights[k][i] = gNetWeightsData[offset+i+block_size*k];
     }
   }
@@ -373,10 +332,6 @@ void init_weights() {
     output_bias[k] = gNetWeightsData[offset+k];
   }
   
-  //std::cout << "l1 w0:" << net_input_weights[0][0] << " l1 w1:" << net_input_weights[0][1]
-  //          << " l1 b0:" << bias_layer_one[0] << " l1 b1:" << bias_layer_one[1] << std::endl;
-  //std::cout << "out w0:" << output_weights[0][0] << " out w1:" << output_weights[0][1]
-  //          << " out b0:" << output_bias[0] << " out b1:" << output_bias[1] << std::endl;
 }
 
 std::vector<int32_t> GetNetInputs(const Board &board) {
