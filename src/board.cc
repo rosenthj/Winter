@@ -384,8 +384,6 @@ void PrintStandardRow(std::string first_delim, std::string mid_delim, std::strin
 
 Board::Board() {
   hash = 0;
-  hash_p = 0;
-  hash_pm = 0;
   previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
@@ -498,8 +496,6 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   move_history_information.clear();
   previous_hashes.clear();
   hash = 0;
-  hash_p = 0;
-  hash_pm = 0;
   en_passant = 0;
   fifty_move_count = 0;
   phase = 0;
@@ -680,8 +676,6 @@ void Board::SetStartBoard() {
 
 void Board::SetToSamePosition(const Board &board) {
   hash = board.hash;
-  hash_p = board.hash_p;
-  hash_pm = board.hash_pm;
   en_passant = board.en_passant;
   fifty_move_count = board.fifty_move_count;
   move_history = board.move_history;
@@ -712,8 +706,6 @@ void Board::AddPiece(const Square square, const Piece piece) {
   phase += piece_phases[GetPieceType(piece)];
   pieces[square] = piece;
   hash ^= hash::get_hash(piece, square);
-  hash_p ^= hash::get_pawn_hash(piece, square);
-  hash_pm ^= hash::get_pawn_hash_mirrored(piece, square);
 }
 
 Piece Board::RemovePiece(const Square square) {
@@ -725,8 +717,6 @@ Piece Board::RemovePiece(const Square square) {
     piece_counts[GetPieceColor(piece)][GetPieceType(piece)]--;
     phase -= piece_phases[GetPieceType(piece)];
     hash ^= hash::get_hash(piece, square);
-    hash_p ^= hash::get_pawn_hash(piece, square);
-    hash_pm ^= hash::get_pawn_hash_mirrored(piece, square);
   }
   return piece;
 }

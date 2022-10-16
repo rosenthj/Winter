@@ -43,8 +43,6 @@ Score ScoreBoard(const Board &board);
 std::vector<int32_t> GetNetInputs(const Board &board);
 void init_weights();
 
-void SetPHashSize(const size_t bytes);
-
 void SetContempt(Color color, int32_t value);
 std::array<Score, 2> GetDrawArray();
 

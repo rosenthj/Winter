@@ -13,46 +13,9 @@ constexpr size_t block_size = 160;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
 
-constexpr bool use_pk_net = false;
-constexpr size_t pk_l2_layer_size = use_pk_net ? block_size : 0;
-
 std::array<int32_t, 2> contempt = { 0, 0 };
 
-namespace pawn_hash {
-
-struct PawnEntry {
-  NetLayerType output;
-  HashType hash;
-};
-
-constexpr size_t kEntrySize = 8 + 4 * block_size;
-
-size_t size = 10000;
-
-std::vector<PawnEntry> table(size);
-
-PawnEntry GetEntry(const HashType hash_p) {
-  return table[hash_p % table.size()];
-}
-void SaveEntry(const NetLayerType &output, const HashType hash_p) {
-  PawnEntry entry;
-  entry.output = output;
-  entry.hash = hash_p ^ (HashType)std::round(output[0] * 1024);
-  table[hash_p % table.size()] = entry;
-}
-
-bool ValidateHash(const PawnEntry &entry, const HashType hash_p) {
-  return hash_p == (entry.hash ^ (HashType)std::round(entry.output[0] * 1024));
-}
-
-}
-
 namespace {
-
-// PK weights
-
-NetLayerType pk_layer_one_bias(0);
-std::vector<NetLayerType> pk_layer_two_weights(pk_l2_layer_size, 0);
 
 // NN weights
 
@@ -109,7 +72,7 @@ inline void AddPieceType(T &score, const Board &board, const PieceType pt) {
 
 template<typename T, Color color, Color our_color>
 inline void ScorePieces(T &score, const Board &board) {
-  for (PieceType piece_type = kKnight; piece_type <= kQueen; ++piece_type) {
+  for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
       AddPieceType<T, color, our_color>(score, board, piece_type);
   }
 }
@@ -135,32 +98,9 @@ inline void ScoreCastlingRights(T &score, const Board &board) {
   }
 }
 
-template<typename T, Color our_color>
-inline T _ScorePawnsAndKings(const Board &board) {
-  T score = init<T>();
-  AddPieceType<T, kWhite, our_color>(score, board, kPawn);
-  AddPieceType<T, kWhite, our_color>(score, board, kKing);
-  AddPieceType<T, kBlack, our_color>(score, board, kPawn);
-  AddPieceType<T, kBlack, our_color>(score, board, kKing);
-  return score;
-}
-
-template<typename T>
-inline T ScorePawnsAndKings(const Board &board) {
-  if (board.get_turn() == kWhite) {
-    return _ScorePawnsAndKings<T,kWhite>(board);
-  }
-  return _ScorePawnsAndKings<T,kBlack>(board);
-}
-
 }
 
 namespace net_evaluation {
-
-void SetPHashSize(const size_t bytes) {
-  pawn_hash::size = bytes / pawn_hash::kEntrySize;
-  pawn_hash::table.resize(pawn_hash::size);
-}
 
 template<typename T, Color our_color>
 T ScoreBoard(const Board &board) {
@@ -173,21 +113,6 @@ T ScoreBoard(const Board &board) {
   ScoreCastlingRights<T, our_color>(score, board);
 
   return score;
-}
-
-NetLayerType PKNetForward(NetLayerType &pk_layer_one) {
-  if (!use_pk_net) {
-    return pk_layer_one;
-  }
-  pk_layer_one += pk_layer_one_bias;
-  pk_layer_one.relu();
-  
-  NetLayerType layer_two = NetLayerType(0);
-  for (size_t i = 0; i < pk_layer_one.size(); ++i) {
-    layer_two.FMA(pk_layer_two_weights[i], pk_layer_one[i]);
-  }
-  
-  return layer_two;
 }
 
 Score NetForward(NetLayerType &layer_one) {
@@ -221,18 +146,6 @@ Score NetForward(NetLayerType &layer_one) {
 }
 
 Score ScoreBoard(const Board &board) {
-  //const EvalConstants ec(board);
-  HashType p_hash = board.get_pawn_hash();
-  pawn_hash::PawnEntry entry = pawn_hash::GetEntry(p_hash);
-  NetLayerType cnn_out;
-  if (pawn_hash::ValidateHash(entry, p_hash)) {
-    cnn_out = entry.output;
-  }
-  else {
-    NetLayerType pk_in = ScorePawnsAndKings<NetLayerType>(board);
-    cnn_out = PKNetForward(pk_in);
-    pawn_hash::SaveEntry(cnn_out, p_hash);
-  }
 
   NetLayerType layer_one = init<NetLayerType>();
   if (board.get_turn() == kWhite) {
@@ -241,7 +154,6 @@ Score ScoreBoard(const Board &board) {
   else {
     layer_one = ScoreBoard<NetLayerType, kBlack>(board);
   }
-  layer_one += cnn_out;
   if (contempt[board.get_turn()] != 0) {
     return AddContempt(NetForward(layer_one), board.get_turn());
   }
@@ -264,59 +176,14 @@ void init_weights() {
   
   size_t offset = 0;
   
-  if (use_pk_net) {
-    std::vector<NetLayerType> l1_weights = load_weights(8*64 + 4, offset);
-    
-    for (size_t k = 0; k < block_size; ++k) {
-      bias_layer_one[k] = gNetWeightsData[offset+k];
-    }
-    offset += block_size;
-    
-    // PK l1 weights
-    std::vector<NetLayerType> pk_l1_weights = load_weights(4*64, offset);
-    net_input_weights = std::vector<NetLayerType>(772);
-    for (PieceType pt = kPawn; pt <= kKing; ++pt) {
-      for (Color color = kWhite; color <= kBlack; ++color) {
-        for (Square square = 0; square < 64; ++square) {
-          size_t idx = (pt + 6 * color) * 64 + square;
-          if (pt == kKing || pt == kPawn) {
-            net_input_weights.at(idx) = pk_l1_weights.at(((pt/kKing)  + 2 * color) * 64 + square);
-          }
-          else {
-            net_input_weights.at(idx) = l1_weights.at(((pt-1) + 4 * color) * 64 + square);
-          }
-        }
-      }
-    }
-    for (size_t i=0; i < 4; ++i) {
-      net_input_weights.at(12*64+i) = l1_weights.at(8*64+i);
-    }
-    
-    // PK l1 bias
-    for (size_t k = 0; k < block_size; ++k) {
-      pk_layer_one_bias[k] = gNetWeightsData[offset+k];
-    }
-    offset += block_size;
-    
-    // PK l2 weights
-    pk_layer_two_weights = std::vector<NetLayerType>(block_size);
-    for (size_t i = 0; i < block_size; ++i) {
-      for (size_t k = 0; k < block_size; ++k) {
-        pk_layer_two_weights[i][k] = gNetWeightsData[offset + i + block_size * k];
-      }
-    }
-    offset += block_size * block_size;
-  }
-  else {
-    // L1 Weights
-    net_input_weights = load_weights(772, offset);
+  // L1 Weights
+  net_input_weights = load_weights(772, offset);
   
-    // L1 Bias
-    for (size_t k = 0; k < block_size; ++k) {
-      bias_layer_one[k] = gNetWeightsData[offset+k];
-    }
-    offset += block_size;
+  // L1 Bias
+  for (size_t k = 0; k < block_size; ++k) {
+    bias_layer_one[k] = gNetWeightsData[offset+k];
   }
+  offset += block_size;
   
   
   // Output Weights
