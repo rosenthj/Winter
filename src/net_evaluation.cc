@@ -22,6 +22,8 @@ namespace {
 std::vector<NetLayerType> net_input_weights(772, 0);
 NetLayerType bias_layer_one(0);
 
+std::vector<NetLayerType> castling_right_weights(1 << 5, 0);
+
 //std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
 //NetLayerType bias_layer_two(0);
 
@@ -55,6 +57,19 @@ template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index
   s += net_input_weights[index];
 }
 
+template<typename T> inline
+void AddCastlingFeatures(T &s, const int index) {
+  assert(index >= 0);
+  assert(index < (1<<5));
+  s[index]++;
+}
+
+template<> inline void AddCastlingFeatures<NetLayerType>(NetLayerType &s, const int index) {
+  assert(index >= 0);
+  assert(index < (1<<5));
+  s += castling_right_weights[index];
+}
+
 template<typename T, Color color, Color our_color>
 inline void AddPieceType(T &score, const Board &board, const PieceType pt) {
   constexpr size_t c_offset = color == our_color ? 0 : 64 * 6;
@@ -79,22 +94,12 @@ inline void ScorePieces(T &score, const Board &board) {
 
 template<typename T, Color color>
 inline void ScoreCastlingRights(T &score, const Board &board) {
-  constexpr int offset_us = color == kWhite ? 0 : 2;
-  constexpr int offset_them = color == kWhite? 2 : 0;
-  constexpr size_t base_castling_right_idx = 12 * 64;
-  
   const CastlingRights castling_rights = board.get_castling_rights();
-  if (castling_rights & (kWLCastle << offset_us)) {
-      AddFeature<T>(score, base_castling_right_idx + 0);
+  if (color == kWhite) {
+    AddCastlingFeatures<T>(score, castling_rights);
   }
-  if (castling_rights & (kWSCastle << offset_us)) {
-      AddFeature<T>(score, base_castling_right_idx + 1);
-  }
-    if (castling_rights & (kWLCastle << offset_them)) {
-      AddFeature<T>(score, base_castling_right_idx + 2);
-  }
-  if (castling_rights & (kWSCastle << offset_them)) {
-      AddFeature<T>(score, base_castling_right_idx + 3);
+  else {
+    AddCastlingFeatures<T>(score, castling_rights + (1<<4));
   }
 }
 
@@ -199,6 +204,26 @@ void init_weights() {
   // Output Bias
   for (size_t k = 0; k < 3; ++k) {
     output_bias[k] = gNetWeightsData[offset+k];
+  }
+  
+  for (int castling_rights = 0; castling_rights < (1 << 5); ++castling_rights) {
+    Color color = castling_rights <= 0xF ? kWhite : kBlack;
+    int offset_us = color == kWhite ? 0 : 2;
+    int offset_them = color == kWhite? 2 : 0;
+    size_t base_idx = 12 * 64;
+    if (castling_rights & (kWLCastle << offset_us)) {
+      castling_right_weights[castling_rights] += net_input_weights[base_idx + 0];
+    }
+    if (castling_rights & (kWSCastle << offset_us)) {
+      castling_right_weights[castling_rights] += net_input_weights[base_idx + 1];
+    }
+    if (castling_rights & (kWLCastle << offset_them)) {
+      castling_right_weights[castling_rights] += net_input_weights[base_idx + 2];
+    }
+    if (castling_rights & (kWSCastle << offset_them)) {
+      castling_right_weights[castling_rights] += net_input_weights[base_idx + 3];
+    }
+    
   }
   
 }
