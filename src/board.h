@@ -57,12 +57,6 @@ public:
   HashType get_hash() const {
     return hash ^ (castling_rights | GetSquareBitBoard(en_passant + 8));
   }
-  HashType get_pawn_hash() const {
-    if (get_turn()) {
-      return hash_pm;
-    }
-    return hash_p;
-  }
   //This needs to be public for the evaluation function.
   //PieceBitboardSet get_piece_bitboards() const;
   Piece get_piece(const Square square) const { return pieces[square]; }
@@ -156,8 +150,6 @@ private:
   Color turn;
   //Ply refers to the number of played halfmoves
   HashType hash;    // Standard zobrist Hash
-  HashType hash_p;  // Zobrist Pawn/King Hash
-  HashType hash_pm; // Mirrored Zobrist Pawn/King Hash
 
   int32_t fifty_move_count;
 };
