@@ -121,7 +121,7 @@ T ScoreBoard(const Board &board) {
 }
 
 Score NetForward(NetLayerType &layer_one) {
-  layer_one += bias_layer_one;
+  // layer_one += bias_layer_one;
   layer_one.relu();
   
   float_t sum = 0;
@@ -211,6 +211,7 @@ void init_weights() {
     int offset_us = color == kWhite ? 0 : 2;
     int offset_them = color == kWhite? 2 : 0;
     size_t base_idx = 12 * 64;
+    castling_right_weights[castling_rights] += bias_layer_one;
     if (castling_rights & (kWLCastle << offset_us)) {
       castling_right_weights[castling_rights] += net_input_weights[base_idx + 0];
     }
