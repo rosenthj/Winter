@@ -102,7 +102,7 @@ void PrintBitboards(Board &board, const StrArgs) {
 }
 
 void EvaluateBoard(Board &board, const StrArgs) {
-  std::cout << net_evaluation::ScoreBoard(board).to_nscore() << std::endl;
+  std::cout << net_evaluation::ScoreBoard(board).to_wpct() << std::endl;
 }
 
 }
