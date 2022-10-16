@@ -25,6 +25,8 @@ struct PawnEntry {
   HashType hash;
 };
 
+constexpr size_t kEntrySize = 8 + 4 * block_size;
+
 size_t size = 10000;
 
 std::vector<PawnEntry> table(size);
@@ -156,7 +158,7 @@ inline T ScorePawnsAndKings(const Board &board) {
 namespace net_evaluation {
 
 void SetPHashSize(const size_t bytes) {
-  pawn_hash::size = bytes / 72;
+  pawn_hash::size = bytes / pawn_hash::kEntrySize;
   pawn_hash::table.resize(pawn_hash::size);
 }
 
