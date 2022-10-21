@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f192rS01_ep11.bin");
+INCBIN(float_t, NetWeights, "f192rS02_ep7.bin");
 
 // NN types
 constexpr size_t block_size = 192;
