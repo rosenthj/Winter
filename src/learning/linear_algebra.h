@@ -438,6 +438,21 @@ struct Vec<SIMDFloat, length> {
     }
     return *this;
   }
+  
+  template <size_t l2>
+  Vec<SIMDFloat, l2> reduce_sum() const {
+    assert(length % l2 == 0);
+    Vec<SIMDFloat, l2> result;
+    for (size_t i = 0; i < result.arr_length; ++i) {
+        result[i] = values[i];
+    }
+    for (size_t i = result.arr_length; i < arr_length; i += result.arr_length) {
+        for (size_t j = 0; j < result.arr_length; ++j) {
+            result.values[j] = simd::add(result.values[j], v1.values[i+j]);
+        }
+    }
+    return result;
+  }
 
   float dot(const Vec<SIMDFloat, length> &other) const {
     SIMDFloat c = simd::set(0);
