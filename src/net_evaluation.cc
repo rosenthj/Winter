@@ -6,11 +6,11 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f192rS10_ep3.bin");
+INCBIN(float_t, NetWeights, "f224rS04_ep3.bin");
 
 
 // NN types
-constexpr size_t block_size = 192;
+constexpr size_t block_size = 224;
 using NetLayerType = Vec<float, block_size>;
 using FNetLayerType = Vec<SIMDFloat, block_size>;
 
