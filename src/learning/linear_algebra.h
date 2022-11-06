@@ -386,6 +386,23 @@ struct Vec<float, length> {
     return simd::sum(c);
   }
   
+  template<size_t new_length>
+  Vec<float, new_length> reduce_sum() const {
+      static_assert(new_length % kSIMDWidth == 0, "Reducing to non-SIMDWidth multiple");
+      static_assert(new_length < length, "Reduction not reducing")
+      static_assert(length % new_length == 0, "Invalid reduction size");
+      Vec<float, new_length> result;
+      for (size_t i = 0; i <= new_length-kSIMDWidth; i+=kSIMDWidth) {
+          SIMDFloat c = simd::set(0);
+          for (size_t j = 0; j <= length - new_length; j+=new_length) {
+              SIMDFloat v = simd::load(&values[i+j]);
+              c = simd::add(c, v);
+          }
+          simd::store(&result.values[i], c);
+      }
+      return result;
+  }
+  
   inline float& operator[](std::size_t idx) { return values[idx]; }
   inline const float operator[](std::size_t idx) const { return values[idx]; }
   
