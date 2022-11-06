@@ -389,7 +389,7 @@ struct Vec<float, length> {
   template<size_t new_length>
   Vec<float, new_length> reduce_sum() const {
       static_assert(new_length % kSIMDWidth == 0, "Reducing to non-SIMDWidth multiple");
-      static_assert(new_length < length, "Reduction not reducing")
+      static_assert(new_length < length, "Reduction not reducing");
       static_assert(length % new_length == 0, "Invalid reduction size");
       Vec<float, new_length> result;
       for (size_t i = 0; i <= new_length-kSIMDWidth; i+=kSIMDWidth) {
