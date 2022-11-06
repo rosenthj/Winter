@@ -12,7 +12,6 @@ INCBIN(float_t, NetWeights, "f192rS10_ep3.bin");
 // NN types
 constexpr size_t block_size = 192;
 using NetLayerType = Vec<float, block_size>;
-using FNetLayerType = Vec<SIMDFloat, block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
