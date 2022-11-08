@@ -568,7 +568,7 @@ void RunBenchCommand(int argc, char **argv) {
   auto total_time = std::chrono::duration_cast<Milliseconds>(now() - initial_time);
   int64_t totalNodes = 0;
   for (int i = 0; i < kBenchmarkCommandPositions.size(); i++) totalNodes += nodes[i];
-  printf("OVERALL: %38d nodes %8d nps\n", (int)totalNodes, (int)(1000 * totalNodes / (total_time.count() + 1)));
+  printf("OVERALL: %38d nodes %8d nps\n", (int)(totalNodes - (totalNodes % 100)), (int)(1000 * totalNodes / (total_time.count() + 1)));
 }
 
 }
