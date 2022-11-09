@@ -28,7 +28,6 @@
 #include "general/settings.h"
 #include "board.h"
 #include "search.h"
-#include "learning/cluster.h"
 
 #include "net_evaluation.h"
 

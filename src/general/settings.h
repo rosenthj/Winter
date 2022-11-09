@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "1.04";
+const std::string engine_version = "1.05";
 
 const std::string engine_author = "Jonathan Rosenthal";
 
@@ -63,7 +63,6 @@ const std::string kSearchParamInCheckExplanationFile = kSearchParamInCheckFile +
 const std::string kCCRLPath = "data/CCRL.ucig";
 const std::string kCEGTPath = "data/CEGT.ucig";
 
-const bool kTrainGMMFromScratch = false;
 const bool kTrainFromScratch = false;
 
 const bool kUseExtensions = true;

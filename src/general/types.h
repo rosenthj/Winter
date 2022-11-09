@@ -200,8 +200,6 @@ constexpr int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
               + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
               + 2 * piece_phases[kQueen];
 
-constexpr size_t kPhaseVecLength = 4;
-
 constexpr int64_t kThousand = 1000;
 constexpr int64_t kMillion = kThousand * kThousand;
 constexpr int64_t kBillion = kThousand * kMillion;
