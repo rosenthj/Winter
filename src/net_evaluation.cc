@@ -6,12 +6,13 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f256A32rS04_ep4.bin");
+//INCBIN(float_t, NetWeights, "f256A32rS05_ep4.bin");
+INCBIN(float_t, NetWeights, "f224rS07_ep4.bin");
 
 // NN types
-constexpr size_t block_size = 256;
+constexpr size_t block_size = 224;
 using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 32;
+constexpr size_t reduced_block_size = 224;
 using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
@@ -120,12 +121,12 @@ Score NetForward(NetLayerType &layer_one_) {
   layer_one_ += bias_layer_one;
   layer_one_.relu();
   
-  ReducedNetLayerType layer_one = layer_one_.reduce_sum<32>();
+  //ReducedNetLayerType layer_one = layer_one_.reduce_sum<32>();
   
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
   for (size_t i = 0; i < 3; ++i) {
-      outcomes[i] = layer_one.dot(output_weights[i]) + output_bias[i];
+      outcomes[i] = layer_one_.dot(output_weights[i]) + output_bias[i];
       outcomes[i] = std::exp(outcomes[i]);
       sum += outcomes[i];
   }
