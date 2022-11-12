@@ -7,7 +7,7 @@
 #include <cmath>
 
 //INCBIN(float_t, NetWeights, "f256A32rS05_ep4.bin");
-INCBIN(float_t, NetWeights, "f224rS07_ep4.bin");
+INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
 
 // NN types
 constexpr size_t block_size = 224;
