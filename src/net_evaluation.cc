@@ -6,13 +6,14 @@
 #include <vector>
 #include <cmath>
 
+INCBIN(float_t, NetWeights, "f256G32rS01_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256A32rS05_ep4.bin");
-INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
+//INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
 
 // NN types
-constexpr size_t block_size = 224;
+constexpr size_t block_size = 256;
 using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 224;
+constexpr size_t reduced_block_size = 32;
 using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
@@ -26,6 +27,9 @@ NetLayerType bias_layer_one(0);
 
 //std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
 //NetLayerType bias_layer_two(0);
+
+NetLayerType reduction_weights(0);
+ReducedNetLayerType reduction_bias(0);
 
 std::vector<ReducedNetLayerType> output_weights;
 std::array<float_t, 3> output_bias;
@@ -123,10 +127,14 @@ Score NetForward(NetLayerType &layer_one_) {
   
   //ReducedNetLayerType layer_one = layer_one_.reduce_sum<32>();
   
+  ReducedNetLayerType layer_one = layer_one_.reduce_weighted<32>(reduction_weights);
+  layer_one += reduction_bias;
+  layer_one.relu();
+  
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
   for (size_t i = 0; i < 3; ++i) {
-      outcomes[i] = layer_one_.dot(output_weights[i]) + output_bias[i];
+      outcomes[i] = layer_one.dot(output_weights[i]) + output_bias[i];
       outcomes[i] = std::exp(outcomes[i]);
       sum += outcomes[i];
   }
@@ -188,6 +196,20 @@ void init_weights() {
     bias_layer_one[k] = gNetWeightsData[offset+k];
   }
   offset += block_size;
+  
+  const size_t group_size = block_size / reduced_block_size;
+  for (size_t k = 0; k < block_size; ++k) {
+    size_t group_id = k / group_size;
+    size_t member_id = k % group_size;
+    size_t id = member_id * reduced_block_size + group_id;
+    reduction_weights[id] = gNetWeightsData[offset+k];
+  }
+  offset += block_size;
+  
+  for (size_t k = 0; k < reduced_block_size; ++k) {
+    reduction_bias[k] = gNetWeightsData[offset+k];
+  }
+  offset += reduced_block_size;
   
   
   // Output Weights
