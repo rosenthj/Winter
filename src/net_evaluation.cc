@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f224rS10_ep4.bin");
+INCBIN(float_t, NetWeights, "f224rS11_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
 //INCBIN(float_t, NetWeights, "f256A32rS05_ep4.bin");
@@ -40,15 +40,6 @@ template<typename T>
 T init() {
   return T(0);
 }
-
-//template<typename T> inline
-//void AddFeature(T &s, const int index, const int value) {
-//  s[index] += value;
-//}
-
-//template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index, const int value) {
-//  s.FMA(net_input_weights[index], value);
-//}
 
 template<typename T> inline
 void AddFeature(T &s, const int index) {
