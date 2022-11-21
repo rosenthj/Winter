@@ -41,15 +41,6 @@ T init() {
   return T(0);
 }
 
-//template<typename T> inline
-//void AddFeature(T &s, const int index, const int value) {
-//  s[index] += value;
-//}
-
-//template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index, const int value) {
-//  s.FMA(net_input_weights[index], value);
-//}
-
 template<typename T> inline
 void AddFeature(T &s, const int index) {
   assert(index >= 0);
