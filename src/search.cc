@@ -901,11 +901,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
   // idea from http://talkchess.com/forum3/viewtopic.php?f=7&t=74769
   // ELO | 4.67 +- 3.56
-  if (node_type == NodeType::kPV && depth >= 2 && !valid_entry) {
+  if (node_type == NodeType::kPV && depth >= 5 && !valid_entry) {
     depth--;
-    if (depth >= 4) {
-      depth--;
-    }
   }
 
   //Get move list and return result if there are no legal moves
@@ -986,6 +983,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
       //Late Move Reduction factor
       reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+      
+      if (valid_entry && reduction < (depth - 1) && tt_entry > kDoublePawnMove && move <= kDoublePawnMove) {
+        reduction++;
+      }
       assert(reduction < depth);
 
       //Futility Pruning
