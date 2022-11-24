@@ -125,16 +125,16 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 }
 
 #ifdef TUNE
-NScore kInitialAspirationDelta = 30; // 40;
-NScore kSNMPMargin = 690; // 790;
-Vec<NScore, 4> kFutileMargin = init_futility_margins(560); // init_futility_margins(560);
+NScore kInitialAspirationDelta = 40;
+NScore kSNMPMargin = 790;
+Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 50; // 40;
-constexpr NScore kSNMPMargin = 690; // 790;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(560); // init_futility_margins(560);
+constexpr NScore kInitialAspirationDelta = 40;
+constexpr NScore kSNMPMargin = 790;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
@@ -901,8 +901,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
   // idea from http://talkchess.com/forum3/viewtopic.php?f=7&t=74769
   // ELO | 4.67 +- 3.56
-  if (node_type == NodeType::kPV && depth >= 5 && !valid_entry) {
+  if (node_type == NodeType::kPV && depth >= 2 && !valid_entry) {
     depth--;
+    if (depth >= 4) {
+      depth--;
+    }
   }
 
   //Get move list and return result if there are no legal moves
