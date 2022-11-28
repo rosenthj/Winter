@@ -6,10 +6,10 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f224rS11_ep4.bin");
+INCBIN(float_t, NetWeights, "f224rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
-//INCBIN(float_t, NetWeights, "f256A32rS05_ep4.bin");
+//INCBIN(float_t, NetWeights, "f256A32rS06_ep4.bin");
 //INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
 
 // NN types
