@@ -104,6 +104,13 @@ struct Vec {
     }
     return *this;
   }
+  
+  inline Vec<type, length>& clipped_relu(const type max_val) {
+    for (size_t i = 0; i < length; ++i) {
+      values[i] = std::min(std::max(values[i], static_cast<type>(0)), max_val);
+    }
+    return *this;
+  }
 
   /// Non-standard PReLU activation assumes alpha <= 1
   inline Vec<type, length>& ns_prelu(const Vec<type, length> &alpha) {
@@ -267,6 +274,7 @@ inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm256_
 inline void store(float* mem_addr, SIMDFloat a) { _mm256_storeu_ps(mem_addr, a); }
 inline SIMDFloat load(float const* mem_addr) { return _mm256_loadu_ps(mem_addr); }
 inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm256_max_ps(a,  b); }
+inline SIMDFloat min(SIMDFloat a, SIMDFloat b) { return _mm256_min_ps(a,  b); }
 inline SIMDFloat set(float a) { return _mm256_set1_ps(a); }
 
 inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
@@ -301,6 +309,7 @@ inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm_mul
 inline void store(float* mem_addr, SIMDFloat a) { _mm_storeu_ps(mem_addr, a); }
 inline SIMDFloat load(float const* mem_addr) { return _mm_loadu_ps(mem_addr); }
 inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm_max_ps(a,  b); }
+inline SIMDFloat min(SIMDFloat a, SIMDFloat b) { return _mm_min_ps(a,  b); }
 inline SIMDFloat set(float a) { return _mm_set1_ps(a); }
 
 inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
@@ -348,6 +357,16 @@ struct Vec<float, length> {
     for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       simd::store(&values[i], simd::max(v1, zero));
+    }
+    return *this;
+  }
+  
+  inline Vec<float, length>& clipped_relu(const float max_val) {
+    const SIMDFloat zero = simd::set(0);
+    const SIMDFloat max_simd = simd::set(max_val);
+    for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
+      SIMDFloat v1 = simd::load(&values[i]);
+      simd::store(&values[i], simd::min(simd::max(v1, zero), max_simd));
     }
     return *this;
   }

@@ -6,7 +6,8 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "f224rS14_ep4.bin");
+INCBIN(float_t, NetWeights, "g224rS01_ep4.bin");
+//INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
 //INCBIN(float_t, NetWeights, "f256A32rS06_ep4.bin");
@@ -116,7 +117,7 @@ T ScoreBoard(const Board &board) {
 
 Score NetForward(NetLayerType &layer_one_) {
   layer_one_ += bias_layer_one;
-  layer_one_.relu();
+  layer_one_.clipped_relu(8);
   
   //ReducedNetLayerType layer_one = layer_one_.reduce_sum<32>();
   
