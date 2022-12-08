@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "g224rS02_ep4.bin");
+INCBIN(float_t, NetWeights, "g256rS01_ep4.bin");
 //INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
@@ -14,9 +14,9 @@ INCBIN(float_t, NetWeights, "g224rS02_ep4.bin");
 //INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
 
 // NN types
-constexpr size_t block_size = 224;
+constexpr size_t block_size = 256;
 using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 224;
+constexpr size_t reduced_block_size = 256;
 using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
