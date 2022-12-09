@@ -335,6 +335,7 @@ struct Vec<float, length> {
   }
   
   inline Vec<float, length>& operator+=(const Vec<float, length> &rhs) {
+    #pragma GCC unroll 32
     for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       SIMDFloat v2 = simd::load(&rhs.values[i]);
@@ -364,6 +365,7 @@ struct Vec<float, length> {
   inline Vec<float, length>& clipped_relu(const float max_val) {
     const SIMDFloat zero = simd::set(0);
     const SIMDFloat max_simd = simd::set(max_val);
+    #pragma GCC unroll 32
     for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       simd::store(&values[i], simd::min(simd::max(v1, zero), max_simd));
