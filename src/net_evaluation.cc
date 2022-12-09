@@ -49,7 +49,7 @@ void AddFeature(T &s, const int index) {
   s[index]++;
 }
 
-template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
+template<> void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
   assert(index >= 0);
   assert(index < 772);
   s += net_input_weights[index];
