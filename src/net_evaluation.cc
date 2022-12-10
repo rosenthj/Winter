@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "g224rS01_ep4.bin");
+INCBIN(float_t, NetWeights, "g224rS02_ep4.bin");
 //INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
@@ -49,7 +49,7 @@ void AddFeature(T &s, const int index) {
   s[index]++;
 }
 
-template<> inline void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
+template<> void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
   assert(index >= 0);
   assert(index < 772);
   s += net_input_weights[index];
