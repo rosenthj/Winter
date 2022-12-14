@@ -59,7 +59,7 @@ int kNodeCountSampleAt = 1000;
 const int kMaxDepthSampled = 32;
 #endif
 
-int32_t contempt = 10;
+int32_t contempt = 20;
 bool armageddon = false;
 std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
 
