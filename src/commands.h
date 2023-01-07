@@ -22,8 +22,6 @@ void CheckIfDraw(Board &board, const StrArgs);
 void PerftTest(Board &board, const StrArgs);
 void SymmetryTest(Board &board, const StrArgs);
 void Benchmark(Board &board, const StrArgs tokens);
-void BenchmarkMoveOrder(Board &board, const StrArgs);
-void BenchmarkNode(Board &board, const StrArgs tokens);
 void SEE(Board &board, const StrArgs tokens);
 void Perft(Board &board, const StrArgs tokens);
 void GetFEN(Board &board, const StrArgs);

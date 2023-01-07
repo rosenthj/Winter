@@ -33,25 +33,6 @@
 //The arrays in this file are automatically generated!
 namespace hardcode {
 
-// Clustering Parameters
-// ------------------------------------------------------------------------------------------------
-
-// Normalized Fuzzy C-Means Parameters
-// First Centroid set to zero vector normalized. Last centroid set to start pos.
-// m = 3
-constexpr std::array<double, 8+(4*4)> NFCM_params = {
-    // Means and Standard Deviations
-    1.4501, 1.34111,
-    1.81476, 1.38448,
-    2.59293, 1.45835,
-    1.10424, 0.930082,
-    // Centroids
-    -1.08127, -1.31079, -1.77798, -1.18725,
-    -0.502385, -0.486815, -0.339176, -0.733863,
-    0.00748032, 0.146452, 0.515402, 0.631396,
-    1.90134, 1.57839, 0.964835, 0.963098
-};
-
 // Search Parameters
 // ------------------------------------------------------------------------------------------------
 

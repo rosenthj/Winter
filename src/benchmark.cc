@@ -121,59 +121,6 @@ PerftTest string_to_perft_test(const std::string input) {
 
 namespace benchmark {
 
-double MoveOrderTest() {
-  std::cout << "Running move order benchmark!" << std::endl;
-  std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
-  double count = 0, top_1 = 0, top_2 = 0, top_3 = 0, top_5 = 0, top_half = 0;
-  search::clear_killers_and_counter_moves();
-
-  for (size_t idx = 0; idx < games.size(); idx++) {
-    Game game = games[idx];
-    game.set_to_position_after(0);
-    while (game.board.get_num_made_moves() < game.moves.size() - 1) {
-      int move_num = game.board.get_num_made_moves();
-      std::vector<Move> moves = search::GetSortedMovesML(game.board);
-      if (moves.size() < 10) {
-        game.forward();
-        continue;
-      }
-      size_t i;
-      for (i = 0; i < moves.size(); i++) {
-        if (game.moves[move_num] == moves[i])
-          break;
-      }
-      if (i == 0)
-        top_1++;
-      if (i <= 1)
-        top_2++;
-      if (i <= 2)
-        top_3++;
-      if (i <= 5)
-        top_5++;
-      if (i <= moves.size() / 2)
-        top_half++;
-      count++;
-
-      game.forward();
-    }
-    //total_error += SigmoidCrossEntropyLoss(search::get_last_search_score(), target);
-
-    if ((idx + 1) % 10000 == 0) {
-      std::cout << "Stats after " << (idx+1) << " games:"
-          << "\nTop 1: " << (top_1 / count) << "\nTop 2: " << (top_2 / count)
-          << "\nTop 3: " << (top_3 / count) << "\nTop 5: " << (top_5 / count)
-          << "\nTop Half: " << (top_half / count) << "\nCount: " << count << std::endl;
-    }
-  }
-
-  std::cout << "\nStats after " << games.size() << " games:"
-      << "\nTop 1: " << (top_1 / count) << "\nTop 2: " << (top_2 / count)
-      << "\nTop 3: " << (top_3 / count) << "\nTop 5: " << (top_5 / count)
-      << "\nTop Half: " << (top_half / count) << "\nCount: " << count << std::endl;
-
-  return top_1 / count;
-}
-
 void SymmetrySuite() {
   std::vector<SymmetryTest> test_sets;
   std::string line;
@@ -337,53 +284,6 @@ double EntropyLossTimedSuite(Milliseconds time_per_position) {
     }
     table::ClearTable();
     search::TimeSearch(games[idx].board, time_per_position);
-    total_error += ResultAbsLoss(search::get_last_search_score(), target);
-    if (target.is_draw()) {
-      draw_error +=
-          ResultAbsLoss(search::get_last_search_score(), target);
-    }
-    else {
-      decisive_error += ResultAbsLoss(search::get_last_search_score(), target);
-    }
-    if ((idx + 1) % 100 == 0) {
-      std::cout << (idx + 1) << std::endl
-          << "Total Error: " << (total_error / (idx + 1)) << std::endl;
-      if (idx + 1 > draws) {
-        std::cout << "Decisive Error: " << ((decisive_error) / (idx + 1 - draws)) << std::endl;
-      }
-      if (draws > 0) {
-        std::cout << "Draw Error: " << ((draw_error) / (draws)) << std::endl;
-      }
-    }
-  }
-  search::set_print_info(true);
-  std::cout << "Final Avg Error: " << (total_error / games.size()) << std::endl;
-  return total_error / games.size();
-}
-
-double EntropyLossNodeSuite(size_t nodes_per_position) {
-  std::cout << "Running benchmark!" << std::endl;
-  std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
-  //We want to count the number of drawn games in order to calculate the
-  //minimal achievable error our engine can achieve on the data.
-  double total_error = 0, decisive_error = 0, draw_error = 0;
-  size_t draws = 0;
-  int l_margin = games.size() / 10;
-  int u_margin = l_margin * 2;
-  search::set_print_info(false);
-  for (size_t idx = 0; idx < games.size(); idx++) {
-    int num_made_moves = games[idx].moves.size();
-    games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
-                                        / (games.size() + u_margin));
-    Score target = games[idx].result;
-    if (target.is_draw()) {
-      draws++;
-    }
-    if (games[idx].board.get_turn() == kBlack) {
-      target = -target;
-    }
-    table::ClearTable();
-    search::NodeSearch(games[idx].board, nodes_per_position);
     total_error += ResultAbsLoss(search::get_last_search_score(), target);
     if (target.is_draw()) {
       draw_error +=
