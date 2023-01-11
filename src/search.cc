@@ -53,8 +53,6 @@ enum class NodeType {
   kPV, kNW
 };
 
-int kNodeCountSampleAt = 1000;
-//int kNodeCountSampleEvalAt = 5000;
 #ifdef SAMPLE_SEARCH
 const int kMaxDepthSampled = 32;
 #endif
@@ -67,8 +65,9 @@ Milliseconds rsearch_duration;
 Depth rsearch_depth;
 
 Board sampled_board;
-Score sampled_alpha;
 #ifdef SEARCH_TRAINING
+size_t sample_nodes = 0;
+Score sampled_alpha;
 NodeType sampled_node_type;
 Depth sampled_depth;
 #endif
@@ -184,7 +183,6 @@ std::mt19937_64 rng;
 size_t min_ply = 0;
 const size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
-size_t sample_nodes = 0;
 size_t evaluation_nodes = 0;
 bool fixed_search_time;
 
@@ -208,38 +206,6 @@ inline Time get_infinite_time() {
   return now()+std::chrono::hours(24);
 }
 #endif
-
-//size_t get_move_priority_idx(const Move move, search::Thread &t, const Move best) {
-//  if (move == best)
-//    return qs_move_features::kPWIHashMove;
-//  else if (GetMoveType(move) > kCapture) {
-//    return qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece));
-//  }
-//  else if (GetMoveType(move) == kCapture) {
-//    return qs_move_features::kPWICapture
-//           + 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-//           + GetPieceType(t.board.get_piece(GetMoveSource(move)));
-//    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-//    //            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-//  }
-//  return qs_move_features::kNumQSMoveProbabilityFeatures;
-//}
-
-//MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
-  //if (move == best)
-    //return hardcode::qs_params[qs_move_features::kPWIHashMove];
-  //else if (GetMoveType(move) > kCapture) {
-    //return hardcode::qs_params[qs_move_features::kPWIPromotion + GetMoveType(move) - kCapture - 1 + (4 * (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece))];
-  //}
-  //else if (GetMoveType(move) == kCapture) {
-    //return hardcode::qs_params[qs_move_features::kPWICapture
-                               //+ 6 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                               //+ GetPieceType(t.board.get_piece(GetMoveSource(move)))];
-    ////return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-    ////            - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-  //}
-  //return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
-//}
 
 MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
   if (move == best)
@@ -1444,6 +1410,8 @@ void clear_killers_and_counter_moves() {
 // to all previous moves in the list or better than the previous move in the move ordering performed worse.
 
 #ifdef SEARCH_TRAINING
+int kNodeCountSampleAt = 1000;
+
 void TrainSearchParams(bool from_scratch) {
   const int scaling = 128;
   set_print_info(false);
@@ -1901,203 +1869,6 @@ void LoadSearchVariablesHardCoded() {
   for (size_t i = 0; i < kNumMoveProbabilityFeatures; ++i) {
     search_weights[i] = hardcode::search_params[c];
     search_weights_in_check[i] = hardcode::search_params_in_check[c++];
-  }
-}
-
-void EvaluateScoreDistributions(const int focus) {
-  set_print_info(false);
-  size_t count1 = 0, count2 = 0;
-  std::vector<Game> games = data::LoadGames(1200000);
-  const int max_depth = 3, n_score_bins = 160, score_bin_size = 100,
-            n_dif_bins = 800, dif_bin_size = 16;
-  std::vector<Array2d<long, n_score_bins, n_dif_bins> > histogram(max_depth);
-  for (size_t i = 0; i < max_depth; ++i) {
-    for (size_t j = 0; j < n_score_bins; ++j) {
-      for (size_t k = 0; k < n_dif_bins; ++k) {
-        histogram[i][j][k] = 0;
-      }
-    }
-  }
-  size_t id = 0;
-  while (true) {
-    id++;
-    Game game = games[rng() % games.size()];
-    size_t index = (rng() % (2 * game.moves.size() / 3)) + (game.moves.size() / 3) - 2;
-    game.set_to_position_after(index);
-    clear_killers_and_counter_moves();
-    table::ClearTable();
-
-    kNodeCountSampleAt = 300 + rng() % 150;
-    Board board = game.board;
-    sample_nodes = 0;
-    sampled_alpha = kMinScore;
-    RootSearch(board, 128, Milliseconds(150));
-    if (sampled_alpha == kMinScore || sampled_board.InCheck()) {
-      continue;
-    }
-    Score score = net_evaluation::ScoreBoard(sampled_board);
-    NScore score_bin_idx = score.to_nscore();
-    score_bin_idx += score_bin_size / 2;
-    score_bin_idx /= score_bin_size;
-    score_bin_idx += n_score_bins / 2;
-    score_bin_idx = std::max(0, (int)score_bin_idx);
-    score_bin_idx = std::min(n_score_bins - 1, (int)score_bin_idx);
-    if (focus == 0) {
-      for (Depth depth = 1; depth <= max_depth; ++depth) {
-        DepthSearch(sampled_board, depth);
-        Score ab_score = get_last_search_score();
-        NScore dif = ab_score.to_nscore() - score.to_nscore();
-        dif /= dif_bin_size;
-        dif += n_dif_bins / 2;
-        dif = std::max(0, (int)dif);
-        dif = std::min(n_dif_bins - 1, (int)dif);
-        histogram[depth - 1][score_bin_idx][dif]++;
-      }
-    }
-    else if (focus == 1) {
-      std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
-      for (Depth depth = 1; depth <= max_depth; ++depth) {
-        for (Move move : moves) {
-          if (GetMoveType(move) >= kEnPassant) {
-            continue;
-          }
-          sampled_board.Make(move);
-          if (sampled_board.InCheck()) {
-            sampled_board.UnMake();
-            continue;
-          }
-          NScore ab_score = 0;
-          if (depth == 1) {
-            ab_score = -QSearch(sampled_board).to_nscore();
-          }
-          else {
-            DepthSearch(sampled_board, depth - 1);
-            ab_score = -get_last_search_score().to_nscore();
-          }
-          sampled_board.UnMake();
-
-          NScore dif = ab_score - score.to_nscore();
-          dif /= dif_bin_size;
-          dif += n_dif_bins / 2;
-          dif = std::max(0, (int)dif);
-          dif = std::min(n_dif_bins - 1, (int)dif);
-          histogram[depth - 1][score_bin_idx][dif]++;
-        }
-      }
-    }
-    else if (focus == 2) {
-      std::vector<Move> moves = sampled_board.GetMoves<kNonQuiescent>();
-      for (Depth depth = 1; depth <= max_depth; ++depth) {
-        NScore max_dif = kMinScore.to_nscore();
-        NScore max_forcing_dif = kMinScore.to_nscore();
-        for (Move move : moves) {
-          bool forcing = false;
-          if (GetMoveType(move) >= kEnPassant) {
-            forcing = true;
-          }
-          sampled_board.Make(move);
-          if (sampled_board.InCheck()) {
-            forcing = true;
-          }
-          NScore ab_score = 0;
-          if (depth == 1) {
-            ab_score = -QSearch(sampled_board).to_nscore();
-          }
-          else {
-            DepthSearch(sampled_board, depth - 1);
-            ab_score = -get_last_search_score().to_nscore();
-          }
-          sampled_board.UnMake();
-
-          if (forcing) {
-            max_forcing_dif = std::max(ab_score - score.to_nscore(), max_forcing_dif);
-          }
-          else {
-            max_dif = std::max(ab_score - score.to_nscore(), max_dif);
-
-          }
-        }
-        if (max_dif > max_forcing_dif) {
-          count1++;
-          max_dif /= dif_bin_size;
-          max_dif += n_dif_bins / 2;
-          max_dif = std::max(0, (int)max_dif);
-          max_dif = std::min(n_dif_bins - 1, (int)max_dif);
-          histogram[depth - 1][score_bin_idx][max_dif]++;
-        }
-        count2++;
-      }
-    }
-    if ((id + 1) % 1000 == 0) {
-      std::cout << "Evaluated " << (id+1) << " games!" << std::endl;
-    }
-    if (id % 1000 == 0) {
-      std::vector<std::vector <long> > vhistogram(n_score_bins, std::vector<long>(n_dif_bins + 1));
-      for (size_t i = 0; i < n_score_bins; ++i) {
-        vhistogram[i][0] = (i - (n_score_bins / 2)) * score_bin_size;
-      }
-      for (Depth depth = 0; depth < max_depth; ++depth) {
-        for (size_t i = 0; i < n_score_bins; ++i) {
-          for (size_t j = 0; j < n_dif_bins; ++j) {
-            vhistogram[i][j + 1] = histogram[depth][i][j];
-          }
-        }
-        switch (focus) {
-          case 2:
-            parse::Save2dVecToCSV<long>(vhistogram, "data/max_quiet_hist" + std::to_string(depth + 1) + ".csv");
-            std::cout << "Max is quiet in " << count1 << "/" << count2 << std::endl;
-            break;
-          case 1:
-            parse::Save2dVecToCSV<long>(vhistogram, "data/v2quiet_hist" + std::to_string(depth + 1) + ".csv");
-            break;
-          default:
-            parse::Save2dVecToCSV<long>(vhistogram, "data/v2hist" + std::to_string(depth + 1) + ".csv");
-        }
-      }
-    }
-  }
-}
-
-
-void EvaluateCaptureMoveValue(int n) {
-  std::vector<std::vector<Score> > move_scores(6);
-  std::vector<Game> games = data::LoadGames();
-  for (size_t i = 0; i < games.size(); ++i) {
-    Game game = games[i];
-    game.set_to_position_after(0);
-    while (game.board.get_num_made_moves() < game.moves.size()) {
-      const Move move = game.moves[game.board.get_num_made_moves()];
-      if (GetMoveType(move) == kCapture
-          && !game.board.GivesCheck(move)) {
-        PieceType target = game.board.get_piece(GetMoveDestination(move));
-        Score before = net_evaluation::ScoreBoard(game.board);
-        game.forward();
-        Score after = -net_evaluation::ScoreBoard(game.board);
-        move_scores[GetPieceType(target)].emplace_back(after - before);
-      }
-      else if (GetMoveType(move) == kEnPassant
-          && !game.board.GivesCheck(move)) {
-        Score before = net_evaluation::ScoreBoard(game.board);
-        game.forward();
-        Score after = -net_evaluation::ScoreBoard(game.board);
-        move_scores[5].emplace_back(after - before);
-      }
-      else {
-        game.forward();
-      }
-    }
-    if ((i + 1) % 10000 == 0) {
-      std::cout << "Evaluated " << (i+1) << " games!" << std::endl;
-    }
-  }
-  for (int i = 0; i < 6; ++i) {
-    std::sort(move_scores[i].begin(), move_scores[i].end());
-  }
-  for (int j = 0; j < 6; ++j) {
-    for (int i = 1; i < n; ++i) {
-      std::cout << i << ":" << move_scores[j][move_scores[j].size() * i / (n)].to_nscore() << " ";
-    }
-    std::cout << std::endl << std::endl;
   }
 }
 

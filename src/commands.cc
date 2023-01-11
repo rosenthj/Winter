@@ -44,15 +44,6 @@ void Benchmark(Board &board, const StrArgs tokens) {
   benchmark::EntropyLossTimedSuite(Milliseconds(ms));
 }
 
-void BenchmarkMoveOrder(Board &board, const StrArgs) {
-  benchmark::MoveOrderTest();
-}
-
-void BenchmarkNode(Board &board, const StrArgs tokens) {
-  long n = atol(tokens[1].c_str());
-  benchmark::EntropyLossNodeSuite(n);
-}
-
 void SEE(Board &board, const StrArgs tokens) {
   Move move = parse::StringToMove(tokens[1]);
   std::cout << board.NonNegativeSEE(move) << std::endl;

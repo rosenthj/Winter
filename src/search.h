@@ -65,9 +65,6 @@ void SaveHardcodeSearchVariables();
 #endif
 void LoadSearchVariablesHardCoded();
 
-void EvaluateCaptureMoveValue(int n);
-void EvaluateScoreDistributions(const int focus);
-
 void SetArmageddon(bool armageddon);
 void SetContempt(int32_t contempt);
 void SetUCIShowWDL(bool show_wdl);
