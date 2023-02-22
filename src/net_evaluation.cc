@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "g224rS13_ep4.bin");
+INCBIN(float_t, NetWeights, "g224rS14_ep4.bin");
 //INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
