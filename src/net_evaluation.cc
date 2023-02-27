@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "g224rS14a_ep4.bin");
+INCBIN(float_t, NetWeights, "h224rS01d_ep3.bin");
 //INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
@@ -25,7 +25,7 @@ namespace {
 
 // NN weights
 
-std::vector<NetLayerType> net_input_weights(772, 0);
+std::vector<NetLayerType> net_input_weights(773, 0);
 NetLayerType bias_layer_one(0);
 
 //std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
@@ -45,13 +45,13 @@ T init() {
 template<typename T> inline
 void AddFeature(T &s, const int index) {
   assert(index >= 0);
-  assert(index < 772);
+  assert(index < 773);
   s[index]++;
 }
 
 template<> void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
   assert(index >= 0);
-  assert(index < 772);
+  assert(index < 773);
   s += net_input_weights[index];
 }
 
@@ -98,6 +98,15 @@ inline void ScoreCastlingRights(T &score, const Board &board) {
   }
 }
 
+template<typename T>
+inline void OppositeColoredBishops(T &score, const Board &board) {
+  constexpr size_t ocb_idx = 12 * 64 + 4;
+  if (board.get_piece_count(kWhite, kBishop) == 1 && board.get_piece_count(kBlack, kBishop) == 1
+      && bitops::PopCount(board.get_piecetype_bitboard(kBishop) & bitops::light_squares) == 1) {
+    AddFeature<T>(score, ocb_idx);
+  }
+}
+
 }
 
 namespace net_evaluation {
@@ -111,6 +120,7 @@ T ScoreBoard(const Board &board) {
   ScorePieces<T, kBlack, our_color>(score, board);
   
   ScoreCastlingRights<T, our_color>(score, board);
+  OppositeColoredBishops<T>(score, board);
 
   return score;
 }
@@ -183,7 +193,7 @@ void init_weights() {
   size_t offset = 0;
   
   // L1 Weights
-  net_input_weights = load_weights(772, offset);
+  net_input_weights = load_weights(773, offset);
   
   // L1 Bias
   for (size_t k = 0; k < block_size; ++k) {
