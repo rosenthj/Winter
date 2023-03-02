@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "h224rS01d_ep3.bin");
+INCBIN(float_t, NetWeights, "h128x16rS01_ep8.bin");
 //INCBIN(float_t, NetWeights, "f224rS15_ep4.bin");
 //INCBIN(float_t, NetWeights, "f192rS12_ep4.bin");
 //INCBIN(float_t, NetWeights, "f256G32rS01b_ep3.bin");
@@ -14,9 +14,9 @@ INCBIN(float_t, NetWeights, "h224rS01d_ep3.bin");
 //INCBIN(float_t, NetWeights, "f224rS08_ep3.bin");
 
 // NN types
-constexpr size_t block_size = 224;
+constexpr size_t block_size = 128;
 using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 224;
+constexpr size_t reduced_block_size = 16;
 using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
@@ -28,11 +28,8 @@ namespace {
 std::vector<NetLayerType> net_input_weights(773, 0);
 NetLayerType bias_layer_one(0);
 
-//std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
-//NetLayerType bias_layer_two(0);
-
-//NetLayerType reduction_weights(0);
-//ReducedNetLayerType reduction_bias(0);
+std::vector<NetLayerType> layer_two_weights(reduced_block_size, 0);
+ReducedNetLayerType bias_layer_two(0);
 
 std::vector<ReducedNetLayerType> output_weights;
 std::array<float_t, 3> output_bias;
@@ -125,20 +122,23 @@ T ScoreBoard(const Board &board) {
   return score;
 }
 
-Score NetForward(NetLayerType &layer_one_) {
-  layer_one_ += bias_layer_one;
-  layer_one_.clipped_relu(8);
+Score NetForward(NetLayerType &layer_one) {
+  layer_one += bias_layer_one;
+  layer_one.clipped_relu(8);
   
-  //ReducedNetLayerType layer_one = layer_one_.reduce_sum<32>();
-  
-  //ReducedNetLayerType layer_one = layer_one_.reduce_weighted<32>(reduction_weights);
-  //layer_one += reduction_bias;
-  //layer_one.relu();
+  ReducedNetLayerType layer_two = bias_layer_two;
+  for (size_t i = 0; i < layer_two.size(); ++i) {
+    layer_two[i] += layer_one.dot(layer_two_weights[i]);
+  }
+  //for (size_t i = 0; i < layer_one.size(); ++i) {
+  //  layer_two.FMA(second_layer_weights[i], layer_one[i]);
+  //}
+  layer_two.clipped_relu(8);
   
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
   for (size_t i = 0; i < 3; ++i) {
-      outcomes[i] = layer_one_.dot(output_weights[i]) + output_bias[i];
+      outcomes[i] = layer_two.dot(output_weights[i]) + output_bias[i];
       outcomes[i] = std::exp(outcomes[i]);
       sum += outcomes[i];
   }
@@ -146,12 +146,6 @@ Score NetForward(NetLayerType &layer_one_) {
   for (size_t i = 0; i < 3; ++i) {
       outcomes[i] /= sum;
   }
-
-  //NetLayerType layer_two = bias_layer_two;
-  //for (size_t i = 0; i < layer_one.size(); ++i) {
-  //  layer_two.FMA(second_layer_weights[i], layer_one[i]);
-  //}
-  //layer_two.relu();
   
   float win = outcomes[0];
   float win_draw = outcomes[0] + outcomes[1];
@@ -200,22 +194,19 @@ void init_weights() {
     bias_layer_one[k] = gNetWeightsData[offset+k];
   }
   offset += block_size;
-  
-  /*const size_t group_size = block_size / reduced_block_size;
-  for (size_t k = 0; k < block_size; ++k) {
-    size_t group_id = k / group_size;
-    size_t member_id = k % group_size;
-    size_t id = member_id * reduced_block_size + group_id;
-    reduction_weights[id] = gNetWeightsData[offset+k];
+    
+  for (size_t i = 0; i < block_size; ++i) {
+    for (size_t k = 0; k < reduced_block_size; ++k) {
+      layer_two_weights[k][i] = gNetWeightsData[offset+i+block_size*k];
+    }
   }
-  offset += block_size;
-  
+  offset += block_size * reduced_block_size;
+    
   for (size_t k = 0; k < reduced_block_size; ++k) {
-    reduction_bias[k] = gNetWeightsData[offset+k];
+    bias_layer_two[k] = gNetWeightsData[offset+k];
   }
-  offset += reduced_block_size;*/
-  
-  
+  offset += reduced_block_size;
+    
   // Output Weights
   output_weights = std::vector<ReducedNetLayerType>(3);
   for (size_t i = 0; i < reduced_block_size; ++i) {
