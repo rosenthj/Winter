@@ -6,13 +6,13 @@
 #include <vector>
 #include <cmath>
 
-INCBIN(float_t, NetWeights, "h256rS02_ep4.bin");
-//INCBIN(float_t, NetWeights, "h224rS01d_ep3.bin");
+//INCBIN(float_t, NetWeights, "h256rS02_ep4.bin");
+INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
 // NN types
-constexpr size_t block_size = 256;
+constexpr size_t block_size = 224;
 using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 256;
+constexpr size_t reduced_block_size = 224;
 using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
