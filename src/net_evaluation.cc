@@ -5,15 +5,17 @@
 #include <array>
 #include <vector>
 #include <cmath>
+#include <list>
 
-INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
+INCBIN(float_t, NetWeights, "temp_model.bin");
+//INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
 //INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
 // NN types
-constexpr size_t block_size = 256;
-using NetLayerType = Vec<float, block_size>;
-constexpr size_t reduced_block_size = 256;
-using ReducedNetLayerType = Vec<float, reduced_block_size>;
+constexpr size_t block_size = 8;
+using NetLayerType = Vec<float_t, block_size>;
+// constexpr size_t reduced_block_size = 256;
+// using ReducedNetLayerType = Vec<float, reduced_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -21,8 +23,14 @@ namespace {
 
 // NN weights
 
-std::vector<NetLayerType> net_input_weights(773, 0);
-NetLayerType bias_layer_one(0);
+std::vector<NetLayerType> net_input_weights(12 * 12 * 15 * 15, 0);
+std::vector<NetLayerType> bias_layer_one(12 * 8 * 8, 0);
+
+std::vector<NetLayerType> output_weights(3 * 12 * 8 * 8, 0);
+std::array<float_t, 3> output_bias;
+
+//std::vector<NetLayerType> net_input_weights(773, 0);
+//NetLayerType bias_layer_one(0);
 
 //std::vector<NetLayerType> second_layer_weights(16 * 16, 0);
 //NetLayerType bias_layer_two(0);
@@ -30,8 +38,28 @@ NetLayerType bias_layer_one(0);
 //NetLayerType reduction_weights(0);
 //ReducedNetLayerType reduction_bias(0);
 
-std::vector<ReducedNetLayerType> output_weights;
-std::array<float_t, 3> output_bias;
+//std::vector<ReducedNetLayerType> output_weights;
+//std::array<float_t, 3> output_bias;
+
+
+Array2d<int32_t, 64, 64> square_offset;
+
+void init_square_offset() {
+  for (size_t src = 0; src < 64; ++src) {
+    for (size_t des = 0; des < 64; ++des) {
+      int32_t x = 7 + GetSquareX(src) - GetSquareX(des);
+      int32_t y = 7 + GetSquareY(src) - GetSquareY(des);
+      square_offset[src][des] = y * 15 + x;
+    }
+  }
+}
+
+struct NetPieceModule {
+  PieceType pt;
+  Square sq;
+  NetLayerType features;
+  NetPieceModule() = default;
+};
 
 template<typename T>
 T init() {
@@ -41,19 +69,35 @@ T init() {
 template<typename T> inline
 void AddFeature(T &s, const int index) {
   assert(index >= 0);
-  assert(index < 773);
+  assert(index < 12 * 12 * 15 * 15);
   s[index]++;
 }
 
 template<> void AddFeature<NetLayerType>(NetLayerType &s, const int index) {
   assert(index >= 0);
-  assert(index < 773);
+  assert(index < 12 * 12 * 15 * 15);
   s += net_input_weights[index];
 }
 
-template<typename T, Color color, Color our_color>
-inline void AddPieceType(T &score, const Board &board, const PieceType pt) {
-  constexpr size_t c_offset = color == our_color ? 0 : 64 * 6;
+void AddRelative(const NetPieceModule &p_src, NetPieceModule &p_des) {
+  size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_src.sq][p_des.sq];
+  p_des.features += net_input_weights[idx];
+}
+
+void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
+  for (size_t i = 0; i < piece_modules.size(); ++i) {
+    AddRelative(piece_modules[i], piece_modules[i]);
+    for (size_t j = i+1; j < piece_modules.size(); ++j) {
+      AddRelative(piece_modules[i], piece_modules[j]);
+      AddRelative(piece_modules[j], piece_modules[i]);
+    }
+  }
+}
+
+template<Color color, Color our_color>
+inline void AddPieceType(const Board &board, const PieceType pt,
+                         std::vector<NetPieceModule> &piece_modules) {
+  constexpr size_t c_offset = color == our_color ? 0 : 6;
   const size_t offset = 64 * pt + c_offset;
   
   for (BitBoard pieces = board.get_piece_bitboard(color, pt); pieces; bitops::PopLSB(pieces)) {
@@ -61,45 +105,30 @@ inline void AddPieceType(T &score, const Board &board, const PieceType pt) {
     if (our_color == kBlack) {
         piece_square = GetMirroredSquare(piece_square);
     }
-    //score += net_input_weights[piece_square + offset];
-    AddFeature<T>(score, piece_square + offset);
+    
+    // piece_modules.emplace_back(pt + c_offset, piece_square);
+    size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
+    //NetPieceModule npm(pt + c_offset, piece_square, bias_layer_one[bias_idx]);
+    NetPieceModule npm;
+    npm.pt = pt + c_offset;
+    npm.sq = piece_square;
+    npm.features = bias_layer_one[bias_idx];
+    //std::cout << "F(" << pt << "," << piece_square << "):";
+    //for (size_t i = 0; i < block_size; ++i) {
+    //  npm.features[i] = bias_layer_one[bias_idx][i];
+      //std::cout << " " << npm.features[i];
+    //}
+    //std::cout << std::endl;
+    piece_modules.push_back(npm);
   }
 }
 
-template<typename T, Color color, Color our_color>
-inline void ScorePieces(T &score, const Board &board) {
+template<Color our_color>
+inline void AddAllPieceTypes(const Board &board,
+                         std::vector<NetPieceModule> &piece_modules) {
   for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      AddPieceType<T, color, our_color>(score, board, piece_type);
-  }
-}
-
-template<typename T, Color color>
-inline void ScoreCastlingRights(T &score, const Board &board) {
-  constexpr int offset_us = color == kWhite ? 0 : 2;
-  constexpr int offset_them = color == kWhite? 2 : 0;
-  constexpr size_t base_castling_right_idx = 12 * 64;
-  
-  const CastlingRights castling_rights = board.get_castling_rights();
-  if (castling_rights & (kWLCastle << offset_us)) {
-      AddFeature<T>(score, base_castling_right_idx + 0);
-  }
-  if (castling_rights & (kWSCastle << offset_us)) {
-      AddFeature<T>(score, base_castling_right_idx + 1);
-  }
-    if (castling_rights & (kWLCastle << offset_them)) {
-      AddFeature<T>(score, base_castling_right_idx + 2);
-  }
-  if (castling_rights & (kWSCastle << offset_them)) {
-      AddFeature<T>(score, base_castling_right_idx + 3);
-  }
-}
-
-template<typename T>
-inline void OppositeColoredBishops(T &score, const Board &board) {
-  constexpr size_t ocb_idx = 12 * 64 + 4;
-  if (board.get_piece_count(kWhite, kBishop) == 1 && board.get_piece_count(kBlack, kBishop) == 1
-      && bitops::PopCount(board.get_piecetype_bitboard(kBishop) & bitops::light_squares) == 1) {
-    AddFeature<T>(score, ocb_idx);
+      AddPieceType<kWhite, our_color>(board, piece_type, piece_modules);
+      AddPieceType<kBlack, our_color>(board, piece_type, piece_modules);
   }
 }
 
@@ -107,21 +136,58 @@ inline void OppositeColoredBishops(T &score, const Board &board) {
 
 namespace net_evaluation {
 
-template<typename T, Color our_color>
-T ScoreBoard(const Board &board) {
-  T score = init<T>();
-
-  // Piece evaluations
-  ScorePieces<T, kWhite, our_color>(score, board);
-  ScorePieces<T, kBlack, our_color>(score, board);
+Score NetForward(std::vector<NetPieceModule> &piece_modules) {
+  std::vector<NetLayerType> output_helpers(3, 0);
+  for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
+    //std::cout << "M(" << piece_modules[piece_idx].pt << "," << piece_modules[piece_idx].sq << "):";
+    //for (size_t i = 0; i < block_size; ++i) {
+    //  std::cout << " " << piece_modules[piece_idx].features[i];
+    //}
+    //std::cout << std::endl;
+    piece_modules[piece_idx].features.clipped_relu(8);
+    size_t idx = 3 * (piece_modules[piece_idx].pt * 8 * 8 + piece_modules[piece_idx].sq);
+    assert(idx + 2 < output_weights.size());
+    for (size_t output_idx = 0; output_idx < 3; output_idx++) {
+      //output_helpers[output_idx].print();
+      output_helpers[output_idx].FMA(output_weights[idx + output_idx], piece_modules[piece_idx].features);
+      //for (size_t f = 0; f < block_size; ++f) {
+      //  output_helpers[output_idx][f] += output_weights[idx + output_idx][f] * piece_modules[piece_idx].features[f];
+        //if (output_idx == 0 && piece_idx == 0) {
+        //  std::cout << "s" << 0 << ":" << output_helpers[0][0] << " " << idx << " " << output_weights[idx][0] << " " << piece_modules[piece_idx].features[0] << std::endl;
+        //}
+      //}
+    }
+    //std::cout << "t" << 0 << ":" << output_helpers[0][0] << " " << idx << " " << output_weights[idx][0] << " " << piece_modules[piece_idx].features[0] << std::endl;
+  }
+  for (size_t i = 0; i < block_size; ++i) {
+    //std::cout << "f" << i << ":" << piece_modules[31].features[i] << std::endl;
+  }
   
-  ScoreCastlingRights<T, our_color>(score, board);
-  OppositeColoredBishops<T>(score, board);
-
-  return score;
+  float_t sum = 0;
+  std::array<float_t, 3> outcomes;
+  for (size_t i = 0; i < 3; ++i) {
+    //outcomes[i] = output_helpers[i].sum() + output_bias[i];
+    outcomes[i] = output_bias[i];
+    for (size_t j = 0; j < block_size; ++j) {
+      //std::cout << "Tmp Outcome " << i << ":" << outcomes[i] << std::endl;
+      outcomes[i] += output_helpers[i][j];
+    }
+    //std::cout << "Outcome " << i << ":" << outcomes[i] << std::endl;
+    outcomes[i] = std::exp(outcomes[i]);
+    sum += outcomes[i];
+  }
+  
+  for (size_t i = 0; i < 3; ++i) {
+    outcomes[i] /= sum;
+    //std::cout << "res " << i << ":" << outcomes[i] << std::endl;
+  }
+  
+  float win = outcomes[0];
+  float win_draw = outcomes[0] + outcomes[1];
+  return WDLScore::from_pct_valid(win, win_draw);
 }
 
-Score NetForward(NetLayerType &layer_one_) {
+/*Score NetForward(NetLayerType &layer_one_) {
   layer_one_ += bias_layer_one;
   layer_one_.clipped_relu(8);
   
@@ -155,25 +221,27 @@ Score NetForward(NetLayerType &layer_one_) {
 
   //float wpct = sigmoid(win) * c + sigmoid(win_draw) * (1 - c);
   //return wpct_to_score(wpct);
-}
+}*/
 
 Score ScoreBoard(const Board &board) {
-
-  NetLayerType layer_one = init<NetLayerType>();
+  std::vector<NetPieceModule> piece_modules;
   if (board.get_turn() == kWhite) {
-    layer_one = ScoreBoard<NetLayerType, kWhite>(board);
+    AddAllPieceTypes<kWhite>(board, piece_modules);
   }
   else {
-    layer_one = ScoreBoard<NetLayerType, kBlack>(board);
+    AddAllPieceTypes<kBlack>(board, piece_modules);
   }
+  EvalPieceRelations(piece_modules);
   if (contempt[board.get_turn()] != 0) {
-    return AddContempt(NetForward(layer_one), board.get_turn());
+    return AddContempt(NetForward(piece_modules), board.get_turn());
+    //return AddContempt(NetForward(layer_one), board.get_turn());
   }
-  return NetForward(layer_one);
+  return NetForward(piece_modules);
+  //return NetForward(layer_one);
 }
 
 std::vector<NetLayerType> load_weights(size_t in_size, size_t &offset) {
-  std::vector<NetLayerType> weights = std::vector<NetLayerType>(in_size);
+  std::vector<NetLayerType> weights = std::vector<NetLayerType>(in_size, 0);
   for (size_t i = 0; i < in_size; ++i) {
     for (size_t k = 0; k < block_size; ++k) {
       weights[i][k] = gNetWeightsData[offset + i + in_size * k];
@@ -183,7 +251,99 @@ std::vector<NetLayerType> load_weights(size_t in_size, size_t &offset) {
   return weights;
 }
 
+using IP = std::pair<size_t, size_t>;
+
+size_t wrapped_idx(const std::list<IP> &values) {
+  size_t idx = 0;
+  for (const IP &ip : values) {
+    idx = idx * ip.second + ip.first;
+  }
+  return idx;
+}
+
+void init_conv_weights(size_t &offset) {
+  assert(offset == 0);
+  for (size_t piece_in = 0; piece_in < 12; ++piece_in) {
+    for (size_t piece_out = 0; piece_out < 12; ++piece_out) {
+      for (size_t h = 0; h < 15; ++h) {
+        for (size_t w = 0; w < 15; ++w) {
+          size_t idx = wrapped_idx({IP(piece_in,12), IP(piece_out,12),
+                                    IP(h,15), IP(w,15)});
+          assert(idx < net_input_weights.size());
+          // size_t idx = (((((piece_in * 12) + piece_out) * 15) + h) * 15) + w;
+          //idx *= block_size;
+          for (size_t d = 0; d < block_size; ++d) {
+            size_t idx2 = wrapped_idx({IP(piece_out,12), IP(d,block_size),
+                                       IP(piece_in,12), IP(h,15), IP(w,15)});
+            //size_t idx2 = (((piece_out * block_size) + d) * 12) + piece_in;
+            //idx2 = (idx2 * 15 + h) * 15 + w;
+            assert(idx2 < net_input_weights.size() * block_size);
+            net_input_weights[idx][d] = gNetWeightsData[idx2];
+          }
+        }
+      }
+    }
+  }
+  offset += 12 * 12 * 15 * 15 * block_size;
+}
+
+void init_conv_bias_weights(size_t &offset) {
+  assert(offset > 0);
+  for (size_t pt = 0; pt < 12; ++pt) {
+    for (size_t h = 0; h < 8; ++h) {
+      for (size_t w = 0; w < 8; ++w) {
+        size_t idx = wrapped_idx({IP(pt,12), IP(h,8), IP(w,8)});
+        assert(idx < bias_layer_one.size());
+        for (size_t d = 0; d < block_size; ++d) {
+          size_t idx2 = wrapped_idx({IP(pt,12), IP(d, block_size), IP(h, 8), IP(w, 8)});
+          assert(idx2 < bias_layer_one.size() * block_size);
+          bias_layer_one[idx][d] = gNetWeightsData[idx2 + offset];
+        }
+      }
+    }
+  }
+  offset += 12 * 8 * 8 * block_size;
+}
+
+void init_out_weights(size_t &offset) {
+  assert(offset > 0);
+  for (size_t pt = 0; pt < 12; ++pt) {
+    for (size_t h = 0; h < 8; ++h) {
+      for (size_t w = 0; w < 8; ++w) {
+        for (size_t res = 0; res < 3; ++res) {
+          size_t idx = wrapped_idx({IP(pt,12), IP(h,8), IP(w,8), IP(res,3)});
+          assert(idx < output_weights.size());
+          for (size_t d = 0; d < block_size; ++d) {
+            size_t idx2 = wrapped_idx({IP(res,3), IP(pt,12), IP(d, block_size),
+                                       IP(h, 8), IP(w, 8)});
+            assert(idx2 < output_weights.size() * block_size);
+            output_weights[idx][d] = gNetWeightsData[idx2 + offset];
+          }
+        }
+      }
+    }
+  }
+  offset += 12 * 8 * 8 * 3 * block_size;
+}
+
+void init_out_bias(size_t &offset) {
+  output_bias[0] = gNetWeightsData[0 + offset];
+  output_bias[1] = gNetWeightsData[1 + offset];
+  output_bias[2] = gNetWeightsData[2 + offset];
+  //std::cout << "output bias 0" << output_bias[0] << std::endl;
+  offset += 3;
+}
+
 void init_weights() {
+  init_square_offset();
+  size_t offset = 0;
+  init_conv_weights(offset);
+  init_conv_bias_weights(offset);
+  init_out_weights(offset);
+  init_out_bias(offset);
+}
+
+/*void init_weights_old() {
   // Init regular net weights
   
   size_t offset = 0;
@@ -195,7 +355,7 @@ void init_weights() {
   for (size_t k = 0; k < block_size; ++k) {
     bias_layer_one[k] = gNetWeightsData[offset+k];
   }
-  offset += block_size;
+  offset += block_size;*/
   
   /*const size_t group_size = block_size / reduced_block_size;
   for (size_t k = 0; k < block_size; ++k) {
@@ -213,7 +373,7 @@ void init_weights() {
   
   
   // Output Weights
-  output_weights = std::vector<ReducedNetLayerType>(3);
+  /*output_weights = std::vector<ReducedNetLayerType>(3);
   for (size_t i = 0; i < reduced_block_size; ++i) {
     //size_t j = i * block_size;
     for (size_t k = 0; k < 3; ++k) {
@@ -227,14 +387,7 @@ void init_weights() {
     output_bias[k] = gNetWeightsData[offset+k];
   }
   
-}
-
-std::vector<int32_t> GetNetInputs(const Board &board) {
-  if (board.get_turn() == kWhite) {
-    return ScoreBoard<std::vector<int32_t>, kWhite>(board);
-  }
-  return ScoreBoard<std::vector<int32_t>, kBlack>(board);
-}
+}*/
 
 void SetContempt(Color color, int32_t value) {
   contempt[color] = value;
