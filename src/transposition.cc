@@ -132,7 +132,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   size_t idx = HashFunction(hash);
   size_t index = GetIdxToReplace(hash, idx);
 
-  assert(index < table.size());
+  assert(index < _table.size());
   assert(score.is_valid());
 
   HashType best_move_cast = best_move;

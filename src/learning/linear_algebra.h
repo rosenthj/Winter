@@ -334,6 +334,14 @@ struct Vec<float, length> {
     return length;
   }
   
+  float sum() const {
+    float t = 0;
+    for (size_t i = 0; i < length; ++i) {
+      t += values[i];
+    }
+    return t;
+  }
+  
   inline Vec<float, length>& operator+=(const Vec<float, length> &rhs) {
     #pragma GCC unroll 32
     for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
