@@ -86,7 +86,7 @@ void AddRelative(const NetPieceModule &p_src, NetPieceModule &p_des) {
 
 void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
   for (size_t i = 0; i < piece_modules.size(); ++i) {
-    AddRelative(piece_modules[i], piece_modules[i]);
+    // AddRelative(piece_modules[i], piece_modules[i]);
     for (size_t j = i+1; j < piece_modules.size(); ++j) {
       AddRelative(piece_modules[i], piece_modules[j]);
       AddRelative(piece_modules[j], piece_modules[i]);
@@ -294,10 +294,13 @@ void init_conv_bias_weights(size_t &offset) {
       for (size_t w = 0; w < 8; ++w) {
         size_t idx = wrapped_idx({IP(pt,12), IP(h,8), IP(w,8)});
         assert(idx < bias_layer_one.size());
+        size_t idx_c = wrapped_idx({IP(pt,12), IP(pt,12),
+                                    IP(7,15), IP(7,15)});
         for (size_t d = 0; d < block_size; ++d) {
           size_t idx2 = wrapped_idx({IP(pt,12), IP(d, block_size), IP(h, 8), IP(w, 8)});
           assert(idx2 < bias_layer_one.size() * block_size);
           bias_layer_one[idx][d] = gNetWeightsData[idx2 + offset];
+          bias_layer_one[idx][d] += net_input_weights[idx_c][d];
         }
       }
     }
