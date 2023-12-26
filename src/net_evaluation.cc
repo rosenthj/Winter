@@ -27,14 +27,14 @@ std::vector<NetLayerType> bias_layer_one(12 * 8 * 8, 0);
 std::vector<NetLayerType> output_weights(3 * 12 * 8 * 8, 0);
 std::array<float_t, 3> output_bias;
 
-Array2d<int32_t, 64, 64> square_offset;
+Array2d<int16_t, 64, 64> square_offset;
 
 void init_square_offset() {
   for (size_t src = 0; src < 64; ++src) {
     for (size_t des = 0; des < 64; ++des) {
       int32_t x = 7 + GetSquareX(src) - GetSquareX(des);
       int32_t y = 7 + GetSquareY(src) - GetSquareY(des);
-      square_offset[src][des] = y * 15 + x;
+      square_offset[des][src] = y * 15 + x;
     }
   }
 }
@@ -47,14 +47,16 @@ struct NetPieceModule {
 };
 
 void AddRelative(const NetPieceModule &p_src, NetPieceModule &p_des) {
-  size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_src.sq][p_des.sq];
+  size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_des.sq][p_src.sq];
   p_des.features += net_input_weights[idx];
 }
 
 void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
   for (size_t i = 0; i < piece_modules.size(); ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      AddRelative(piece_modules[j], piece_modules[i]);
+    }
     for (size_t j = i+1; j < piece_modules.size(); ++j) {
-      AddRelative(piece_modules[i], piece_modules[j]);
       AddRelative(piece_modules[j], piece_modules[i]);
     }
   }
@@ -83,8 +85,8 @@ template<Color our_color>
 inline void AddAllPieceTypes(const Board &board,
                          std::vector<NetPieceModule> &piece_modules) {
   for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      AddPieceType<kWhite, our_color>(board, piece_type, piece_modules);
-      AddPieceType<kBlack, our_color>(board, piece_type, piece_modules);
+    AddPieceType<kWhite, our_color>(board, piece_type, piece_modules);
+    AddPieceType<kBlack, our_color>(board, piece_type, piece_modules);
   }
 }
 
