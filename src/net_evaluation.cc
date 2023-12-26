@@ -7,12 +7,12 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "temp_model.bin");
+INCBIN(float_t, NetWeights, "relnet16.bin");
 //INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
 //INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
 // NN types
-constexpr size_t block_size = 8;
+constexpr size_t block_size = 16;
 using NetLayerType = Vec<float_t, block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
