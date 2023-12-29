@@ -7,13 +7,16 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "relnet16.bin");
+INCBIN(float_t, NetWeights, "relnet8h64.bin");
 //INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
 //INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
 // NN types
-constexpr size_t block_size = 16;
+constexpr size_t block_size = 8;
 using NetLayerType = Vec<float_t, block_size>;
+
+constexpr size_t full_block_size = 64;
+using FullLayerType = Vec<float_t, full_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -26,6 +29,11 @@ std::vector<NetLayerType> bias_layer_one(12 * 8 * 8, 0);
 
 std::vector<NetLayerType> output_weights(3 * 12 * 8 * 8, 0);
 std::array<float_t, 3> output_bias;
+
+std::vector<FullLayerType> full_layer_weights(12 * 64, 0);
+FullLayerType full_layer_bias(0);
+
+std::vector<FullLayerType> full_output_weights(3, 0);
 
 Array2d<int32_t, 64, 64> square_offset;
 
@@ -62,7 +70,8 @@ void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
 
 template<Color color, Color our_color>
 inline void AddPieceType(const Board &board, const PieceType pt,
-                         std::vector<NetPieceModule> &piece_modules) {
+                         std::vector<NetPieceModule> &piece_modules,
+                         FullLayerType &full_layer) {
   constexpr size_t c_offset = color == our_color ? 0 : 6;
   
   for (BitBoard pieces = board.get_piece_bitboard(color, pt); pieces; bitops::PopLSB(pieces)) {
@@ -76,15 +85,18 @@ inline void AddPieceType(const Board &board, const PieceType pt,
     npm.sq = piece_square;
     npm.features = bias_layer_one[bias_idx];
     piece_modules.push_back(npm);
+    
+    full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
   }
 }
 
 template<Color our_color>
 inline void AddAllPieceTypes(const Board &board,
-                         std::vector<NetPieceModule> &piece_modules) {
+                         std::vector<NetPieceModule> &piece_modules,
+                         FullLayerType &full_layer) {
   for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      AddPieceType<kWhite, our_color>(board, piece_type, piece_modules);
-      AddPieceType<kBlack, our_color>(board, piece_type, piece_modules);
+      AddPieceType<kWhite, our_color>(board, piece_type, piece_modules, full_layer);
+      AddPieceType<kBlack, our_color>(board, piece_type, piece_modules, full_layer);
   }
 }
 
@@ -92,7 +104,7 @@ inline void AddAllPieceTypes(const Board &board,
 
 namespace net_evaluation {
 
-Score NetForward(std::vector<NetPieceModule> &piece_modules) {
+Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &full_layer) {
   std::vector<NetLayerType> output_helpers(3, 0);
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
     piece_modules[piece_idx].features.clipped_relu(8);
@@ -103,10 +115,13 @@ Score NetForward(std::vector<NetPieceModule> &piece_modules) {
     }
   }
   
+  full_layer.clipped_relu(8);
+  
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
   for (size_t i = 0; i < 3; ++i) {
-    outcomes[i] = output_helpers[i].sum() + output_bias[i];
+    outcomes[i] = output_helpers[i].sum() + output_bias[i]
+                  + full_layer.dot(full_output_weights[i]);
     outcomes[i] = std::exp(outcomes[i]);
     sum += outcomes[i];
   }
@@ -122,17 +137,18 @@ Score NetForward(std::vector<NetPieceModule> &piece_modules) {
 
 Score ScoreBoard(const Board &board) {
   std::vector<NetPieceModule> piece_modules;
+  FullLayerType full_layer = full_layer_bias;
   if (board.get_turn() == kWhite) {
-    AddAllPieceTypes<kWhite>(board, piece_modules);
+    AddAllPieceTypes<kWhite>(board, piece_modules, full_layer);
   }
   else {
-    AddAllPieceTypes<kBlack>(board, piece_modules);
+    AddAllPieceTypes<kBlack>(board, piece_modules, full_layer);
   }
   EvalPieceRelations(piece_modules);
   if (contempt[board.get_turn()] != 0) {
-    return AddContempt(NetForward(piece_modules), board.get_turn());
+    return AddContempt(NetForward(piece_modules, full_layer), board.get_turn());
   }
-  return NetForward(piece_modules);
+  return NetForward(piece_modules, full_layer);
 }
 
 using IP = std::pair<size_t, size_t>;
@@ -220,6 +236,34 @@ void init_out_bias(size_t &offset) {
   offset += 3;
 }
 
+void init_full_layer_weights(size_t &offset) {
+  for (size_t pt = 0; pt < 12; ++pt) {
+    for (size_t sq = 0; sq < 64; ++sq) {
+      size_t idx = wrapped_idx({IP(pt,12), IP(sq,64)});
+      assert(idx < full_layer_weights.size());
+      for (size_t d = 0; d < full_block_size; ++d) {
+        size_t idx2 = wrapped_idx({IP(d, full_block_size), IP(pt,12), IP(sq,64)});
+        full_layer_weights[idx][d] = gNetWeightsData[idx2 + offset];
+      }
+    }
+  }
+  offset += 12 * 64 * full_block_size;
+  for (size_t d = 0; d < full_block_size; ++d) {
+    full_layer_bias[d] = gNetWeightsData[d + offset];
+  }
+  offset += full_block_size;
+}
+
+void init_full_output_weights(size_t &offset) {
+  for (size_t res = 0; res < 3; ++res) {
+    for (size_t d = 0; d < full_block_size; ++d) {
+      size_t idx2 = wrapped_idx({IP(res, 3), IP(d, full_block_size)});
+      full_output_weights[res][d] = gNetWeightsData[idx2 + offset];
+    }
+  }
+  offset += 3 * full_block_size;
+}
+
 void init_weights() {
   init_square_offset();
   size_t offset = 0;
@@ -227,6 +271,8 @@ void init_weights() {
   init_conv_bias_weights(offset);
   init_out_weights(offset);
   init_out_bias(offset);
+  init_full_layer_weights(offset);
+  init_full_output_weights(offset);
 }
 
 void SetContempt(Color color, int32_t value) {
