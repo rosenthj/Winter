@@ -7,7 +7,7 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "rnet8H64b.bin");
+INCBIN(float_t, NetWeights, "rnet8H64c.bin");
 //INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
 //INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
