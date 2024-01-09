@@ -137,6 +137,7 @@ Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &full
 
 Score ScoreBoard(const Board &board) {
   std::vector<NetPieceModule> piece_modules;
+  piece_modules.reserve(32);
   FullLayerType full_layer = full_layer_bias;
   if (board.get_turn() == kWhite) {
     AddAllPieceTypes<kWhite>(board, piece_modules, full_layer);
