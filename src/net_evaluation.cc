@@ -7,7 +7,7 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "rnet8H64c.bin");
+INCBIN(float_t, NetWeights, "rnet8H64e.bin");
 //INCBIN(float_t, NetWeights, "h256rS07_ep4.bin");
 //INCBIN(float_t, NetWeights, "h224rS02_ep4.bin");
 
@@ -137,6 +137,7 @@ Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &full
 
 Score ScoreBoard(const Board &board) {
   std::vector<NetPieceModule> piece_modules;
+  piece_modules.reserve(32);
   FullLayerType full_layer = full_layer_bias;
   if (board.get_turn() == kWhite) {
     AddAllPieceTypes<kWhite>(board, piece_modules, full_layer);
