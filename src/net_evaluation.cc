@@ -7,7 +7,7 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "rnet16H64c.bin");
+INCBIN(float_t, NetWeights, "rnet16H64d.bin");
 
 // NN types
 constexpr size_t block_size = 16;
