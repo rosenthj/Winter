@@ -131,9 +131,9 @@ Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 4;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 36;
-constexpr NScore kSNMPMargin = 700;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(500);
+constexpr NScore kInitialAspirationDelta = 88;
+constexpr NScore kSNMPMargin = 790;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(560);
 const Depth kLMPBaseNW = 3, kLMPBasePV = 5;
 const int32_t kLMPScalar = 12, kLMPQuad = 4;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
