@@ -9,7 +9,7 @@
 
 //INCBIN(float_t, NetWeights, "rnet16H64f.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96c.bin");
-INCBIN(float_t, NetWeights, "rnet8H64h.bin");
+INCBIN(float_t, NetWeights, "rnet8H64i.bin");
 
 // NN types
 constexpr size_t block_size = 8;
