@@ -131,21 +131,21 @@ Depth kLMPBaseNW = 4, kLMPBasePV = 5;
 int32_t kLMPScalar = 12, kLMPQuad = 5;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 59;
-constexpr NScore kSNMPMargin = 674;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(594);
+constexpr NScore kInitialAspirationDelta = 68;
+constexpr NScore kSNMPMargin = 619;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(574);
 const Depth kLMPBaseNW = 4, kLMPBasePV = 5;
-const int32_t kLMPScalar = 12, kLMPQuad = 5;
+const int32_t kLMPScalar = 11, kLMPQuad = 5;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
 bool uci_show_wdl = true;
 
 // Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
-  0.11, 0.85,
-  0.34, 0.51,
-  0.75, 0.75,
-  0.44, 0.51 * 0.75
+  0.03, 0.83,
+  0.23, 0.52,
+  0.63, 0.77,
+  0.40, 0.52 * 0.77
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
