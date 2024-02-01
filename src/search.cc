@@ -124,28 +124,28 @@ Vec<NScore, 4> init_futility_margins(NScore s) {
 }
 
 #ifdef TUNE
-NScore kInitialAspirationDelta = 59;
-NScore kSNMPMargin = 674;
-Vec<NScore, 4> kFutileMargin = init_futility_margins(594);
+NScore kInitialAspirationDelta = 66;
+NScore kSNMPMargin = 561;
+Vec<NScore, 4> kFutileMargin = init_futility_margins(515);
 Depth kLMPBaseNW = 4, kLMPBasePV = 5;
-int32_t kLMPScalar = 12, kLMPQuad = 5;
+int32_t kLMPScalar = 11, kLMPQuad = 5;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 59;
-constexpr NScore kSNMPMargin = 674;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(594);
+constexpr NScore kInitialAspirationDelta = 66;
+constexpr NScore kSNMPMargin = 561;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(515);
 const Depth kLMPBaseNW = 4, kLMPBasePV = 5;
-const int32_t kLMPScalar = 12, kLMPQuad = 5;
+const int32_t kLMPScalar = 11, kLMPQuad = 5;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
 bool uci_show_wdl = true;
 
 // Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
-  0.11, 0.85,
-  0.34, 0.51,
-  0.75, 0.75,
-  0.44, 0.51 * 0.75
+  0.00, 0.79,
+  0.31, 0.55,
+  0.76, 0.81,
+  0.26, 0.55 * 0.81
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
