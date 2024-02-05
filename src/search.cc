@@ -115,37 +115,51 @@ const Array2d<Depth, 2, 6> init_lmp_breakpoints(Depth base_nw, Depth base_pv,
   return lmp;
 }
 
-Vec<NScore, 4> init_futility_margins(NScore s) {
+Vec<NScore, 4> init_futility_margins(NScore scaling, NScore offset) {
   Vec<NScore, 4> kFutilityMargins(0);
   for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
-    kFutilityMargins[i] = s * i;
+    kFutilityMargins[i] = offset + scaling * i;
   }
   return kFutilityMargins;
 }
 
 #ifdef TUNE
-NScore kInitialAspirationDelta = 66;
-NScore kSNMPMargin = 561;
-Vec<NScore, 4> kFutileMargin = init_futility_margins(515);
-Depth kLMPBaseNW = 4, kLMPBasePV = 5;
-int32_t kLMPScalar = 11, kLMPQuad = 5;
+NScore kInitialAspirationDelta = 77;
+NScore kSNMPScaling = 574;
+NScore kSNMPOffset = 0;
+NScore kSNMPImproving = 60;
+NScore kFutilityScaling = 553;
+NScore kFutilityOffset = 0;
+NScore kFutilityImproving = 100;
+Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
+                                                     kFutilityOffset);
+Depth kLMPBaseNW = 4, kLMPBasePV = 6;
+int32_t kLMPScalar = 10, kLMPQuad = 5;
+Depth kSingularExtensionDepth = 9;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 66;
-constexpr NScore kSNMPMargin = 561;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(515);
-const Depth kLMPBaseNW = 4, kLMPBasePV = 5;
-const int32_t kLMPScalar = 11, kLMPQuad = 5;
+constexpr NScore kInitialAspirationDelta = 77;
+constexpr NScore kSNMPScaling = 574;
+constexpr NScore kSNMPOffset = 0;
+constexpr NScore kSNMPImproving = 60;
+constexpr NScore kFutilityScaling = 553;
+constexpr NScore kFutilityOffset = 0;
+constexpr NScore kFutilityImproving = 100;
+const Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
+                                                           kFutilityOffset);
+const Depth kLMPBaseNW = 4, kLMPBasePV = 6;
+const int32_t kLMPScalar = 10, kLMPQuad = 5;
+const Depth kSingularExtensionDepth = 9;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
 bool uci_show_wdl = true;
 
 // Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
-  0.00, 0.79,
-  0.31, 0.55,
-  0.76, 0.81,
-  0.26, 0.55 * 0.81
+  -0.02, 0.82,
+  0.23, 0.64,
+  0.36, 0.82,
+  0.27, 0.64 * 0.82
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
@@ -691,7 +705,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 }
 
 inline NScore get_futility_margin(Depth depth, bool improving) {
-  return kFutileMargin[depth] + 100 * depth * improving;
+  return kFutileMargin[depth] + kFutilityImproving * depth * improving;
 }
 
 #ifdef SAMPLE_SEARCH
@@ -844,7 +858,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && depth <= 5) {
-      NScore margin = (kSNMPMargin - 60 * !strict_worsening) * depth;
+      NScore margin = kSNMPOffset + (kSNMPScaling - kSNMPImproving * !strict_worsening) * depth;
       if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
         return beta;
@@ -918,9 +932,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     Depth e = 0;// Extensions
     if (i == 0 
-        && depth >= settings::kSingularExtensionDepth-2
+        && depth >= kSingularExtensionDepth-2
         && valid_entry
-        && entry.depth >= std::max(depth, settings::kSingularExtensionDepth) - 3
+        && entry.depth >= std::max(depth, kSingularExtensionDepth) - 3
         && !(node_type == NodeType::kPV && moves.size() == 1)
         && entry.get_bound() != kUpperBound
         && entry.get_score(t.board).is_static_eval()
@@ -1912,12 +1926,30 @@ void SetInitialAspirationDelta(int32_t delta) {
   kInitialAspirationDelta = delta;
 }
 
-void SetFutilityMargin(int32_t score) {
-  kFutileMargin = init_futility_margins(score);
+void SetFutilityScaling(int32_t scaling) {
+  kFutilityScaling = scaling;
+  kFutileMargin = init_futility_margins(kFutilityScaling, kFutilityOffset);
 }
 
-void SetSNMPMargin(int32_t score) {
-  kSNMPMargin = score;
+void SetFutilityOffset(int32_t offset) {
+  kFutilityOffset = offset;
+  kFutileMargin = init_futility_margins(kFutilityScaling, kFutilityOffset);
+}
+
+void SetFutilityImproving(int32_t offset) {
+  kFutilityImproving = offset;
+}
+
+void SetSNMPScaling(int32_t score) {
+  kSNMPScaling = score;
+}
+
+void SetSNMPOffset(int32_t score) {
+  kSNMPOffset = score;
+}
+
+void SetSNMPImproving(int32_t score) {
+  kSNMPImproving = score;
 }
 
 void SetLMROffset(int32_t value) {
@@ -1979,6 +2011,10 @@ void SetLMPScalar(int32_t value) {
 void SetLMPQuadratic(int32_t value) {
   kLMPQuad = value;
   ResetLMP();
+}
+
+void SetSingularExtensionDepth(int32_t depth) {
+  kSingularExtensionDepth = depth;
 }
 
 #endif

@@ -71,8 +71,12 @@ void SetUCIShowWDL(bool show_wdl);
 
 #ifdef TUNE
 void SetInitialAspirationDelta(int32_t delta);
-void SetFutilityMargin(int32_t score);
-void SetSNMPMargin(int32_t score);
+void SetSNMPScaling(int32_t score);
+void SetSNMPOffset(int32_t score);
+void SetSNMPImproving(int32_t score);
+void SetFutilityScaling(int32_t score);
+void SetFutilityOffset(int32_t score);
+void SetFutilityImproving(int32_t score);
 void SetLMROffset(int32_t value);
 void SetLMRMultiplier(int32_t value);
 void SetLMROffsetPV(int32_t value);
@@ -86,6 +90,7 @@ void SetLMPBasePV(int32_t value);
 void SetLMPScalar(int32_t value);
 void SetLMPQuadratic(int32_t value);
 void SetLMPDepth(int32_t value);
+void SetSingularExtensionDepth(int32_t depth);
 #endif
 
 }
