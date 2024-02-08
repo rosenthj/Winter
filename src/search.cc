@@ -138,17 +138,17 @@ int32_t kLMPScalar = 10, kLMPQuad = 5;
 Depth kSingularExtensionDepth = 9;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
-constexpr NScore kInitialAspirationDelta = 77;
-constexpr NScore kSNMPScaling = 574;
-constexpr NScore kSNMPOffset = 0;
-constexpr NScore kSNMPImproving = 60;
-constexpr NScore kFutilityScaling = 553;
-constexpr NScore kFutilityOffset = 0;
-constexpr NScore kFutilityImproving = 100;
+constexpr NScore kInitialAspirationDelta = 72;
+constexpr NScore kSNMPScaling = 631;
+constexpr NScore kSNMPOffset = -46;
+constexpr NScore kSNMPImproving = 126;
+constexpr NScore kFutilityScaling = 546;
+constexpr NScore kFutilityOffset = -10;
+constexpr NScore kFutilityImproving = 62;
 const Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
                                                            kFutilityOffset);
 const Depth kLMPBaseNW = 4, kLMPBasePV = 6;
-const int32_t kLMPScalar = 10, kLMPQuad = 5;
+const int32_t kLMPScalar = 10, kLMPQuad = 6;
 const Depth kSingularExtensionDepth = 9;
 const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #endif
@@ -156,10 +156,10 @@ bool uci_show_wdl = true;
 
 // Parameters used to initialize the LMR reduction table
 LMRInitializer lmr_initializer {
-  -0.02, 0.82,
-  0.23, 0.64,
-  0.36, 0.82,
-  0.27, 0.64 * 0.82
+  -0.16, 0.86,
+  0.15, 0.51,
+  0.21, 0.86,
+  0.23, 0.51 * 0.86
 };
 Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
 
