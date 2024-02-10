@@ -124,17 +124,17 @@ Vec<NScore, 4> init_futility_margins(NScore scaling, NScore offset) {
 }
 
 #ifdef TUNE
-NScore kInitialAspirationDelta = 77;
-NScore kSNMPScaling = 574;
-NScore kSNMPOffset = 0;
-NScore kSNMPImproving = 60;
-NScore kFutilityScaling = 553;
-NScore kFutilityOffset = 0;
-NScore kFutilityImproving = 100;
+NScore kInitialAspirationDelta = 72;
+NScore kSNMPScaling = 631;
+NScore kSNMPOffset = -46;
+NScore kSNMPImproving = 126;
+NScore kFutilityScaling = 546;
+NScore kFutilityOffset = -10;
+NScore kFutilityImproving = 62;
 Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
                                                      kFutilityOffset);
 Depth kLMPBaseNW = 4, kLMPBasePV = 6;
-int32_t kLMPScalar = 10, kLMPQuad = 5;
+int32_t kLMPScalar = 10, kLMPQuad = 6;
 Depth kSingularExtensionDepth = 9;
 Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
 #else
