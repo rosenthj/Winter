@@ -9,13 +9,15 @@
 
 //INCBIN(float_t, NetWeights, "rnet16H64g.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
-INCBIN(float_t, NetWeights, "rnet8H64j.bin");
+//INCBIN(float_t, NetWeights, "rnet8H64j.bin");
+INCBIN(float_t, NetWeights, "rnet8HD64.bin");
+
 
 // NN types
-constexpr size_t block_size = 8;
+constexpr size_t block_size = 16;
 using NetLayerType = Vec<float_t, block_size>;
 
-constexpr size_t full_block_size = 64;
+constexpr size_t full_block_size = 128;
 using FullLayerType = Vec<float_t, full_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
@@ -173,7 +175,7 @@ void init_conv_weights(size_t &offset) {
           assert(idx < net_input_weights.size());
           // size_t idx = (((((piece_in * 12) + piece_out) * 15) + h) * 15) + w;
           //idx *= block_size;
-          for (size_t d = 0; d < block_size; ++d) {
+          for (size_t d = 0; d < block_size ; ++d) {
             size_t idx2 = wrapped_idx({IP(piece_out,12), IP(d,block_size),
                                        IP(piece_in,12), IP(h,15), IP(w,15)});
             //size_t idx2 = (((piece_out * block_size) + d) * 12) + piece_in;
@@ -186,6 +188,40 @@ void init_conv_weights(size_t &offset) {
     }
   }
   offset += 12 * 12 * 15 * 15 * block_size;
+}
+
+void init_mirrored_conv_weights(size_t &offset) {
+  assert(offset == 0);
+  for (size_t piece_in = 0; piece_in < 12; ++piece_in) {
+    for (size_t piece_out = 0; piece_out < 12; ++piece_out) {
+      size_t m_piece_in = (piece_in + 6) % 12;
+      size_t m_piece_out = (piece_out + 6) % 12;
+      for (size_t h = 0; h < 15; ++h) {
+        size_t m_h = 15 - h - 1;
+        for (size_t w = 0; w < 15; ++w) {
+          size_t idx = wrapped_idx({IP(piece_in,12), IP(piece_out,12),
+                                    IP(h,15), IP(w,15)});
+          assert(idx < net_input_weights.size());
+          // size_t idx = (((((piece_in * 12) + piece_out) * 15) + h) * 15) + w;
+          //idx *= block_size;
+          for (size_t d = 0; d < (block_size / 2); ++d) {
+            size_t idx2 = wrapped_idx({IP(piece_out,12), IP(d, (block_size / 2)),
+                                       IP(piece_in,12), IP(h,15), IP(w,15)});
+            size_t m_idx = wrapped_idx({IP(m_piece_out,12),
+                                        IP(d, (block_size / 2)),
+                                        IP(m_piece_in,12),
+                                        IP(m_h,15), IP(w,15)});
+            //size_t idx2 = (((piece_out * block_size) + d) * 12) + piece_in;
+            //idx2 = (idx2 * 15 + h) * 15 + w;
+            //assert(idx2 < net_input_weights.size() * block_size);
+            net_input_weights[idx][d] = gNetWeightsData[idx2];
+            net_input_weights[idx][d + (block_size/2)] = gNetWeightsData[m_idx];
+          }
+        }
+      }
+    }
+  }
+  offset += 12 * 12 * 15 * 15 * block_size / 2;
 }
 
 void init_conv_bias_weights(size_t &offset) {
@@ -209,6 +245,35 @@ void init_conv_bias_weights(size_t &offset) {
   offset += 12 * 8 * 8 * block_size;
 }
 
+void init_mirrored_conv_bias_weights(size_t &offset) {
+  assert(offset > 0);
+  for (size_t pt = 0; pt < 12; ++pt) {
+    size_t m_pt = (pt + 6) % 12;
+    for (size_t h = 0; h < 8; ++h) {
+      size_t m_h = 8 - h - 1;
+      for (size_t w = 0; w < 8; ++w) {
+        size_t idx = wrapped_idx({IP(pt,12), IP(h,8), IP(w,8)});
+        assert(idx < bias_layer_one.size());
+        size_t idx_c = wrapped_idx({IP(pt,12), IP(pt,12),
+                                    IP(7,15), IP(7,15)});
+        size_t m_idx_c = wrapped_idx({IP(m_pt,12), IP(m_pt,12),
+                                    IP(7,15), IP(7,15)});
+        for (size_t d = 0; d < block_size / 2; ++d) {
+          size_t idx2 = wrapped_idx({IP(pt,12), IP(d, block_size / 2), IP(h, 8), IP(w, 8)});
+          assert(idx2 < bias_layer_one.size() * block_size);
+          bias_layer_one[idx][d] = gNetWeightsData[idx2 + offset];
+          bias_layer_one[idx][d] += net_input_weights[idx_c][d];
+          idx2 = wrapped_idx({IP(m_pt,12), IP(d, block_size / 2), IP(m_h, 8), IP(w, 8)});
+          assert(idx2 < bias_layer_one.size() * block_size);
+          bias_layer_one[idx][d + (block_size/2)] = gNetWeightsData[idx2 + offset];
+          bias_layer_one[idx][d + (block_size/2)] += net_input_weights[m_idx_c][d];
+        }
+      }
+    }
+  }
+  offset += 12 * 8 * 8 * block_size / 2;
+}
+
 void init_out_weights(size_t &offset) {
   assert(offset > 0);
   for (size_t pt = 0; pt < 12; ++pt) {
@@ -220,6 +285,36 @@ void init_out_weights(size_t &offset) {
           for (size_t d = 0; d < block_size; ++d) {
             size_t idx2 = wrapped_idx({IP(res,3), IP(pt,12), IP(d, block_size),
                                        IP(h, 8), IP(w, 8)});
+            assert(idx2 < output_weights.size() * block_size);
+            output_weights[idx][d] = gNetWeightsData[idx2 + offset];
+          }
+        }
+      }
+    }
+  }
+  offset += 12 * 8 * 8 * 3 * block_size;
+}
+
+void init_mirrored_out_weights(size_t &offset) {
+  assert(offset > 0);
+  for (size_t pt = 0; pt < 12; ++pt) {
+    size_t m_pt = (pt + 6) % 12;
+    for (size_t h = 0; h < 8; ++h) {
+      size_t m_h = 8 - h - 1;
+      for (size_t w = 0; w < 8; ++w) {
+        for (size_t res = 0; res < 3; ++res) {
+          size_t idx = wrapped_idx({IP(pt,12), IP(h,8), IP(w,8), IP(res,3)});
+          assert(idx < output_weights.size());
+          for (size_t d = 0; d < block_size; ++d) {
+            size_t c = (2*d) / block_size;
+            size_t idx2 = wrapped_idx({IP(res,3), IP(c,2), IP(pt,12),
+                                       IP(d, block_size/2), IP(h, 8), IP(w, 8)});
+            if (c) {
+              idx2 = wrapped_idx({IP(res,3), IP(c,2), IP(m_pt,12),
+                                  IP(d-(block_size/2), block_size/2), IP(m_h, 8), IP(w, 8)});
+            //  idx2 = wrapped_idx({IP(res,3), IP(pt,12), IP(d, block_size),
+            //                           IP(m_h, 8), IP(w, 8)});
+            }
             assert(idx2 < output_weights.size() * block_size);
             output_weights[idx][d] = gNetWeightsData[idx2 + offset];
           }
@@ -255,6 +350,29 @@ void init_full_layer_weights(size_t &offset) {
   offset += full_block_size;
 }
 
+void init_mirrored_full_layer_weights(size_t &offset) {
+  for (size_t pt = 0; pt < 12; ++pt) {
+    size_t m_pt = (pt + 6) % 12;
+    for (size_t sq = 0; sq < 64; ++sq) {
+      size_t m_sq = GetMirroredSquare(sq);
+      size_t idx = wrapped_idx({IP(pt,12), IP(sq,64)});
+      assert(idx < full_layer_weights.size());
+      for (size_t d = 0; d < full_block_size/2; ++d) {
+        size_t idx2 = wrapped_idx({IP(d, full_block_size/2), IP(pt,12), IP(sq,64)});
+        full_layer_weights[idx][d] = gNetWeightsData[idx2 + offset];
+        idx2 = wrapped_idx({IP(d, full_block_size/2), IP(m_pt,12), IP(m_sq,64)});
+        full_layer_weights[idx][d + (full_block_size/2)] = gNetWeightsData[idx2 + offset];
+      }
+    }
+  }
+  offset += 12 * 64 * full_block_size / 2;
+  for (size_t d = 0; d < full_block_size/2; ++d) {
+    full_layer_bias[d] = gNetWeightsData[d + offset];
+    full_layer_bias[d+(full_block_size/2)] = gNetWeightsData[d + offset];
+  }
+  offset += full_block_size / 2;
+}
+
 void init_full_output_weights(size_t &offset) {
   for (size_t res = 0; res < 3; ++res) {
     for (size_t d = 0; d < full_block_size; ++d) {
@@ -268,11 +386,11 @@ void init_full_output_weights(size_t &offset) {
 void init_weights() {
   init_square_offset();
   size_t offset = 0;
-  init_conv_weights(offset);
-  init_conv_bias_weights(offset);
-  init_out_weights(offset);
+  init_mirrored_conv_weights(offset);
+  init_mirrored_conv_bias_weights(offset);
+  init_mirrored_out_weights(offset);
   init_out_bias(offset);
-  init_full_layer_weights(offset);
+  init_mirrored_full_layer_weights(offset);
   init_full_output_weights(offset);
 }
 
