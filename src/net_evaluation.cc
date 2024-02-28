@@ -10,13 +10,13 @@
 //INCBIN(float_t, NetWeights, "rnet16H64h.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
 //INCBIN(float_t, NetWeights, "rnet8H64k.bin");
-INCBIN(float_t, NetWeights, "rnet4HD32a.bin");
+INCBIN(float_t, NetWeights, "rnet8HD64c.bin");
 
 // NN types
-constexpr size_t block_size = 8;
+constexpr size_t block_size = 16;
 using NetLayerType = Vec<float_t, block_size>;
 
-constexpr size_t full_block_size = 64;
+constexpr size_t full_block_size = 128;
 using FullLayerType = Vec<float_t, full_block_size>;
 
 std::array<int32_t, 2> contempt = { 0, 0 };
