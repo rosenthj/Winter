@@ -9,7 +9,7 @@
 
 //INCBIN(float_t, NetWeights, "rnet16H64h.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
-INCBIN(float_t, NetWeights, "rnet8H64l.bin");
+INCBIN(float_t, NetWeights, "rnet8H64oC.bin");
 
 // NN types
 constexpr size_t block_size = 8;
@@ -30,7 +30,7 @@ std::vector<NetLayerType> bias_layer_one(12 * 8 * 8, 0);
 std::vector<NetLayerType> output_weights(3 * 12 * 8 * 8, 0);
 std::array<float_t, 3> output_bias;
 
-std::vector<FullLayerType> full_layer_weights(12 * 64, 0);
+std::vector<FullLayerType> full_layer_weights(12 * 64 + 4, 0);
 FullLayerType full_layer_bias(0);
 
 std::vector<FullLayerType> full_output_weights(3, 0);
@@ -44,6 +44,27 @@ void init_square_offset() {
       int32_t y = 7 + GetSquareY(src) - GetSquareY(des);
       square_offset[src][des] = y * 15 + x;
     }
+  }
+}
+
+template<Color color>
+inline void ScoreCastlingRights(FullLayerType &full_layer, const Board &board) {
+  constexpr int offset_us = color == kWhite ? 0 : 2;
+  constexpr int offset_them = color == kWhite? 2 : 0;
+  constexpr size_t base_castling_right_idx = 12 * 64;
+  
+  const CastlingRights castling_rights = board.get_castling_rights();
+  if (castling_rights & (kWLCastle << offset_us)) {
+    full_layer += full_layer_weights[base_castling_right_idx + 0];
+  }
+  if (castling_rights & (kWSCastle << offset_us)) {
+    full_layer += full_layer_weights[base_castling_right_idx + 1];
+  }
+  if (castling_rights & (kWLCastle << offset_them)) {
+    full_layer += full_layer_weights[base_castling_right_idx + 2];
+  }
+  if (castling_rights & (kWSCastle << offset_them)) {
+    full_layer += full_layer_weights[base_castling_right_idx + 3];
   }
 }
 
@@ -141,9 +162,11 @@ Score ScoreBoard(const Board &board) {
   FullLayerType full_layer = full_layer_bias;
   if (board.get_turn() == kWhite) {
     AddAllPieceTypes<kWhite>(board, piece_modules, full_layer);
+    ScoreCastlingRights<kWhite>(full_layer, board);
   }
   else {
     AddAllPieceTypes<kBlack>(board, piece_modules, full_layer);
+    ScoreCastlingRights<kBlack>(full_layer, board);
   }
   EvalPieceRelations(piece_modules);
   if (contempt[board.get_turn()] != 0) {
@@ -238,7 +261,7 @@ void init_out_bias(size_t &offset) {
 }
 
 void init_full_layer_weights(size_t &offset) {
-  for (size_t pt = 0; pt < 12; ++pt) {
+  /*for (size_t pt = 0; pt < 12; ++pt) {
     for (size_t sq = 0; sq < 64; ++sq) {
       size_t idx = wrapped_idx({IP(pt,12), IP(sq,64)});
       assert(idx < full_layer_weights.size());
@@ -248,7 +271,14 @@ void init_full_layer_weights(size_t &offset) {
       }
     }
   }
-  offset += 12 * 64 * full_block_size;
+  offset += 12 * 64 * full_block_size;*/
+  for (size_t idx = 0; idx < full_layer_weights.size(); ++idx) {
+    for (size_t d = 0; d < full_block_size; ++d) {
+      size_t idx2 = wrapped_idx({IP(d, full_block_size), IP(idx,full_layer_weights.size())});
+      full_layer_weights[idx][d] = gNetWeightsData[idx2 + offset];
+    }
+  }
+  offset += full_layer_weights.size() * full_block_size;
   for (size_t d = 0; d < full_block_size; ++d) {
     full_layer_bias[d] = gNetWeightsData[d + offset];
   }
