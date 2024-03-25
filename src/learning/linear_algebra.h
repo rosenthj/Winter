@@ -28,6 +28,7 @@
 #define LEARNING_LINEAR_ALGEBRA_H_
 
 #include "../general/types.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -107,7 +108,7 @@ struct Vec {
   
   inline Vec<type, length>& clipped_relu(const type max_val) {
     for (size_t i = 0; i < length; ++i) {
-      values[i] = std::min(std::max(values[i], static_cast<type>(0)), max_val);
+      values[i] = std::clamp(values[i], static_cast<type>(0), max_val);
     }
     return *this;
   }

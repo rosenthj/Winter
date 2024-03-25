@@ -5,6 +5,7 @@
  *      Author: jonathan
  */
 
+#include <algorithm>
 #include <iostream>
 #include "wdl_score.h"
 #include "types.h"
@@ -132,7 +133,6 @@ void WDLScore::print() const {
 
 NScore WDLScore::to_cp() const {
   constexpr float kEpsilon = 0.000001;
-  float wpct = to_wpct();
-  wpct = std::max(std::min(wpct, 1-kEpsilon), kEpsilon);
+  float_t wpct = std::clamp(to_wpct(), kEpsilon,  1-kEpsilon);
   return std::round(std::log(wpct / (1-wpct)) * 1024);
 }

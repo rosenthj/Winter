@@ -197,7 +197,6 @@ std::mt19937_64 rng;
 size_t min_ply = 0;
 const size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
-size_t evaluation_nodes = 0;
 bool fixed_search_time;
 
 Time end_time = now();
@@ -1774,12 +1773,6 @@ Score QSearch(Board &board) {
   return QuiescentSearch((*Threads.main_thread), kMinScore, kMaxScore);
 }
 
-Board SampleEval(Board board) {
-  evaluation_nodes = 0;
-  RootSearch(board, 128, Milliseconds(5000));
-  return sampled_board;
-}
-
 #ifdef SEARCH_TRAINING
 void SaveSearchVariables() {
   std::ofstream file(settings::kSearchParamFile);
@@ -1884,29 +1877,6 @@ void LoadSearchVariablesHardCoded() {
     search_weights[i] = hardcode::search_params[c];
     search_weights_in_check[i] = hardcode::search_params_in_check[c++];
   }
-}
-
-std::vector<Board> GenerateEvalSampleSet(std::string filename) {
-  std::vector<Board> boards;
-  std::vector<Game> games = data::LoadGames(1200000, settings::kCCRLPath);
-  boards.reserve(games.size());
-  HashType last_hash = 42;
-  set_print_info(false);
-  for (size_t i = 0; i < games.size(); ++i) {
-    data::SetGameToRandom(games[i]);
-    Board board = SampleEval(games[i].board);
-    if (board.get_hash() != last_hash) {
-      last_hash = board.get_hash();
-      boards.emplace_back(board);
-      if (boards.size() % 1000 == 0) {
-        std::cout << "\rsampled " << boards.size() << " positions!" << std::flush;
-      }
-    }
-  }
-  std::cout << "\rsampled " << boards.size() << " positions!" << std::endl;
-  set_print_info(true);
-  data::SaveBoardFens(filename, boards);
-  return boards;
 }
 
 void SetContempt(int32_t contempt_) {

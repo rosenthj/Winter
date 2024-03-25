@@ -51,8 +51,6 @@ void end_search();
 Board get_sampled_board();
 std::vector<Move> GetSortedMovesML(Board &board);
 
-std::vector<Board> GenerateEvalSampleSet(std::string filename);
-
 void clear_killers_and_counter_moves();
 
 #ifdef SEARCH_TRAINING

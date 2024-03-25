@@ -1,5 +1,5 @@
 CC=clang++
-CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -march=native -std=c++14 -Isrc -Isrc/general -Isrc/learning
+CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -march=native -std=c++17 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-static -Wall
 SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
@@ -10,19 +10,19 @@ all: $(SOURCES) $(EXECUTABLE)
 target no_bmi: CFLAGS += -DNO_BMI
 no_bmi: all
 
-target ancient: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++14 -Isrc -Isrc/general -Isrc/learning
+target ancient: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -DNO_BMI -std=c++17 -Isrc -Isrc/general -Isrc/learning
 target ancient: LDFLAGS=-Wall -static
 ancient: all
 
-target older: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -msse4.1 -DNO_BMI -std=c++14 -Isrc -Isrc/general -Isrc/learning
+target older: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -msse4.1 -DNO_BMI -std=c++17 -Isrc -Isrc/general -Isrc/learning
 target older: LDFLAGS=-Wall -static
 older: all
 
-target old: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++14 -Isrc -Isrc/general -Isrc/learning
+target old: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -msse4.2 -DNO_BMI -std=c++17 -Isrc -Isrc/general -Isrc/learning
 target old: LDFLAGS=-Wall -static
 old: all
 
-target new: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -mavx2 -mbmi -mbmi2 -std=c++14 -Isrc -Isrc/general -Isrc/learning
+target new: CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -mavx2 -mbmi -mbmi2 -std=c++17 -Isrc -Isrc/general -Isrc/learning
 target new: LDFLAGS=-Wall -static
 new: all
 

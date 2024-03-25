@@ -377,7 +377,8 @@ BitBoard GetAttackMap(PieceType piece_type, Square square, BitBoard all_pieces) 
   case kRook: return GetAttackMap<kRook>(square, all_pieces);
   case kBishop: return GetAttackMap<kBishop>(square, all_pieces);
   case kKnight: return GetAttackMap<kKnight>(square, all_pieces);
-  default: return 0;
+  case kKing: return GetAttackMap<kKing>(square, all_pieces);
+  default: return 0; // Pawn not supported
   }
 }
 
