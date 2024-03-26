@@ -832,6 +832,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   Score static_eval = alpha;
   t.set_static_score(kNoScore);
   bool strict_worsening = false;
+  bool nmp_failed_node = false;
 
   //Speculative pruning methods
   if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
@@ -865,7 +866,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     }
 
     //Null Move Pruning
-    bool nmp_failed_node = false;
     if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
