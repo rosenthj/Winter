@@ -656,7 +656,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     }
     return lower_bound_score;
   }
-  
+
   //Move best_move = 0;
 
   //Sort move list
@@ -669,7 +669,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     SortMoves(moves, t, 0);
     //SortMovesML(moves, board, 0);
   }
-  
+
   //Move loop
   for (Move move : moves) {
     //SEE pruning
@@ -684,7 +684,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     t.board.UnMake();
 
     if (score > lower_bound_score) {
-      
+
       //Return beta if we fail high
       if (score >= beta) {
         //table::SaveEntry(board, move, score, 0);
@@ -865,6 +865,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     }
 
     //Null Move Pruning
+    bool nmp_failed_node = false;
     if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
@@ -875,6 +876,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       if (score >= beta) {
         return score;
       }
+      nmp_failed_node = true;
     }
   }
 
@@ -930,7 +932,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     const Move move = moves[i];
 
     Depth e = 0;// Extensions
-    if (i == 0 
+    if (i == 0
         && depth >= kSingularExtensionDepth-2
         && valid_entry
         && entry.depth >= std::max(depth, kSingularExtensionDepth) - 3
@@ -942,7 +944,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       moves_sorted = true;
       auto is_singular = move_is_singular(t, depth, moves, entry);
       if (is_singular.first) {
-        e = 1;
+        e = 1 + nmp_failed_node;
       }
       else if (is_singular.second >= beta) {
         return is_singular.second;
