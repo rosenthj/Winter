@@ -865,7 +865,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       NScore margin = kSNMPOffset + (kSNMPScaling - kSNMPImproving * !strict_worsening) * depth;
       if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
           && t.board.get_phase() > 1 * piece_phases[kQueen]) {
-        return beta;
+        if (static_eval.is_mate_score()) {
+          return beta;
+        }
+        return (static_eval + beta) / 2;
       }
     }
 
