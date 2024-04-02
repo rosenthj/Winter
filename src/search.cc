@@ -825,7 +825,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 //    if (entry.get_best_move() != kNullMove && GetMoveType(entry.get_best_move()) < kCapture) {
 //      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
 //    }
-    return entry.get_score(t.board);
+    Score score = entry.get_score(t.board);
+    if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
+      return (score * 3 + beta) / 4;
+    }
+    return score;
   }
 
   const bool in_check = t.board.InCheck();
