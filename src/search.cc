@@ -868,7 +868,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
         if (static_eval.is_mate_score()) {
           return beta;
         }
-        return (static_eval + beta) / 2;
+        return (static_eval * 3 + beta) / 4;
       }
     }
 
