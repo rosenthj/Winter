@@ -629,7 +629,6 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   Score static_eval = kMinScore;
   if (!in_check) {
     static_eval = net_evaluation::ScoreBoard(t.board);
-//    std::cout << "QS Eval return: (w:" << static_eval.win << ", wd:" << static_eval.win_draw << ")" << std::endl;
     if (valid_hash && entry.get_bound() == kLowerBound && static_eval < entry.get_score(t.board)) {
       static_eval = entry.get_score(t.board);
     }
