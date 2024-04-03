@@ -530,7 +530,7 @@ inline bool sufficient_bounds(const Board &board, const table::Entry &entry,
                               const Score alpha, const Score beta,
                               const Depth depth) {
   Score score = entry.get_score(board);
-  return entry.depth >= depth
+  return entry.depth + (score==draw_score[board.get_turn()]) >= depth
       && ((entry.get_bound() == kExactBound)
           || (entry.get_bound() == kLowerBound && score >= beta)
           || (entry.get_bound() == kUpperBound && score <= alpha));
@@ -826,7 +826,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 //      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
 //    }
     Score score = entry.get_score(t.board);
-    if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
+    if (score > beta && !score.is_mate_score() && !beta.is_mate_score()
+        && score != draw_score[t.board.get_turn()]) {
       return (score * 3 + beta) / 4;
     }
     return score;
