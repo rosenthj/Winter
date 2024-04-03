@@ -688,7 +688,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
       //Return beta if we fail high
       if (score >= beta) {
         //table::SaveEntry(board, move, score, 0);
-        return score;
+        return (score * 3 + beta) / 4;
       }
 
       //Update alpha in PV nodes if possible
