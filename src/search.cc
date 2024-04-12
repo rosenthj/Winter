@@ -787,7 +787,7 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
 }
 
 template<NodeType node_type>
-Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
+Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move exclude_move = kNullMove) {
   assert(alpha.is_valid());
   assert(beta.is_valid());
   assert(beta > alpha);
@@ -820,7 +820,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   //Transposition Table Probe
   table::Entry entry = table::GetEntry(t.board.get_hash());
   bool valid_entry = table::ValidateHash(entry,t.board.get_hash());
-  if (node_type != NodeType::kPV && valid_entry
+  if (node_type != NodeType::kPV && !exclude_move && valid_entry
       && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
 //    if (entry.get_best_move() != kNullMove && GetMoveType(entry.get_best_move()) < kCapture) {
 //      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
@@ -839,7 +839,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
   bool nmp_failed_node = false;
 
   //Speculative pruning methods
-  if (node_type == NodeType::kNW && beta.is_static_eval() && !in_check) {
+  if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
 
     //Set static eval from board and TT entry.
     if (valid_entry) {
@@ -937,6 +937,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
       moves_sorted = true;
     }
     const Move move = moves[i];
+    if (move == exclude_move) {
+      continue;
+    }
 
     Depth e = 0;// Extensions
     if (i == 0
@@ -1014,12 +1017,16 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
 
     //Check if search failed high
     if (score >= beta) {
+      if (exclude_move) {
+        return score;
+      }
       if (GetMoveType(move) < kCapture) {
         update_counter_move_history(t, quiets, depth);
       }
+    
       //Save TT entry
       table::SaveEntry(t.board, move, score, depth);
-
+      
       //Update Killers
       if (GetMoveType(move) < kCapture) {
         int num_made_moves = t.board.get_num_made_moves();
@@ -1066,7 +1073,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth) {
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
   }
-  else {
+  else if (!exclude_move) {
     table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
   }
 
@@ -1085,17 +1092,23 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   assert(rAlpha.is_static_eval());
   assert(entry.get_best_move() == moves[0]);
   assert(entry.get_bound() != kUpperBound);
-
-  for(size_t i = 1; i < moves.size(); ++i) {
-    t.set_move(moves[i]);
-    t.board.Make(moves[i]);
-    Score score = -AlphaBeta<NodeType::kNW>(t, -rBeta, -rAlpha, rDepth);
-    t.board.UnMake();
-    if (score >= rBeta) {
-      return std::make_pair(false, score);
-    }
+  
+  Score score = AlphaBeta<NodeType::kNW>(t, rAlpha, rBeta, rDepth, entry.get_best_move());
+  if (score >= rBeta) {
+    return std::make_pair(false, score);
   }
-  return std::make_pair(true, rAlpha);
+  return std::make_pair(true, score);
+
+  //for(size_t i = 1; i < moves.size(); ++i) {
+  //  t.set_move(moves[i]);
+  //  t.board.Make(moves[i]);
+  //  Score score = -AlphaBeta<NodeType::kNW>(t, -rBeta, -rAlpha, rDepth);
+  //  t.board.UnMake();
+  //  if (score >= rBeta) {
+  //    return std::make_pair(false, score);
+  //  }
+  //}
+  //return std::make_pair(true, rAlpha);
 }
 
 Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
