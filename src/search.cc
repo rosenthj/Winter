@@ -1098,17 +1098,6 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
     return std::make_pair(false, score);
   }
   return std::make_pair(true, score);
-
-  //for(size_t i = 1; i < moves.size(); ++i) {
-  //  t.set_move(moves[i]);
-  //  t.board.Make(moves[i]);
-  //  Score score = -AlphaBeta<NodeType::kNW>(t, -rBeta, -rAlpha, rDepth);
-  //  t.board.UnMake();
-  //  if (score >= rBeta) {
-  //    return std::make_pair(false, score);
-  //  }
-  //}
-  //return std::make_pair(true, rAlpha);
 }
 
 Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
