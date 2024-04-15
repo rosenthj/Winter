@@ -9,10 +9,10 @@
 
 //INCBIN(float_t, NetWeights, "rnet16H64h.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
-INCBIN(float_t, NetWeights, "rnet8H64l.bin");
+INCBIN(float_t, NetWeights, "rnet16H64l.bin");
 
 // NN types
-constexpr size_t block_size = 8;
+constexpr size_t block_size = 16;
 using NetLayerType = Vec<float_t, block_size>;
 
 constexpr size_t full_block_size = 64;
