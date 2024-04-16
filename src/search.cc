@@ -978,7 +978,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       }
 
       //Late Move Reduction factor
-      reduction = get_lmr_reduction<node_type>(depth, i-is_root, GetMoveType(move) > kDoublePawnMove);
+      if (!is_root) {
+        reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+      }
+      else if (i > 2) {
+        reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
+      }
       assert(reduction < depth);
 
       //Futility Pruning
@@ -1111,83 +1116,8 @@ std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
   return std::make_pair(true, score);
 }
 
-Score RootSearchLoop(Thread &t, Score original_alpha, const Score beta,
-                     Depth current_depth, std::vector<Move> &moves) {
-  assert(original_alpha.is_valid());
-  assert(beta.is_valid());
-  assert(original_alpha < beta);
-
-  Score alpha = original_alpha;
-  Score lower_bound_score = kMinScore;
-  //const bool in_check = board.InCheck();
-  if (settings::kRepsForDraw == 3 && alpha < draw_score[t.board.get_turn()].get_previous_score() && t.board.MoveInListCanRepeat(moves)) {
-    if (beta <= draw_score[t.board.get_turn()]) {
-      return draw_score[t.board.get_turn()];
-    }
-    alpha = draw_score[t.board.get_turn()].get_previous_score();
-  }
-  const bool in_check = t.board.InCheck();
-  for (size_t i = 0; i < moves.size(); ++i) {
-    t.set_move(moves[i]);
-    t.board.Make(moves[i]);
-    if (i == 0) {
-      Score score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
-      assert(score.is_valid());
-      if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
-        score = draw_score[t.board.get_turn()];
-      }
-      t.board.UnMake();
-      if (score >= beta) {
-        return score;
-      }
-      alpha = std::max(score, alpha);
-      lower_bound_score = std::max(score, lower_bound_score);
-    }
-    else {
-      Depth reduction = 0;
-      if (!in_check && !t.board.InCheck() && i > 2) {
-        //Late Move Reduction factor
-        reduction = get_lmr_reduction<NodeType::kPV>(current_depth, i - 2, GetMoveType(moves[i]) > kDoublePawnMove);
-//        if (GetMoveType(moves[i]) > kDoublePawnMove) {
-//          reduction = (2 * reduction) / 3;
-//        }
-      }
-      Score score = -AlphaBeta<NodeType::kNW>(t, -get_next_score(alpha),
-                                                    -alpha, current_depth - 1 - reduction);
-      if (score > alpha) {
-        score = -AlphaBeta<NodeType::kPV>(t, -beta, -alpha, current_depth - 1);
-      }
-      if (settings::kRepsForDraw == 3 && score < draw_score[t.board.get_turn()] && t.board.CountRepetitions() >= 2) {
-        score = draw_score[t.board.get_turn()];
-      }
-      lower_bound_score = std::max(score, lower_bound_score);
-      t.board.UnMake();
-      if (finished(t)) {
-        Threads.end_search = true;
-        return lower_bound_score;
-      }
-      if (score >= beta) {
-        auto it = moves.rbegin() + moves.size() - i - 1;
-        std::rotate(it, it + 1, moves.rend());
-        return score;
-      }
-      else if (score > alpha) {
-        alpha = score;
-        auto it = moves.rbegin() + moves.size() - i - 1;
-        std::rotate(it, it + 1, moves.rend());
-      }
-    }
-  }
-  if (t.id == 0) {
-    table::SavePVEntry(t.board, moves[0], lower_bound_score, current_depth);
-    //table::SavePVEntry(t.board, moves[0]);
-  }
-  return lower_bound_score;
-}
-
 inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores) {
   if (current_depth <= 4) {
-    //return RootSearchLoop(t, kMinScore, kMaxScore, current_depth, moves);
     return AlphaBeta<NodeType::kPV>(t, kMinScore, kMaxScore, current_depth);
   }
   else {
@@ -1195,10 +1125,6 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
-    //SortMovesML(moves, t, moves[0]);
-//    assert(is_valid_score(alpha));
-//    assert(is_valid_score(beta));
-    //score = RootSearchLoop(t, alpha, beta, current_depth, moves);
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta.win > 0 && delta.win_draw > 0);
@@ -1222,10 +1148,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
           beta = get_next_score(score);
         }
       }
-//      assert(is_valid_score(alpha));
-//      assert(is_valid_score(beta));
       assert(score > alpha && score < beta);
-      //score = RootSearchLoop(t, alpha, beta, current_depth, moves);
       score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
       delta *= 2;
     }

@@ -79,8 +79,6 @@ struct Thread {
   }
 
   void search();
-  //It may make sense to perturb move ordering slightly for LazySMP helper threads.
-  void perturb_root_moves();
 
   // The following functions return the trend of the score. Regular and strict effect the handling of
   // kNoMove scores from the previous position.

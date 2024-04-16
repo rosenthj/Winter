@@ -44,14 +44,6 @@ Thread::Thread() {
   clear_killers_and_counter_moves();
 }
 
-void Thread::perturb_root_moves() {
-  //for (int i = moves.size()-1; i > 0; i--) {
-  //  if (rng() % 2) {
-  //    std::swap(moves[i-1], moves[i]);
-  //  }
-  //}
-}
-
 void Thread::set_move(Move move) {
   Depth height = get_height();
   if (move == kNullMove) {
@@ -63,19 +55,6 @@ void Thread::set_move(Move move) {
     assert(passed_moves[get_height()].pt != kNoPiece);
   }
 }
-
-//int32_t Thread::get_fu_score(Move move) const {
-//  if (get_height() < 2) {
-//    return 0;
-//  }
-//  PieceTypeAndDestination pt_and_des = get_previous_move(2);
-//  if (pt_and_des.pt == kNoPiece) {
-//    return 0;
-//  }
-//  PieceType piece_type = GetPieceType(board.get_piece(GetMoveSource(move)));
-//  Square des = GetMoveDestination(move);
-//  return followup_move_history[pt_and_des.pt][pt_and_des.des][piece_type][des];
-//}
 
 PieceTypeAndDestination Thread::get_previous_move(Depth moves_ago) const {
   return passed_moves[std::max(get_height() - moves_ago, 0)];
