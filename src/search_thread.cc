@@ -45,11 +45,11 @@ Thread::Thread() {
 }
 
 void Thread::perturb_root_moves() {
-  for (int i = moves.size()-1; i > 0; i--) {
-    if (rng() % 2) {
-      std::swap(moves[i-1], moves[i]);
-    }
-  }
+  //for (int i = moves.size()-1; i > 0; i--) {
+  //  if (rng() % 2) {
+  //    std::swap(moves[i-1], moves[i]);
+  //  }
+  //}
 }
 
 void Thread::set_move(Move move) {

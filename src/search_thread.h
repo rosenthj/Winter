@@ -122,7 +122,7 @@ struct Thread {
 
   //Data for search local to the thread
   Board board;
-  std::vector<Move> moves;
+  Move best_root_move;
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
