@@ -1203,7 +1203,6 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
 void Thread::search() {
   const Time begin = now();
   double time_factor = 1.0;
-  current_depth = 1;
   root_height = board.get_num_made_moves();
   if (id == 0) {
     end_time = begin+rsearch_duration;
@@ -1214,31 +1213,11 @@ void Thread::search() {
   Move last_best = kNullMove;
   std::vector<Score> previous_scores;
 
-  for (Depth depth = current_depth; depth <= rsearch_depth; ++depth) {
+  for (current_depth = 1; current_depth <= rsearch_depth; ++current_depth) {
     if(finished(*this)) {
       Threads.end_search = true;
       break;
     }
-
-    if (id != 0 && depth > 4) {
-      static std::mutex mutex;
-      std::lock_guard<std::mutex> lock(mutex);
-
-      size_t count = 0;
-      for (Thread* t : Threads.helpers) {
-        if (depth <= t->current_depth) {
-          count++;
-        }
-      }
-      if (count >= Threads.get_thread_count() / 2) {
-        if ((id % 3) != (depth % 3)) {
-          continue;
-        }
-        depth = std::min(depth+1, rsearch_depth);
-      }
-    }
-
-    current_depth = depth;
 
     score = PVS(*this, current_depth, previous_scores);
 
