@@ -1307,11 +1307,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     t->board.SetToSamePosition(board);
     t->root_height = board.get_num_made_moves();
     t->best_root_move = tt_move;
-    //t->moves = moves;
-    //t->perturb_root_moves();
-    //while(rng() % 2) {
-    //  t->perturb_root_moves();
-    //}
     t->max_depth = t->board.get_num_made_moves();
     helpers.emplace_back(std::thread(&Thread::search, t));
   }
