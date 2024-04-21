@@ -1125,7 +1125,6 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
-    int failed_high = 0;
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta.win > 0 && delta.win_draw > 0);
@@ -1138,23 +1137,19 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
         if (alpha == score) {
           alpha = get_previous_score(score);
         }
-        failed_high = 0;
       }
       else if (score >= beta) {
         if (alpha.is_static_eval()) {
-          // alpha = ((alpha * 3) + std::min(kMaxStaticEval, score)) / 4;
+          alpha = ((alpha * 3) + std::min(kMaxStaticEval, score)) / 4;
           assert(alpha.is_valid());
         }
         beta = (score + delta).get_valid_score();
         if (beta == score) {
           beta = get_next_score(score);
         }
-        if (failed_high < 3 && score.is_static_eval()) {
-          failed_high++;
-        }
       }
       assert(score > alpha && score < beta);
-      score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth - failed_high);
+      score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
       delta *= 2;
     }
     return score;
