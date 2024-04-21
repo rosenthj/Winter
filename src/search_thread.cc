@@ -44,13 +44,13 @@ Thread::Thread() {
   clear_killers_and_counter_moves();
 }
 
-void Thread::perturb_root_moves() {
-  for (int i = moves.size()-1; i > 0; i--) {
-    if (rng() % 2) {
-      std::swap(moves[i-1], moves[i]);
-    }
-  }
-}
+//void Thread::perturb_root_moves() {
+//  for (int i = moves.size()-1; i > 0; i--) {
+//    if (rng() % 2) {
+//      std::swap(moves[i-1], moves[i]);
+//    }
+//  }
+//}
 
 void Thread::set_move(Move move) {
   Depth height = get_height();

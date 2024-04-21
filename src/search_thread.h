@@ -43,6 +43,21 @@ struct PieceTypeAndDestination {
   Square des;
 };
 
+struct RootMove {
+  Move move;
+  Score score;
+  size_t nodes;
+  Depth depth;
+};
+
+inline std::vector<RootMove> moves_to_root_moves(std::vector<Move> moves) {
+  std::vector<RootMove> root_moves(moves.size());
+  for (size_t i = 0; i < moves.size(); ++i) {
+    root_moves[i].move = moves[i];
+  }
+  return root_moves;
+}
+
 struct Thread {
   Thread();
 
@@ -80,7 +95,7 @@ struct Thread {
 
   void search();
   //It may make sense to perturb move ordering slightly for LazySMP helper threads.
-  void perturb_root_moves();
+  // void perturb_root_moves();
 
   // The following functions return the trend of the score. Regular and strict effect the handling of
   // kNoMove scores from the previous position.
@@ -122,7 +137,7 @@ struct Thread {
 
   //Data for search local to the thread
   Board board;
-  std::vector<Move> moves;
+  std::vector<RootMove> root_moves;
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
