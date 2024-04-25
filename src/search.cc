@@ -925,6 +925,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   if (node_type == NodeType::kPV && moves.size() == 1) {
     depth++;
   }
+  
+  if (depth >= 7 && tt_entry == kNullMove) {
+    depth--;
+  }
 
   //Init checking squares for efficient detection of checking moves.
   //Moves detected always give check, but only direct checks are detected.
