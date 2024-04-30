@@ -830,6 +830,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     }
     return score;
   }
+  
+  if (depth >= 2 && !exclude_move && !valid_entry) {
+    depth--;
+  }
 
   const bool in_check = t.board.InCheck();
   Score static_eval = alpha;
@@ -922,10 +926,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   Move best_local_move = tt_entry;
   if (node_type == NodeType::kPV && moves.size() == 1) {
     depth++;
-  }
-  
-  if (depth >= 7 && tt_entry == kNullMove && valid_entry) {
-    depth--;
   }
 
   //Init checking squares for efficient detection of checking moves.
