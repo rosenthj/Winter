@@ -831,7 +831,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     return score;
   }
   
-  if (depth >= 2 && !exclude_move && !valid_entry) {
+  if (depth >= 2 && !exclude_move && (!valid_entry || depth >= entry.depth + 5)) {
     depth--;
   }
 
