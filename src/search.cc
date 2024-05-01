@@ -820,17 +820,19 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   //Transposition Table Probe
   table::Entry entry = table::GetEntry(t.board.get_hash());
-  bool valid_entry = table::ValidateHash(entry,t.board.get_hash());
+  bool valid_entry = table::ValidateHash(entry, t.board.get_hash());
+  
   if (node_type != NodeType::kPV && !exclude_move && valid_entry
       && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
-//    if (entry.get_best_move() != kNullMove && GetMoveType(entry.get_best_move()) < kCapture) {
-//      update_counter_move_history(t, {{entry.get_best_move()}}, depth);
-//    }
     Score score = entry.get_score(t.board);
     if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
       return (score * 3 + beta) / 4;
     }
     return score;
+  }
+  
+  if (depth >= 2 && !exclude_move && !valid_entry) {
+    depth--;
   }
 
   const bool in_check = t.board.InCheck();
