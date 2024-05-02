@@ -138,7 +138,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   HashType best_move_cast = best_move;
   hash ^= best_move_cast;
   
-  if (_table[index].hash != hash || _table[index].depth <= depth + 4) {
+  if (_table[index].hash != hash || _table[index].depth <= depth + 2) {
     Entry entry;
     entry.hash = hash;
     entry.set_score(score, board);
