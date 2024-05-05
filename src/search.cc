@@ -687,7 +687,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
       //Return beta if we fail high
       if (score >= beta) {
-        //table::SaveEntry(board, move, score, 0);
+        table::SaveEntry(t.board, move, score, 0);
         return score;
       }
 
