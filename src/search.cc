@@ -883,6 +883,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                     depth - R);
       t.board.UnMake();
+      if (score > kMaxStaticEval) {
+        score = kMaxStaticEval;
+      }
       if (score >= beta) {
         return score;
       }
