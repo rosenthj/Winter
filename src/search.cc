@@ -669,7 +669,8 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     SortMoves(moves, t, 0);
     //SortMovesML(moves, board, 0);
   }
-
+  
+  Move best_move = kNullMove;
   //Move loop
   for (Move move : moves) {
     //SEE pruning
@@ -696,9 +697,12 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
         alpha = score;
       }
       lower_bound_score = score;
+      best_move = move;
     }
   }
-
+  if (best_move) {
+    table::SaveEntry(t.board, best_move, lower_bound_score, 0, kUpperBound);
+  }
   //Return the lower bound after all has been said and done.
   return lower_bound_score;
 }
