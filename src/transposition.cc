@@ -135,12 +135,10 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   assert(index < _table.size());
   assert(score.is_valid());
 
-  HashType best_move_cast = best_move;
-  hash ^= best_move_cast;
-  
-  if (_table[index].hash != hash || _table[index].depth <= depth + 2) {
+  if (!ValidateHash(_table[index], hash) || _table[index].depth <= depth + 2) {
     Entry entry;
-    entry.hash = hash;
+    HashType best_move_cast = best_move;
+    entry.hash = hash ^ best_move_cast;
     entry.set_score(score, board);
     entry.set_best_move(best_move);
     entry.set_gen_and_bound(bound);
