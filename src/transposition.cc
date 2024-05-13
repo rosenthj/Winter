@@ -136,14 +136,18 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   assert(score.is_valid());
 
   HashType best_move_cast = best_move;
-  Entry entry;
-  entry.hash = hash ^ best_move_cast;
-  entry.set_score(score, board);
-  entry.set_best_move(best_move);
-  entry.set_gen_and_bound(bound);
-  assert(entry.get_generation() == current_generation);
-  entry.depth = depth;
-  _table[index] = entry;
+  hash ^= best_move_cast;
+  
+  if (_table[index].hash != hash || _table[index].depth <= depth + 2) {
+    Entry entry;
+    entry.hash = hash;
+    entry.set_score(score, board);
+    entry.set_best_move(best_move);
+    entry.set_gen_and_bound(bound);
+    assert(entry.get_generation() == current_generation);
+    entry.depth = depth;
+    _table[index] = entry;
+  }
 }
 
 void SavePVEntry(const Board &board, const Move best_move, const Score score, const Depth depth) {

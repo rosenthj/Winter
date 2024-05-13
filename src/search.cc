@@ -687,7 +687,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
       //Return beta if we fail high
       if (score >= beta) {
-        //table::SaveEntry(board, move, score, 0);
+        table::SaveEntry(t.board, move, score, 0);
         return score;
       }
 
@@ -883,6 +883,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                     depth - R);
       t.board.UnMake();
+      if (score > kMaxStaticEval) {
+        score = kMaxStaticEval;
+      }
       if (score >= beta) {
         return score;
       }
