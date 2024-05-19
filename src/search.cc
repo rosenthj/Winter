@@ -786,6 +786,31 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
   return result;
 }
 
+inline void update_killers(Thread &t, const Move move) {
+  assert(GetMoveType(move) < kCapture);
+  int num_made_moves = t.board.get_num_made_moves();
+  if (t.killers[num_made_moves][0] != move) {
+    t.killers[num_made_moves][1] = t.killers[num_made_moves][0];
+    t.killers[num_made_moves][0] = move;
+  }
+}
+
+inline void update_counter_moves(Thread &t, const Move move) {
+  if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
+    PieceType last_moved_piece = kNoPiece;
+    const Move last_move = t.board.get_last_move();
+    const Square last_destination = GetMoveDestination(last_move);
+    if (GetMoveType(last_move) == kCastle) {
+      last_moved_piece = kKing;
+    }
+    else {
+      last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+    }
+    assert(last_moved_piece != kNoPiece);
+    t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination] = move;
+  }
+}
+
 template<NodeType node_type>
 Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move exclude_move = kNullMove) {
   assert(alpha.is_valid());
@@ -951,12 +976,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     }
 
     Depth e = 0;// Extensions
-    if (i == 0
+    if (i == 0 && !is_root
         && depth >= kSingularExtensionDepth-2
         && valid_entry
         && entry.depth >= std::max(depth, kSingularExtensionDepth) - 3
         && !(node_type == NodeType::kPV && moves.size() == 1)
-        && !is_root
         && entry.get_bound() != kUpperBound
         && entry.get_score(t.board).is_static_eval()
         && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval) {
@@ -1035,39 +1059,17 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (exclude_move) {
         return score;
       }
+      
+      table::SaveEntry(t.board, move, score, depth);
+      update_counter_moves(t, move);
+      if (GetMoveType(move) < kCapture) {
+        update_counter_move_history(t, quiets, depth);
+        update_killers(t, move);
+      }
       if (is_root) {
         t.best_root_move = move;
       }
-      if (GetMoveType(move) < kCapture) {
-        update_counter_move_history(t, quiets, depth);
-      }
-    
-      //Save TT entry
-      table::SaveEntry(t.board, move, score, depth);
-      
-      //Update Killers
-      if (GetMoveType(move) < kCapture) {
-        int num_made_moves = t.board.get_num_made_moves();
-        if (t.killers[num_made_moves][0] != move) {
-          t.killers[num_made_moves][1] = t.killers[num_made_moves][0];
-          t.killers[num_made_moves][0] = move;
-        }
-      }
 
-      //Update Counter Move
-      if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
-        PieceType last_moved_piece = kNoPiece;
-        const Move last_move = t.board.get_last_move();
-        const Square last_destination = GetMoveDestination(last_move);
-        if (GetMoveType(last_move) == kCastle) {
-          last_moved_piece = kKing;
-        }
-        else {
-          last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
-        }
-        assert(last_moved_piece != kNoPiece);
-        t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination] = move;
-      }
       return score;
     }
 
@@ -1089,8 +1091,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       lower_bound_score = score;
     }
   }
+  
   if (node_type != NodeType::kNW && alpha > original_alpha) {
     assert(best_local_move != kNullMove);
+    assert(exclude_move == kNullMove);
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
   }
