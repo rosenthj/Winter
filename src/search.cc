@@ -43,7 +43,7 @@
 #include <fstream>
 #include <mutex>
 #include <random>
-#include <utility>
+#include <tuple>
 
 using namespace move_features;
 
@@ -723,10 +723,6 @@ Score sample_node_and_return_alpha(const Board &board, const Depth depth,
 }
 #endif
 
-std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
-                                       const std::vector<Move> &moves,
-                                       const table::Entry &entry);
-
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
@@ -784,6 +780,31 @@ inline const Score get_singular_beta(Score beta, Depth depth) {
     result.win_draw = 0;
   }
   return result;
+}
+
+inline std::tuple<Score, Score, Depth> get_singular_bounds(
+                                          Thread &t, const Depth depth,
+                                          const table::Entry &entry) {
+  const Score beta = entry.get_score(t.board);
+  const Score rBeta = get_singular_beta(beta, depth);
+  const Score rAlpha = get_previous_score(rBeta);
+  const Depth rDepth = (depth - 3) / 2;
+  assert(beta.is_static_eval());
+  assert(rBeta.is_static_eval());
+  assert(rAlpha.is_static_eval());
+  
+  return {rAlpha, rBeta, rDepth};
+}
+
+inline bool singular_conditions_met(NodeType node_type, const Thread &t,
+                                    const Depth depth, const table::Entry &entry,
+                                    size_t movecount) {
+  return depth >= kSingularExtensionDepth-2
+        && entry.depth >= std::max(depth, kSingularExtensionDepth) - 3
+        && !(node_type == NodeType::kPV && movecount == 1)
+        && entry.get_bound() != kUpperBound
+        && entry.get_score(t.board).is_static_eval()
+        && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval;
 }
 
 inline void update_killers(Thread &t, const Move move) {
@@ -974,24 +995,17 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (move == exclude_move) {
       continue;
     }
-
+    
     Depth e = 0;// Extensions
-    if (i == 0 && !is_root
-        && depth >= kSingularExtensionDepth-2
-        && valid_entry
-        && entry.depth >= std::max(depth, kSingularExtensionDepth) - 3
-        && !(node_type == NodeType::kPV && moves.size() == 1)
-        && entry.get_bound() != kUpperBound
-        && entry.get_score(t.board).is_static_eval()
-        && get_singular_beta(entry.get_score(t.board), depth) > kMinStaticEval) {
-      SortMovesML(moves, t, tt_entry);
-      moves_sorted = true;
-      auto is_singular = move_is_singular(t, depth, moves, entry);
-      if (is_singular.first) {
+    if (i == 0 && valid_entry && !is_root
+        && singular_conditions_met(node_type, t, depth, entry, moves.size())) {
+      const auto [rAlpha, rBeta, rDepth] = get_singular_bounds(t, depth, entry);
+      Score score = AlphaBeta<NodeType::kNW>(t, rAlpha, rBeta, rDepth, tt_entry);
+      if (score <= rAlpha) {
         e = 1 + nmp_failed_node;
       }
-      else if (is_singular.second >= beta) {
-        return is_singular.second;
+      else if (score >= beta) {
+        return score;
       }
     }
 
@@ -1103,26 +1117,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   }
 
   return lower_bound_score;
-}
-
-std::pair<bool, Score> move_is_singular(Thread &t, const Depth depth,
-                                       const std::vector<Move> &moves,
-                                       const table::Entry &entry) {
-  const Score beta = entry.get_score(t.board);
-  const Score rBeta = get_singular_beta(beta, depth);
-  const Score rAlpha = get_previous_score(rBeta);
-  const Depth rDepth = (depth - 3) / 2;
-  assert(beta.is_static_eval());
-  assert(rBeta.is_static_eval());
-  assert(rAlpha.is_static_eval());
-  assert(entry.get_best_move() == moves[0]);
-  assert(entry.get_bound() != kUpperBound);
-  
-  Score score = AlphaBeta<NodeType::kNW>(t, rAlpha, rBeta, rDepth, entry.get_best_move());
-  if (score >= rBeta) {
-    return std::make_pair(false, score);
-  }
-  return std::make_pair(true, score);
 }
 
 inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores) {
