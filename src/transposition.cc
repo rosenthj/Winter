@@ -27,6 +27,7 @@
 #include "transposition.h"
 #include "net_evaluation.h"
 #include <cassert>
+#include <optional>
 
 namespace {
 
@@ -78,27 +79,32 @@ size_t HashFunction(const HashType hash) {
   return (hash % size) & ~(0x3);
 }
 
-Entry GetMainEntryIdx(const HashType hash, const size_t idx) {
-  for (size_t i = 0; i < 2; ++i) {
+bool ValidateHash(const Entry &entry, const HashType hash){
+  HashType best_move_cast = entry.get_best_move();
+  return entry.hash == (hash ^ best_move_cast);
+}
+
+std::optional<Entry> GetMainEntryIdx(const HashType hash, const size_t idx) {
+  for (size_t i = 0; i < 3; ++i) {
     if (ValidateHash(_table[idx+i], hash)) {
       return _table[idx+i];
     }
   }
-  return _table[idx+2];
+  return {};
 }
 
-Entry GetEntry(const HashType hash) {
+std::optional<Entry> GetEntry(const HashType hash) {
   size_t idx = HashFunction(hash);
-  Entry entry = GetMainEntryIdx(hash, idx);
+  std::optional<Entry> entry = GetMainEntryIdx(hash, idx);
   Entry entry_pv = _table.at(idx+3);
 
-  if (!ValidateHash(entry, hash)) {
-    return entry_pv;
-  }
   if (!ValidateHash(entry_pv, hash)) {
     return entry;
   }
-  if (entry.depth > entry_pv.depth) {
+  if (!entry.has_value()) {
+    return entry_pv;
+  }
+  if (entry->depth > entry_pv.depth) {
     return entry;
   }
   return entry_pv;
@@ -168,11 +174,6 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   entry.set_gen_and_bound(kExactBound);
   _table[index] = entry;
   _table[index_pv] = entry;
-}
-
-bool ValidateHash(const Entry &entry, const HashType hash){
-  HashType best_move_cast = entry.get_best_move();
-  return entry.hash == (hash ^ best_move_cast);
 }
 
 void ClearTable() {
