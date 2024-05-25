@@ -30,7 +30,7 @@
 #include "general/types.h"
 #include "general/parse.h"
 #include "general/bit_operations.h"
-#include "learning/linear_algebra.h"
+#include <array>
 #include <vector>
 #include <iostream>
 
@@ -111,8 +111,8 @@ public:
     std::cout << std::endl;
   }
   bool InCheck() const;
-  Vec<BitBoard, 6> GetDirectCheckingSquares() const;
-  Vec<BitBoard, 6> GetTabooSquares() const;
+  std::array<BitBoard, 6> GetDirectCheckingSquares() const;
+  std::array<BitBoard, 6> GetTabooSquares() const;
   bool GivesCheck(const Move move);
   void SetToSamePosition(const Board &board);
   bool NonNegativeSEE(const Move move) const;
