@@ -118,8 +118,8 @@ const Array2d<Depth, 2, 6> init_lmp_breakpoints(Depth base_nw, Depth base_pv,
   return lmp;
 }
 
-Vec<NScore, 4> init_futility_margins(NScore scaling, NScore offset) {
-  Vec<NScore, 4> kFutilityMargins(0);
+std::array<NScore, 4> init_futility_margins(NScore scaling, NScore offset) {
+  std::array<NScore, 4> kFutilityMargins;
   for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
     kFutilityMargins[i] = offset + scaling * i;
   }
@@ -134,7 +134,7 @@ NScore kSNMPImproving = 126;
 NScore kFutilityScaling = 546;
 NScore kFutilityOffset = -10;
 NScore kFutilityImproving = 62;
-Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
+std::array<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
                                                      kFutilityOffset);
 Depth kLMPBaseNW = 4, kLMPBasePV = 6;
 int32_t kLMPScalar = 10, kLMPQuad = 6;
@@ -148,7 +148,7 @@ constexpr NScore kSNMPImproving = 126;
 constexpr NScore kFutilityScaling = 546;
 constexpr NScore kFutilityOffset = -10;
 constexpr NScore kFutilityImproving = 62;
-const Vec<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
+const std::array<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
                                                            kFutilityOffset);
 const Depth kLMPBaseNW = 4, kLMPBasePV = 6;
 const int32_t kLMPScalar = 10, kLMPQuad = 6;
@@ -341,8 +341,8 @@ inline BitBoard get_under_threat_squares(const Board &board) {
 struct MoveOrderInfo {
   const Move tt_entry;
   const Move last_move;
-  const Vec<BitBoard, 6> direct_checks;
-  const Vec<BitBoard, 6> taboo_squares;
+  const std::array<BitBoard, 6> direct_checks;
+  const std::array<BitBoard, 6> taboo_squares;
   const BitBoard passed_pawn_squares;
   const BitBoard pawn_attack_squares;
   const BitBoard under_threat;
@@ -979,7 +979,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   //Init checking squares for efficient detection of checking moves.
   //Moves detected always give check, but only direct checks are detected.
   //Ie no checks from special moves or discovered checks.
-  Vec<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
+  std::array<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
   Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
   std::vector<Move> quiets;
