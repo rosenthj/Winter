@@ -49,9 +49,9 @@ void init_square_offset() {
 }
 
 struct NetPieceModule {
+  NetLayerType features;
   PieceType pt;
   Square sq;
-  NetLayerType features;
   NetPieceModule() = default;
 };
 
