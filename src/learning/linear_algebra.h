@@ -41,6 +41,7 @@ using SIMDFloat = __m256;
 constexpr size_t kSIMDWidth = 8;
 
 namespace simd {
+
 // Sept. 10, 2020. Taken from: https://stackoverflow.com/questions/13219146/how-to-sum-m256-horizontally
 inline float sum(__m256 x) {
     const __m128 hiQuad = _mm256_extractf128_ps(x, 1);
@@ -240,7 +241,7 @@ struct Vec<float, length> {
   inline float& operator[](std::size_t idx) { return values[idx]; }
   inline const float operator[](std::size_t idx) const { return values[idx]; }
   
-  float values[length];
+  alignas(sizeof(SIMDFloat)) float values[length];
 };
 
 template<typename t, size_t l>
