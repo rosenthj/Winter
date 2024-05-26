@@ -48,7 +48,7 @@ void init_square_offset() {
   }
 }
 
-struct NetPieceModule {
+struct alignas(sizeof(SIMDFloat)) NetPieceModule {
   NetLayerType features;
   PieceType pt;
   Square sq;
