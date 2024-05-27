@@ -53,16 +53,6 @@ std::vector<Move> GetSortedMovesML(Board &board);
 
 void clear_killers_and_counter_moves();
 
-#ifdef SEARCH_TRAINING
-void CreateSearchParamDataset(bool from_scratch);
-void CreateSearchParamDataset();
-void TrainSearchParams(bool from_scratch);
-void SaveSearchVariables();
-void LoadSearchVariables();
-void SaveHardcodeSearchVariables();
-#endif
-void LoadSearchVariablesHardCoded();
-
 void SetArmageddon(bool armageddon);
 void SetContempt(int32_t contempt);
 void SetUCIShowWDL(bool show_wdl);
