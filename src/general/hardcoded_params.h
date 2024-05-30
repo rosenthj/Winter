@@ -38,26 +38,26 @@ namespace hardcode {
 
 constexpr std::array<int, 117> search_params = {
     2000, // Hash Move
-    80,   // Killer Move
-    77,   // Killer Move
-    72,   // Counter Move
-    -60,  // Moving and Target Piece Type
-    80,   // Moving and Target Piece Type
-    89,   // Moving and Target Piece Type
-    202,  // Moving and Target Piece Type
-    333,  // Moving and Target Piece Type
+    106,  // Killer Move
+    98,   // Killer Move
+    94,   // Counter Move
+    -78,  // Moving and Target Piece Type
+    116,  // Moving and Target Piece Type
+    36,   // Moving and Target Piece Type
+    181,  // Moving and Target Piece Type
+    319,  // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
     5,    // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
-    139,  // Moving and Target Piece Type
-    290,  // Moving and Target Piece Type
+    94,   // Moving and Target Piece Type
+    313,  // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
-    -65,  // Moving and Target Piece Type
-    69,   // Moving and Target Piece Type
-    131,  // Moving and Target Piece Type
-    286,  // Moving and Target Piece Type
+    -114, // Moving and Target Piece Type
+    147,  // Moving and Target Piece Type
+    95,   // Moving and Target Piece Type
+    341,  // Moving and Target Piece Type
     0,    // Moving and Target Piece Type
     -18,  // Moving and Target Piece Type
     84,   // Moving and Target Piece Type
