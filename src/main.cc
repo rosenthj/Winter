@@ -25,6 +25,7 @@
 #include "general/types.h"
 #include "general/magic.h"
 #include "general/settings.h"
+#include "move_order.h"
 #include "board.h"
 #include "search.h"
 
@@ -39,6 +40,8 @@ int main(int argc, char **argv) {
 
   //search::LoadSearchVariablesHardCoded();
   net_evaluation::init_weights();
+  move_order::Init();
+  //move_order::OptionsToFile();
 
   if (argc > 1 && Equals(argv[1], "bench")) {
     benchmark::RunBenchCommand(argc, argv);
