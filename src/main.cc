@@ -23,7 +23,6 @@
 #include "transposition.h"
 #include "uci.h"
 #include "general/types.h"
-#include "learning/linear_algebra.h"
 #include "general/magic.h"
 #include "general/settings.h"
 #include "board.h"

@@ -1,6 +1,6 @@
 #include "net_evaluation.h"
 #include "general/types.h"
-#include "learning/linear_algebra.h"
+#include "linear_algebra.h"
 #include "incbin/incbin.h"
 
 #include <array>

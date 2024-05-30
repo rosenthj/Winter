@@ -1,7 +1,7 @@
 CC=clang++
 CFLAGS=-c -DNDEBUG -O3 -target x86_64-w64-windows-msvc -Wall -Wno-sign-compare -m64 -march=native -std=c++17 -Isrc -Isrc/general -Isrc/learning
 LDFLAGS=-static -Wall
-SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
+SOURCES=$(wildcard src/general/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXECUTABLE:=Winter.exe
 
