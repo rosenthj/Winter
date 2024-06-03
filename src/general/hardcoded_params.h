@@ -36,245 +36,248 @@ namespace hardcode {
 // Search Parameters
 // ------------------------------------------------------------------------------------------------
 
+
 constexpr std::array<int, 117> search_params = {
-    2000, // Hash Move
-    106,  // Killer Move
-    98,   // Killer Move
-    94,   // Counter Move
-    -78,  // Moving and Target Piece Type
-    116,  // Moving and Target Piece Type
-    36,   // Moving and Target Piece Type
-    181,  // Moving and Target Piece Type
-    319,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    5,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    94,   // Moving and Target Piece Type
-    313,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -114, // Moving and Target Piece Type
-    147,  // Moving and Target Piece Type
-    95,   // Moving and Target Piece Type
-    341,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -18,  // Moving and Target Piece Type
-    84,   // Moving and Target Piece Type
-    116,  // Moving and Target Piece Type
-    123,  // Moving and Target Piece Type
-    293,  // Moving and Target Piece Type
-    -1,   // Moving and Target Piece Type
-    -120, // Moving and Target Piece Type
-    -27,  // Moving and Target Piece Type
-    1,    // Moving and Target Piece Type
-    32,   // Moving and Target Piece Type
-    161,  // Moving and Target Piece Type
-    3,    // Moving and Target Piece Type
-    -81,  // Moving and Target Piece Type
-    56,   // Moving and Target Piece Type
-    37,   // Moving and Target Piece Type
-    189,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -58,  // Moving and Target Piece Type
-    0,    // Move Type
-    142,  // Move Type
-    -48,  // Move Type
-    192,  // Move Type
-    287,  // Move Type
-    31,   // Move Type
-    -1000,// Move Type
-    -1000,// Move Type
-    404,  // Move Type
-    45,   // Move Source
-    24,   // Move Source
-    25,   // Move Source
-    19,   // Move Source
-    -8,   // Move Source
-    -1,   // Move Source
-    0,    // Move Source
-    -7,   // Move Source
-    -11,  // Move Source
-    -16,  // Move Source
-    -83,  // Move Destination
-    -47,  // Move Destination
-    -44,  // Move Destination
-    -28,  // Move Destination
-    -6,   // Move Destination
-    0,    // Move Destination
-    4,    // Move Destination
-    13,   // Move Destination
-    19,   // Move Destination
-    30,   // Move Destination
-    186,  // Knight Move Source
-    80,   // Knight Move Source
-    38,   // Knight Move Source
-    44,   // Knight Move Source
-    36,   // Knight Move Source
-    29,   // Knight Move Source
-    19,   // Knight Move Source
-    0,    // Knight Move Source
-    -17,  // Knight Move Source
-    -22,  // Knight Move Source
-    -226, // Knight Move Destination
-    -159, // Knight Move Destination
-    -102, // Knight Move Destination
-    -67,  // Knight Move Destination
-    -78,  // Knight Move Destination
-    -12,  // Knight Move Destination
-    3,    // Knight Move Destination
-    27,   // Knight Move Destination
-    44,   // Knight Move Destination
-    60,   // Knight Move Destination
-    101,  // Move Captures Last Moved Piece
-    -387, // Move SEE
-    -244, // Move SEE
-    93,   // Move Gives Check
-    180,  // Move Gives Check
-    -343, // Move Destination Taboo
-    0,    // Changes Between Non-/Forcing States
-    0,    // Changes Between Non-/Forcing States
-    -22,  // Changes Between Non-/Forcing States
-    41,   // Changes Between Non-/Forcing States
-    -46,  // Rank of pawn destination
-    -8,   // Rank of pawn destination
-    69,   // Rank of pawn destination
-    141,  // Rank of pawn destination
-    0,    // Rank of pawn destination
-    0,    // Rank of pawn destination
-    -50,  // Rank of passed pawn destination
-    35,   // Rank of passed pawn destination
-    51,   // Rank of passed pawn destination
-    64,   // Rank of passed pawn destination
-    101,  // Rank of passed pawn destination
-    0,    // Rank of passed pawn destination
-    119,  // Pawn move attacks a piece
-    86,   // Piece under attack
-    159,  // Piece under attack
-    7,    // History // TODO: try smoothing histories so weights = 1.
-    14,   // CMH
-    2     // CMH
+    2000, 
+    122, 
+    90, 
+    101, 
+    -74, 
+    124, 
+    30, 
+    169, 
+    325, 
+    3, 
+    0, 
+    -7, 
+    -4, 
+    92, 
+    311, 
+    1, 
+    -8, 
+    -117, 
+    131, 
+    90, 
+    339, 
+    -5, 
+    -19, 
+    87, 
+    123, 
+    126, 
+    283, 
+    -2, 
+    -124, 
+    -14, 
+    -9, 
+    28, 
+    164, 
+    -3, 
+    -82, 
+    54, 
+    43, 
+    180, 
+    3, 
+    -59, 
+    -5, 
+    143, 
+    -45, 
+    199, 
+    289, 
+    27, 
+    -1000, 
+    -1000, 
+    400, 
+    36, 
+    15, 
+    16, 
+    21, 
+    -9, 
+    6, 
+    5, 
+    -8, 
+    5, 
+    -13, 
+    -69, 
+    -45, 
+    -38, 
+    -32, 
+    -4, 
+    -4, 
+    9, 
+    18, 
+    11, 
+    29, 
+    180, 
+    81, 
+    28, 
+    44, 
+    42, 
+    31, 
+    10, 
+    2, 
+    -7, 
+    -17, 
+    -231, 
+    -154, 
+    -105, 
+    -59, 
+    -79, 
+    -11, 
+    17, 
+    22, 
+    42, 
+    57, 
+    110, 
+    -389, 
+    -231, 
+    94, 
+    175, 
+    -343, 
+    -24, 
+    18, 
+    -15, 
+    43, 
+    -53, 
+    3, 
+    54, 
+    144, 
+    1, 
+    11, 
+    -57, 
+    33, 
+    57, 
+    59, 
+    109, 
+    1, 
+    124, 
+    77, 
+    161, 
+    7, 
+    14, 
+    2, 
 };
 
 constexpr std::array<int, 117> search_params_in_check = {
-    2000, // Hash Move
-    60,   // Killer Move
-    53,   // Killer Move
-    131,  // Counter Move
-    -50,  // Moving and Target Piece Type
-    -47,  // Moving and Target Piece Type
-    -21,  // Moving and Target Piece Type
-    21,   // Moving and Target Piece Type
-    8,    // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -49,  // Moving and Target Piece Type
-    -68,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -22,  // Moving and Target Piece Type
-    30,   // Moving and Target Piece Type
-    -19,  // Moving and Target Piece Type
-    -2,   // Moving and Target Piece Type
-    3,    // Moving and Target Piece Type
-    3,    // Moving and Target Piece Type
-    9,    // Moving and Target Piece Type
-    50,   // Moving and Target Piece Type
-    -12,  // Moving and Target Piece Type
-    -4,   // Moving and Target Piece Type
-    -27,  // Moving and Target Piece Type
-    25,   // Moving and Target Piece Type
-    61,   // Moving and Target Piece Type
-    64,   // Moving and Target Piece Type
-    13,   // Moving and Target Piece Type
-    -14,  // Moving and Target Piece Type
-    -27,  // Moving and Target Piece Type
-    14,   // Moving and Target Piece Type
-    -11,  // Moving and Target Piece Type
-    40,   // Moving and Target Piece Type
-    4,    // Moving and Target Piece Type
-    -81,  // Moving and Target Piece Type
-    0,    // Moving and Target Piece Type
-    -11,  // Moving and Target Piece Type
-    38,   // Moving and Target Piece Type
-    44,   // Moving and Target Piece Type
-    -82,  // Moving and Target Piece Type
-    0,    // Move Type
-    0,    // Move Type
-    -18,  // Move Type
-    -134, // Move Type
-    254,  // Move Type
-    151,  // Move Type
-    -1000,// Move Type
-    -1000,// Move Type
-    395,  // Move Type
-    35,   // Move Source
-    -3,   // Move Source
-    11,   // Move Source
-    17,   // Move Source
-    4,    // Move Source
-    0,    // Move Source
-    -1,   // Move Source
-    -23,  // Move Source
-    -29,  // Move Source
-    -32,  // Move Source
-    -131, // Move Destination
-    -75,  // Move Destination
-    -78,  // Move Destination
-    -76,  // Move Destination
-    -19,  // Move Destination
-    0,    // Move Destination
-    8,    // Move Destination
-    30,   // Move Destination
-    35,   // Move Destination
-    45,   // Move Destination
-    0,    // Knight Move Source
-    -6,   // Knight Move Source
-    0,    // Knight Move Source
-    3,    // Knight Move Source
-    0,    // Knight Move Source
-    0,    // Knight Move Source
-    0,    // Knight Move Source
-    0,    // Knight Move Source
-    0,    // Knight Move Source
-    -4,   // Knight Move Source
-    0,    // Knight Move Destination
-    -127, // Knight Move Destination
-    -105, // Knight Move Destination
-    -131, // Knight Move Destination
-    -62,  // Knight Move Destination
-    -13,  // Knight Move Destination
-    0,    // Knight Move Destination
-    1,    // Knight Move Destination
-    0,    // Knight Move Destination
-    45,   // Knight Move Destination
-    5,    // Move Captures Last Moved Piece
-    -344, // Move SEE
-    -369, // Move SEE
-    61,   // Move Gives Check
-    65,   // Move Gives Check
-    -367, // Move Destination Taboo
-    0,    // Changes Between Non-/Forcing States
-    55,   // Changes Between Non-/Forcing States
-    -138, // Changes Between Non-/Forcing States
-    0,    // Changes Between Non-/Forcing States
-    -24,  // Rank of pawn destination
-    40,   // Rank of pawn destination
-    40,   // Rank of pawn destination
-    0,    // Rank of pawn destination
-    0,    // Rank of pawn destination
-    0,    // Rank of pawn destination
-    -66,  // Rank of passed pawn destination
-    56,   // Rank of passed pawn destination
-    124,  // Rank of passed pawn destination
-    70,   // Rank of passed pawn destination
-    129,  // Rank of passed pawn destination
-    0,    // Rank of passed pawn destination
-    -8,   // Pawn move attacks a piece
-    34,   // Piece under attack
-    0,    // Piece under attack
-    7,    // History
-    13,   // CMH
-    2     // CMH
+    2000, 
+    55, 
+    40, 
+    124, 
+    -49, 
+    -50, 
+    -20, 
+    30, 
+    16, 
+    10, 
+    -48, 
+    -72, 
+    0, 
+    -18, 
+    26, 
+    -21, 
+    1, 
+    11, 
+    -6, 
+    3, 
+    46, 
+    -3, 
+    -11, 
+    -25, 
+    19, 
+    57, 
+    60, 
+    7, 
+    -17, 
+    -24, 
+    10, 
+    -10, 
+    38, 
+    3, 
+    -84, 
+    -5, 
+    -20, 
+    42, 
+    42, 
+    -93, 
+    -1, 
+    -2, 
+    -18, 
+    -133, 
+    258, 
+    145, 
+    -1000, 
+    -1000, 
+    398, 
+    34, 
+    0, 
+    8, 
+    25, 
+    -2, 
+    -1, 
+    -3, 
+    -23, 
+    -29, 
+    -47, 
+    -140, 
+    -66, 
+    -74, 
+    -84, 
+    -11, 
+    0, 
+    11, 
+    30, 
+    37, 
+    55, 
+    19, 
+    -4, 
+    7, 
+    4, 
+    0, 
+    -2, 
+    4, 
+    14, 
+    -4, 
+    7, 
+    17, 
+    -126, 
+    -110, 
+    -135, 
+    -57, 
+    -13, 
+    6, 
+    1, 
+    0, 
+    37, 
+    0, 
+    -342, 
+    -359, 
+    73, 
+    56, 
+    -374, 
+    -4, 
+    56, 
+    -139, 
+    1, 
+    -29, 
+    34, 
+    36, 
+    -5, 
+    3, 
+    6, 
+    -60, 
+    58, 
+    117, 
+    68, 
+    132, 
+    2, 
+    -10, 
+    27, 
+    -11, 
+    7, 
+    13, 
+    2, 
 };
+
+
 
 //constexpr std::array<int, 45> qs_params = {
 //    150,                          // Hash Move
