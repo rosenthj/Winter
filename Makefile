@@ -15,7 +15,7 @@ CXX=clang++
 CFLAGS=-c -DNDEBUG -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++17 -Isrc -Isrc/general -Isrc/learning  
 LDFLAGS= -flto -Wall -lpthread
 endif
-SOURCES=$(wildcard src/general/*.cc src/learning/*.cc src/*.cc)
+SOURCES=$(wildcard src/general/*.cc src/*.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 EXE:=Winter
 

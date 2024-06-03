@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2021 Jonathan Rosenthal
+ *  Copyright (C) 2017-2024 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include "commands.h"
 #include "general/settings.h"
 #include "general/types.h"
+#include "move_order.h"
 #include "search.h"
 #include "search_thread.h"
 #include "transposition.h"
@@ -253,12 +254,22 @@ void UCINewGame(Board &board, const StrArgs) {
 void UCISetOption(Board &board, const StrArgs tokens) {
   int index = 2;
   std::string command = tokens[index++];
+#ifdef TUNE_ORDER
+  auto components = split(command, '_');
+  if (Equals(components[0], "order")) {
+    int idx = atoi(components[1].c_str());
+    index++;
+    int value = atoi(tokens[index++].c_str());
+    move_order::SetWeight(idx, value);
+    return;
+  }
+#endif
   for (const UCIOption &option : uci_options) {
     if (Equals(command, option.name)) {
       index++;
       int value = atoi(tokens[index++].c_str());
       option.func(value);
-      break;
+      return;
     }
   }
   for (const UCICheck &option : uci_check_options) {
@@ -266,7 +277,7 @@ void UCISetOption(Board &board, const StrArgs tokens) {
       index++;
       bool value = IsTrue(tokens[index++].c_str());
       option.func(value);
-      break;
+      return;
     }
   }
 }
@@ -324,6 +335,9 @@ void UCIUci(Board &board, const StrArgs) {
   for (const UCICheck &option : uci_check_options) {
     Reply(option.to_string());
   }
+  #ifdef TUNE_ORDER
+  move_order::PrintOptions();
+  #endif
   Reply(kOk);
 }
 
@@ -365,6 +379,7 @@ void Loop() {
     std::string command = args[0];
     bool command_found = false;
     for (UCICommand uci_command : uci_commands) {
+      
       if (Equals(command, uci_command.name)) {
         command_found = true;
         uci_command.func(board, args);

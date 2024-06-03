@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2024 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,9 +23,9 @@
 #include "transposition.h"
 #include "uci.h"
 #include "general/types.h"
-#include "learning/linear_algebra.h"
 #include "general/magic.h"
 #include "general/settings.h"
+#include "move_order.h"
 #include "board.h"
 #include "search.h"
 
@@ -38,39 +38,18 @@ bool Equals(std::string string_a, std::string string_b) {
 int main(int argc, char **argv) {
   table::SetTableSize(32);
 
-  search::LoadSearchVariablesHardCoded();
+  //search::LoadSearchVariablesHardCoded();
   net_evaluation::init_weights();
+  move_order::Init();
+  //move_order::OptionsToFile();
 
   if (argc > 1 && Equals(argv[1], "bench")) {
     benchmark::RunBenchCommand(argc, argv);
     return 0;
   }
 
-//  train::RunEMForNFCM();
-//  evaluation::RunEMForGMM();
-
-//  benchmark::GenerateDatasetFromEPD();
-
-//  net_evaluation::GenerateDatasetFromEPD();
-//  benchmark::ZuriChessDatasetLoss();
-//  net_evaluation::EstimateFeatureImpact();
-//  std::cout << "Startpos eval: " << net_evaluation::ScoreBoard(Board()).to_wpct() << std::endl;
-
-  //search::SaveHardcodeSearchVariables();
-
   //The following commented lines remain to remind me how to do stuff =)
-  //search::CreateSearchParamDataset(false);
-  //if (settings::kExperimental)
-  //  search::TrainSearchParams(false);
-  //search::CreateSearchParamDataset();
-  //evaluation::CheckFeatureMagnitude();
-  //evaluation::CheckVariableInfluence();
   //benchmark::EntropyLossTimedSuite(Milliseconds(10));
-  //bookkeeping::PrintNWD1NodeRequirements();
-  //evaluation::SampledEMForGMM();
-  //evaluation::EvaluateQuietMoveValue();
-  //search::EvaluateScoreDistributions(2);
-  //search::EvaluateCaptureMoveValue(1000);
   //benchmark::TimeToDepthSuite();
   //parse::Save2dVecToCSV<Score>(vecvec,"data/test.csv");
   uci::Loop();
