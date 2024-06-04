@@ -182,19 +182,17 @@ enum SlidingCheckType {
 
 template<bool in_check>
 MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
-  MoveScore move_weight = 0;
+  MoveScore move_weight = 160000000;
   if (move == info.tt_entry) {
     AddFeature<in_check>(move_weight, kPWIHashMove);
-    return move_weight;
+    return move_weight / 16000;
   }
   int num_made_moves = t.board.get_num_made_moves();
   if (move == t.killers[num_made_moves][0]) {
     AddFeature<in_check>(move_weight, kPWIKiller);
-    //return move_weight;
   }
   else if (move == t.killers[num_made_moves][1]) {
     AddFeature<in_check>(move_weight, kPWIKiller + 1);
-    //return move_weight;
   }
   if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
     const Square last_destination = GetMoveDestination(t.board.get_last_move());
@@ -209,9 +207,9 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
       const Square destination = GetMoveDestination(move);
       const int32_t score = t.get_continuation_score<1>(last_moved_piece, last_destination,
                                          moving_piece, destination);
-      AddFeature<in_check>(move_weight, kPWICMH, score / 1000);
-      AddFeature<in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move) / 1000);
-      AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination) / 1000);
+      AddFeature<in_check>(move_weight, kPWICMH, score);
+      AddFeature<in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move));
+      AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination));
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
@@ -294,7 +292,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
     }
   }
   AddFeature<in_check>(move_weight, kPWIForcingChanges + IsMoveForcing(move) + 2 * IsMoveForcing(info.last_move));
-  return move_weight;
+  return move_weight / 16000;
 }
 
 // Sorten moves according to weights given by some classifier
@@ -305,12 +303,12 @@ void SortML(std::vector<Move> &moves, search::Thread &t,
   //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
     for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<true>(moves[i], t, info)) << 16);
+      moves[i] |= (GetMoveWeight<true>(moves[i], t, info) << 16);
     }
   }
   else {
     for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= ((10000 + GetMoveWeight<false>(moves[i], t, info)) << 16);
+      moves[i] |= (GetMoveWeight<false>(moves[i], t, info) << 16);
     }
   }
 
@@ -355,7 +353,7 @@ void OptionsToFile() {
   f.open("./order_params.csv");
   for (size_t idx = 0; idx < 2*kNumMoveProbabilityFeatures; ++idx) {
     f << "order_" << idx << ", int, " << GetWeight(idx)
-      << ", -1000, 1000, 10, 0.008" << std::endl;
+      << ", -16000000, 16000000, 160000, 0.002" << std::endl;
   }
   f.close();
 }
