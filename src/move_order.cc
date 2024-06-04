@@ -184,8 +184,7 @@ template<bool in_check>
 MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
   MoveScore move_weight = 160000000;
   if (move == info.tt_entry) {
-    AddFeature<in_check>(move_weight, kPWIHashMove);
-    return move_weight / 16000;
+    return (1 << 15) - 1;
   }
   int num_made_moves = t.board.get_num_made_moves();
   if (move == t.killers[num_made_moves][0]) {
