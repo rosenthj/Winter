@@ -152,9 +152,9 @@ constexpr std::array<int, 117> search_params = {
     1984000,    //Pawn move attacks piece
     1232000,     //Piece is under attack
     2576000,    //Piece is under attack
-    112,      //History heuristic
-    224,     //Countermove History
-    32,      //Countermove History
+    137,      //History heuristic
+    219,     //Countermove History
+    47,      //Countermove History
 };
 
 constexpr std::array<int, 117> search_params_in_check = {
@@ -272,9 +272,9 @@ constexpr std::array<int, 117> search_params_in_check = {
     -160000,    //Pawn move attacks piece
     432000,     //Piece is under attack
     -176000,    //Piece is under attack
-    112,      //History heuristic
-    208,     //Countermove History
-    32,      //Countermove History
+    100,      //History heuristic
+    210,     //Countermove History
+    29,      //Countermove History
 };
 
 
