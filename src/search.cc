@@ -317,21 +317,22 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
     }
     return lower_bound_score;
   }
-
-  //Move best_move = 0;
-
-  //Sort move list
-  if (entry.has_value()) {
-    move_order::Sort(moves, t, entry->get_best_move());
-    //SortMovesML(moves, board, entry.best_move);
-  }
-  else {
-    move_order::Sort(moves, t, 0);
-    //SortMovesML(moves, board, 0);
+  
+  bool moves_sorted = false;
+  if (!entry.has_value() || entry->get_best_move() == kNullMove
+                         || !SwapToFront(moves, entry->get_best_move())) {
+    move_order::Sort(moves, t);
+    moves_sorted = true;
   }
 
   //Move loop
-  for (Move move : moves) {
+  for (size_t i = 0; i < moves.size(); ++i) {
+    if (i == 1 && moves.size() > 2 && !moves_sorted) {
+      move_order::Sort(moves, t, 1);
+      moves_sorted = true;
+    }
+    const Move move = moves[i];
+    
     //SEE pruning
     //Exception for checking moves: -16.03 +/- 10.81
     if (!in_check && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
@@ -605,13 +606,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     tt_entry = t.best_root_move;
   }
 
-  bool moves_sorted = false, swapped = false;
-  if (tt_entry != kNullMove) {
-    swapped = SwapToFront(moves, tt_entry);
-    assert(!swapped || tt_entry == moves[0]);
-  }
-  if (!swapped) {
-    move_order::SortML(moves, t, tt_entry);
+  bool moves_sorted = false;
+  if (tt_entry == kNullMove || !SwapToFront(moves, tt_entry)) {
+    move_order::SortML(moves, t);
     moves_sorted = true;
   }
 
@@ -630,11 +627,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   Score alpha_nw = alpha.get_next_score();
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
-    if (i == 1 && !moves_sorted) {
-      move_order::SortML(moves, t, tt_entry, 1);
+    if (i == 1 && moves.size() > 2 && !moves_sorted) {
+      move_order::SortML(moves, t, 1);
       moves_sorted = true;
     }
     const Move move = moves[i];
+    
     if (move == exclude_move) {
       continue;
     }
@@ -945,7 +943,8 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.main_thread->board.SetToSamePosition(board);
   Threads.main_thread->root_height = board.get_num_made_moves();
   Threads.main_thread->max_depth = board.get_num_made_moves();
-  move_order::SortML(moves, *Threads.main_thread, tt_move);
+  bool tt_move_in_front = SwapToFront(moves, tt_move);
+  move_order::SortML(moves, *Threads.main_thread, tt_move_in_front);
   Threads.main_thread->best_root_move = tt_move;
   Threads.end_search = false;
   std::vector<std::thread> helpers;

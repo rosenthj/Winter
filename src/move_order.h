@@ -37,9 +37,10 @@
 namespace move_order {
 
 void Init();
-void Sort(std::vector<Move> &moves, search::Thread &t, const Move best_move);
+void Sort(std::vector<Move> &moves, search::Thread &t,
+          const size_t start_idx = 0);
 void SortML(std::vector<Move> &moves, search::Thread &t,
-            const Move best_move = kNullMove, const size_t start_idx = 0);
+            const size_t start_idx = 0);
 
 #ifdef TUNE_ORDER
 

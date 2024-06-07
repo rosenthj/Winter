@@ -62,26 +62,30 @@ struct Sorter {
   };
 };
 
-MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
-  if (move == best)
-    return 20000;
-  else if (GetMoveType(move) > kCapture) {
+MoveScore get_move_priority(const Move move, search::Thread &t) {
+  if (GetMoveType(move) > kCapture) {
     return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
   }
   else if (GetMoveType(move) == kCapture) {
     return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
                 - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  assert(GetMoveType(move) == kEnPassant);
+  return 1001;
 }
 
-void Sort(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
-  for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
+void Sort(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
+  if (!t.board.InCheck()) {
+    for (size_t i = start_idx; i < moves.size(); ++i) {
+      moves[i] |= (get_move_priority(moves[i], t) << 16);
+    }
+    std::sort(moves.begin()+start_idx, moves.end(), Sorter());
+    for (size_t i = start_idx; i < moves.size(); ++i) {
+      moves[i] &= 0xFFFFL;
+    }
   }
-  std::sort(moves.begin(), moves.end(), Sorter());
-  for (size_t i = 0; i < moves.size(); ++i) {
-    moves[i] &= 0xFFFFL;
+  else {
+    SortML(moves, t, start_idx);
   }
 }
 
@@ -158,15 +162,13 @@ inline BitBoard get_under_threat_squares(const Board &board) {
 }
 
 struct MoveOrderInfo {
-  const Move tt_entry;
   const Move last_move;
   const std::array<BitBoard, 6> direct_checks;
   const std::array<BitBoard, 6> taboo_squares;
   const BitBoard passed_pawn_squares;
   const BitBoard pawn_attack_squares;
   const BitBoard under_threat;
-  MoveOrderInfo(const Board &board, Move tt_entry_ = kNullMove) :
-    tt_entry(tt_entry_),
+  MoveOrderInfo(const Board &board) :
     last_move(get_last_move(board)),
     direct_checks(board.GetDirectCheckingSquares()),
     taboo_squares(board.GetTabooSquares()),
@@ -183,9 +185,7 @@ enum SlidingCheckType {
 template<bool in_check>
 MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo &info) {
   MoveScore move_weight = 160000000;
-  if (move == info.tt_entry) {
-    return (1 << 15) - 1;
-  }
+  
   int num_made_moves = t.board.get_num_made_moves();
   if (move == t.killers[num_made_moves][0]) {
     AddFeature<in_check>(move_weight, kPWIKiller);
@@ -193,8 +193,9 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   else if (move == t.killers[num_made_moves][1]) {
     AddFeature<in_check>(move_weight, kPWIKiller + 1);
   }
-  if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
-    const Square last_destination = GetMoveDestination(t.board.get_last_move());
+  
+  if (num_made_moves > 0 && info.last_move != kNullMove) {
+    const Square last_destination = GetMoveDestination(info.last_move);
     PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
       AddFeature<in_check>(move_weight, kPWICounterMove);
@@ -296,8 +297,8 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
 
 // Sorten moves according to weights given by some classifier
 void SortML(std::vector<Move> &moves, search::Thread &t,
-                 const Move best_move, const size_t start_idx) {
-  MoveOrderInfo info(t.board, best_move);
+           const size_t start_idx) {
+  MoveOrderInfo info(t.board);
 
   //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
