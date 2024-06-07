@@ -45,6 +45,7 @@ using namespace move_features;
 namespace {
   std::vector<MoveScore> search_params(kNumMoveProbabilityFeatures);
   std::vector<MoveScore> search_params_in_check(kNumMoveProbabilityFeatures);
+  std::vector<MoveScore> qs_search_params(kNumQSMoveProbabilityFeatures);
 }
 
 namespace move_order {
@@ -54,6 +55,9 @@ void Init() {
     search_params.at(idx) = hardcode::search_params[idx];
     search_params_in_check.at(idx) = hardcode::search_params_in_check[idx];
   }
+  for (size_t idx = 0; idx < kNumQSMoveProbabilityFeatures; ++idx) {
+    qs_search_params.at(idx) = hardcode::qs_params[idx];
+  }
 }
 
 struct Sorter {
@@ -62,22 +66,49 @@ struct Sorter {
   };
 };
 
-MoveScore get_move_priority(const Move move, search::Thread &t) {
-  if (GetMoveType(move) > kCapture) {
-    return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+MoveScore get_move_priority(const Move move, search::Thread &t,
+                            const Square last_destination) {
+  MoveScore score = 10000;
+  const MoveType move_type = GetMoveType(move);
+  if (move_type == kEnPassant) {
+    return score + qs_search_params[kQSEnPassant];
   }
-  else if (GetMoveType(move) == kCapture) {
-    return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  if (GetMoveDestination(move) == last_destination) {
+    score += qs_search_params[kQSCaptureLastMoved];
   }
-  assert(GetMoveType(move) == kEnPassant);
-  return 1001;
+  if (move_type > kCapture) {
+    score += qs_search_params[kQSPromotion + move_type - kKnightPromotion];
+    PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
+    if (target == kNoPiece) {
+      return score;
+    }
+    return score + qs_search_params[kQSCapture + target];
+  }
+  else {
+    assert(GetMoveType(move) == kCapture);
+    PieceType mover = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+    PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
+    return score + qs_search_params[kQSCapture + 6*mover + target];
+  }
 }
+
+//MoveScore get_move_priority(const Move move, search::Thread &t) {
+  //if (GetMoveType(move) > kCapture) {
+    //return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+  //}
+  //else if (GetMoveType(move) == kCapture) {
+    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                //- GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  //}
+  //assert(GetMoveType(move) == kEnPassant);
+  //return 1001;
+//}
 
 void Sort(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
   if (!t.board.InCheck()) {
+    Square last = GetMoveDestination(t.board.get_last_move());
     for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (get_move_priority(moves[i], t) << 16);
+      moves[i] |= (get_move_priority(moves[i], t, last) << 16);
     }
     std::sort(moves.begin()+start_idx, moves.end(), Sorter());
     for (size_t i = start_idx; i < moves.size(); ++i) {
@@ -327,6 +358,9 @@ void SetWeight(size_t idx, MoveScore value) {
   else if (idx < (2 * kNumMoveProbabilityFeatures)) {
     search_params_in_check[idx - kNumMoveProbabilityFeatures] = value;
   }
+  else if (idx < (2 * kNumMoveProbabilityFeatures + qs_search_params.size())) {
+    qs_search_params[idx - 2*kNumMoveProbabilityFeatures] = value;
+  }
 }
 
 MoveScore GetWeight(size_t idx) {
@@ -336,13 +370,17 @@ MoveScore GetWeight(size_t idx) {
   else if (idx < (2 * kNumMoveProbabilityFeatures)) {
     return search_params_in_check.at(idx - kNumMoveProbabilityFeatures);
   }
+  else if (idx < (qs_search_params.size() + 2 * kNumMoveProbabilityFeatures)) {
+    return qs_search_params.at(idx - 2 * kNumMoveProbabilityFeatures);
+  }
   std::cout << "Error detected in move_order::GetWeight(" << idx << ")"
             << std::endl;
   return 0;
 }
 
 void PrintOptions() {
-  for (size_t idx = 0; idx < 2*kNumMoveProbabilityFeatures; ++idx) {
+  size_t num_params = 2*kNumMoveProbabilityFeatures + qs_search_params.size();
+  for (size_t idx = 0; idx < num_params; ++idx) {
     std::cout << "option name order_" << idx << " type spin default "
               << GetWeight(idx) << " min -1000 max 1000" << std::endl;
   }
@@ -354,6 +392,12 @@ void OptionsToFile() {
   for (size_t idx = 0; idx < 2*kNumMoveProbabilityFeatures; ++idx) {
     f << "order_" << idx << ", int, " << GetWeight(idx)
       << ", -16000000, 16000000, 160000, 0.002" << std::endl;
+  }
+  size_t start = 2*kNumMoveProbabilityFeatures;
+  size_t num_params = start + qs_search_params.size();
+  for (size_t idx = start; idx < num_params; ++idx) {
+    f << "order_" << idx << ", int, " << GetWeight(idx)
+      << ", -1000, 1000, 10, 0.002" << std::endl;
   }
   f.close();
 }

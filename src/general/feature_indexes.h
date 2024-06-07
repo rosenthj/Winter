@@ -102,14 +102,11 @@ const std::array<FeatureInfo, 21> kFeatureInfos = {{
     FeatureInfo("Num Features Placeholder", kNumMoveProbabilityFeatures)
 }};
 
-}
-
-namespace qs_move_features {
-
-const size_t kPWIHashMove = 0;
-const size_t kPWIPromotion = kPWIHashMove + 1;
-const size_t kPWICapture = kPWIPromotion + 8;
-const size_t kNumQSMoveProbabilityFeatures = kPWICapture + 6 * 6;
+const size_t kQSEnPassant = 0;
+const size_t kQSPromotion = kQSEnPassant + 1;
+const size_t kQSCapture = kQSPromotion + 4;
+const size_t kQSCaptureLastMoved = kQSCapture + 6 * 6;
+const size_t kNumQSMoveProbabilityFeatures = kQSCaptureLastMoved + 1;
 
 }
 

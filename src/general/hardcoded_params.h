@@ -278,18 +278,17 @@ constexpr std::array<int, 117> search_params_in_check = {
 };
 
 
-//constexpr std::array<int, 45> qs_params = {
-//    150,                          // Hash Move
-//    104, 100, 100, 115,           // Promotion Capture
-//    100, 100, 100, 112,           // Promotion
-//    105, 101, 103, 108, 110, 102, // Capture Pawn
-//    116, 119, 111, 106, 114, 122, // Capture Knight
-//    120, 121, 123, 107, 109, 118, // Capture Bishop
-//    126, 113, 124, 125, 117, 128, // Capture Rook
-//    133, 129, 130, 131, 127, 100, // Capture Queen
-//    100, 100, 100, 100, 100, 100, // Capture King
-//    //B1210887, B17-88196534
-//};
+constexpr std::array<int, 42> qs_params = {
+    0,                  // En Passant
+    0, -500, -490, 10,  // Promotion
+    0, 0, 0, 0, 0, 0,   // Capture Pawn
+    0, 0, 0, 0, 0, 0,   // Capture Knight
+    0, 0, 0, 0, 0, 0,   // Capture Bishop
+    0, 0, 0, 0, 0, 0,   // Capture Rook
+    0, 0, 0, 0, 0, 0,   // Capture Queen
+    0, 0, 0, 0, 0, 0,   // Capture King
+    5                   // Capture Last Moved
+};
 
 }
 
