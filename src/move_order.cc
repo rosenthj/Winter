@@ -127,21 +127,21 @@ MoveScore get_move_priority(const Move move, search::Thread &t,
   //return 1001;
 }
 
-//~ void Sort(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
-  //~ //if (!t.board.InCheck()) {
-  //~ Square last = GetMoveDestination(t.board.get_last_move());
-  //~ for (size_t i = start_idx; i < moves.size(); ++i) {
-    //~ moves[i] |= (get_move_priority(moves[i], t, last) << 16);
-  //~ }
-  //~ std::sort(moves.begin()+start_idx, moves.end(), Sorter());
-  //~ for (size_t i = start_idx; i < moves.size(); ++i) {
-    //~ moves[i] &= 0xFFFFL;
-  //~ }
-  //~ //}
-  //~ //else {
-    //~ //SortML(moves, t, start_idx);
-  //~ //}
-//~ }
+void SortSimple(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
+  //if (!t.board.InCheck()) {
+  Square last = GetMoveDestination(t.board.get_last_move());
+  for (size_t i = start_idx; i < moves.size(); ++i) {
+    moves[i] |= (get_move_priority(moves[i], t, last) << 16);
+  }
+  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
+  for (size_t i = start_idx; i < moves.size(); ++i) {
+    moves[i] &= 0xFFFFL;
+  }
+  //}
+  //else {
+    //SortML(moves, t, start_idx);
+  //}
+}
 
 template<bool in_check> inline MoveScore GetFeatureValue(const size_t index) {
   if (in_check)

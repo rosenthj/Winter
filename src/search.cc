@@ -260,6 +260,15 @@ size_t Perft(Board &board, Depth depth) {
   return perft_sum;
 }
 
+//~ double avg_move_return = 0.;
+//~ double avg_move_count = 0.;
+//~ double avg_qs_return = 0.;
+//~ double avg_qs_count = 0.;
+//~ double avg_nw_return = 0.;
+//~ double avg_nw_count = 0.;
+//~ double avg_nh_return = 0;
+//~ double avg_nh_count = 0;
+
 Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   assert(beta > alpha);
   t.nodes++;
@@ -328,7 +337,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
     if (i == 1 && moves.size() > 2 && !moves_sorted) {
-      move_order::Sort(moves, t, 1);
+      move_order::SortSimple(moves, t, 1);
       moves_sorted = true;
     }
     const Move move = moves[i];
@@ -349,6 +358,16 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
       //Return beta if we fail high
       if (score >= beta) {
         table::SaveEntry(t.board, move, score, 0);
+        //~ if (entry.has_value() && entry->get_best_move() == moves[0]) {
+          //~ if (i > 0) {
+            //~ avg_move_return += i - 1;
+            //~ avg_move_count++;
+          //~ }
+        //~ }
+        //~ else {
+          //~ avg_qs_return += i;
+          //~ avg_qs_count++;
+        //~ }
         return score;
       }
 
@@ -724,6 +743,19 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (is_root) {
         t.best_root_move = move;
       }
+      
+      if (node_type == NodeType::kNW) {
+        //~ if (entry.has_value() && entry->get_best_move() == moves[0]) {
+          //~ if (i > 0) {
+            //~ avg_nw_count++;
+            //~ avg_nw_return += i-1;
+          //~ }
+        //~ }
+        //~ else {
+          //~ avg_nh_count++;
+          //~ avg_nh_return += i;
+        //~ }
+      }
 
       return score;
     }
@@ -836,6 +868,7 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
       }
       //std::cout << " w:" << score.win << " wd:" << score.win_draw;
     }
+    //~ std::cout << " avg " << (avg_move_return / avg_move_count) << " " << (avg_qs_return / avg_qs_count) << " " << (avg_nw_return / avg_nw_count) << " " << (avg_nh_return / avg_nh_count);;
     std::cout << " pv";
     for (Move move : pv) {
       std::cout << " " << parse::MoveToString(move);
