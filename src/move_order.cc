@@ -66,58 +66,81 @@ struct Sorter {
   };
 };
 
-MoveScore get_move_priority(const Move move, search::Thread &t,
-                            const Square last_destination) {
-  MoveScore score = 10000;
-  const MoveType move_type = GetMoveType(move);
-  if (move_type == kEnPassant) {
-    return score + qs_search_params[kQSEnPassant];
-  }
-  if (GetMoveDestination(move) == last_destination) {
-    score += qs_search_params[kQSCaptureLastMoved];
-  }
-  if (move_type > kCapture) {
-    score += qs_search_params[kQSPromotion + move_type - kKnightPromotion];
-    PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
-    if (target == kNoPiece) {
-      return score;
-    }
-    return score + qs_search_params[kQSCapture + target];
-  }
-  else {
-    assert(GetMoveType(move) == kCapture);
-    PieceType mover = GetPieceType(t.board.get_piece(GetMoveSource(move)));
-    PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
-    return score + qs_search_params[kQSCapture + 6*mover + target];
-  }
-}
-
-//MoveScore get_move_priority(const Move move, search::Thread &t) {
-  //if (GetMoveType(move) > kCapture) {
-    //return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+//MoveScore get_move_priority(const Move move, search::Thread &t,
+                            //const Square last_destination) {
+  //MoveScore score = 10000;
+  //const MoveType move_type = GetMoveType(move);
+  //if (move_type == kEnPassant) {
+    //return score + qs_search_params[kQSEnPassant];
   //}
-  //else if (GetMoveType(move) == kCapture) {
-    //return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                //- GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  //if (GetMoveDestination(move) == last_destination) {
+    //score += qs_search_params[kQSCaptureLastMoved];
   //}
-  //assert(GetMoveType(move) == kEnPassant);
-  //return 1001;
+  //if (move_type > kCapture) {
+    //score += qs_search_params[kQSPromotion + move_type - kKnightPromotion];
+    //PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
+    //if (target == kNoPiece) {
+      //return score;
+    //}
+    //return score + qs_search_params[kQSCapture + target];
+  //}
+  //else {
+    //assert(GetMoveType(move) == kCapture);
+    //PieceType mover = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+    //PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
+    //return score + qs_search_params[kQSCapture + 6*mover + target];
+  //}
 //}
 
+//~ MoveScore get_move_priority(const Move move, search::Thread &t,
+                            //~ const Square last_destination) {
+  //~ if (GetMoveType(move) > kCapture) {
+    //~ return 10000 + GetMoveType(move) - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+  //~ }
+  //~ else if (GetMoveType(move) == kCapture) {
+    //~ return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                //~ - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  //~ }
+  //~ return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  //~ //assert(GetMoveType(move) == kEnPassant);
+  //~ //return 1001;
+//~ }
+
+MoveScore get_move_priority(const Move move, search::Thread &t,
+                            const Square last_destination) {
+  MoveScore score = 0;
+  if (last_destination == GetMoveDestination(move)) {
+    score += 100;
+  }
+  
+  if (GetMoveType(move) > kCapture) {
+    return 10000 + score + GetMoveType(move)
+    - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+  }
+  else if (GetMoveType(move) == kCapture) {
+    return 1000 + score
+                + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  }
+  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  //assert(GetMoveType(move) == kEnPassant);
+  //return 1001;
+}
+
 void Sort(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
-  if (!t.board.InCheck()) {
-    Square last = GetMoveDestination(t.board.get_last_move());
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (get_move_priority(moves[i], t, last) << 16);
-    }
-    std::sort(moves.begin()+start_idx, moves.end(), Sorter());
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] &= 0xFFFFL;
-    }
+  //if (!t.board.InCheck()) {
+  Square last = GetMoveDestination(t.board.get_last_move());
+  for (size_t i = start_idx; i < moves.size(); ++i) {
+    moves[i] |= (get_move_priority(moves[i], t, last) << 16);
   }
-  else {
-    SortML(moves, t, start_idx);
+  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
+  for (size_t i = start_idx; i < moves.size(); ++i) {
+    moves[i] &= 0xFFFFL;
   }
+  //}
+  //else {
+    //SortML(moves, t, start_idx);
+  //}
 }
 
 template<bool in_check> inline MoveScore GetFeatureValue(const size_t index) {
