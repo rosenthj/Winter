@@ -349,21 +349,12 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   return move_weight / 16000;
 }
 
-// Sorten moves according to weights given by some classifier
-void SortML(std::vector<Move> &moves, search::Thread &t,
-           const size_t start_idx) {
+template<bool in_check, bool SEE_enabled>
+void SortHelper(std::vector<Move> &moves, search::Thread &t,
+                const size_t start_idx) {
   MoveOrderInfo info(t.board);
-
-  //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
-  if (t.board.InCheck()) {
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (GetMoveWeight<true, true>(moves[i], t, info) << 16);
-    }
-  }
-  else {
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (GetMoveWeight<false, true>(moves[i], t, info) << 16);
-    }
+  for (size_t i = start_idx; i < moves.size(); ++i) {
+    moves[i] |= (GetMoveWeight<in_check, SEE_enabled>(moves[i], t, info) << 16);
   }
 
   std::sort(moves.begin()+start_idx, moves.end(), Sorter());
@@ -372,27 +363,25 @@ void SortML(std::vector<Move> &moves, search::Thread &t,
   }
 }
 
-// Sorten moves according to weights given by some classifier
-void Sort(std::vector<Move> &moves, search::Thread &t,
+template<bool SEE_enabled>
+void SortHelper(std::vector<Move> &moves, search::Thread &t,
            const size_t start_idx) {
-  MoveOrderInfo info(t.board);
-
-  //Move ordering is very different if we are in check. Eg a queen move not capturing anything is less likely.
   if (t.board.InCheck()) {
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (GetMoveWeight<true, false>(moves[i], t, info) << 16);
-    }
+    SortHelper<true, SEE_enabled>(moves, t, start_idx);
   }
   else {
-    for (size_t i = start_idx; i < moves.size(); ++i) {
-      moves[i] |= (GetMoveWeight<false, false>(moves[i], t, info) << 16);
-    }
+    SortHelper<false, SEE_enabled>(moves, t, start_idx);
   }
+}
 
-  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
-  for (size_t i = start_idx; i < moves.size(); ++i) {
-    moves[i] &= 0xFFFFL;
-  }
+void SortML(std::vector<Move> &moves, search::Thread &t,
+           const size_t start_idx) {
+  SortHelper<true>(moves, t, start_idx);
+}
+
+void Sort(std::vector<Move> &moves, search::Thread &t,
+           const size_t start_idx) {
+  SortHelper<false>(moves, t, start_idx);
 }
 
 #ifdef TUNE_ORDER
