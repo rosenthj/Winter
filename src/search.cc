@@ -337,7 +337,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
     if (i == 1 && moves.size() > 2 && !moves_sorted) {
-      move_order::SortSimple(moves, t, 1);
+      move_order::Sort(moves, t, 1);
       moves_sorted = true;
     }
     const Move move = moves[i];
@@ -387,7 +387,32 @@ inline NScore get_futility_margin(Depth depth, bool improving) {
   return kFutileMargin[depth] + kFutilityImproving * depth * improving;
 }
 
-void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+void update_capture_history(Thread &t, const Move capture,
+                            const int32_t score) {
+  const Piece piece = t.board.get_piece(GetMoveSource(capture));
+  const Square des = GetMoveDestination(capture);
+  if (GetMoveType(capture) == kEnPassant) {
+    t.update_capture_score(piece, des, kPawn, score);
+  }
+  const PieceType piece_type = t.board.get_piece_type(des);
+  t.update_capture_score(piece, des, piece_type, score);
+}
+
+void update_capture_history(Thread &t, const std::vector<Move> &captures,
+                            const Depth depth, const MoveScore last_sign) {
+  if (captures.size() == 0) {
+    return;
+  }
+  const int32_t score = std::min(depth * depth, 512);
+  for (size_t i = 0; i < captures.size() - 1; ++i) {
+    update_capture_history(t, captures[i], -score);
+  }
+  size_t i = captures.size() - 1;
+  update_capture_history(t, captures[i], last_sign * score);
+}
+
+void update_counter_move_history(Thread &t, const std::vector<Move> &quiets,
+                                 const Depth depth) {
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
@@ -472,7 +497,7 @@ inline bool singular_conditions_met(NodeType node_type, const Thread &t,
 }
 
 inline void update_killers(Thread &t, const Move move) {
-  assert(GetMoveType(move) < kCapture);
+  assert(IsQuiet(move));
   int num_made_moves = t.board.get_num_made_moves();
   if (t.killers[num_made_moves][0] != move) {
     t.killers[num_made_moves][1] = t.killers[num_made_moves][0];
@@ -642,7 +667,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   std::array<BitBoard, 6> checking_squares = t.board.GetDirectCheckingSquares();
 
   Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
-  std::vector<Move> quiets;
+  std::vector<Move> quiets, captures;
   Score alpha_nw = alpha.get_next_score();
   //Move loop
   for (size_t i = 0; i < moves.size(); ++i) {
@@ -698,8 +723,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       }
     }
 
-    if (GetMoveType(move) < kCapture) {
+    if (IsQuiet(move)) {
       quiets.emplace_back(move);
+    }
+    else {
+      captures.emplace_back(move);
     }
 
     //Make moves, search and unmake
@@ -736,9 +764,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       
       table::SaveEntry(t.board, move, score, depth);
       update_counter_moves(t, move);
-      if (GetMoveType(move) < kCapture) {
+      if (IsQuiet(move)) {
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
+        update_capture_history(t, captures, depth, -1);
+      }
+      else {
+        update_capture_history(t, captures, depth, 1);
       }
       if (is_root) {
         t.best_root_move = move;
@@ -762,8 +794,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
     //In PV nodes we might be improving Alpha without breaking Beta
     if (score > alpha) {
-      if (GetMoveType(move) < kCapture) {
+      if (IsQuiet(move)) {
         update_counter_move_history(t, quiets, depth);
+        update_capture_history(t, captures, depth, -1);
+      }
+      else {
+        update_capture_history(t, captures, depth, 1);
       }
       //Update score and expected best move
       alpha = score;
