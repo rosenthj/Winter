@@ -64,7 +64,7 @@ struct Thread {
       }
     }
 
-    for (size_t idx = 0; idx < continuation_history.size(); idx++) {
+    for (size_t idx = 0; idx < continuation_history.size(); ++idx) {
       for (PieceType pt = kPawn; pt <= kKing; ++pt) {
         for (Square sq = 0; sq < kBoardSize; ++sq) {
           for (PieceType pt_i = kPawn; pt_i <= kKing; ++pt_i) {
@@ -72,6 +72,14 @@ struct Thread {
               continuation_history[idx][pt][sq][pt_i][sq_i] = 0;
             }
           }
+        }
+      }
+    }
+    
+    for (Piece piece = 0; piece < GetPiece(1, kNoPiece); ++piece) {
+      for (Square sq = 0; sq < kBoardSize; ++sq) {
+        for (PieceType pt = kPawn; pt <= kKing; ++pt) {
+          capture_history[piece][sq][pt] = 0;
         }
       }
     }
@@ -93,10 +101,14 @@ struct Thread {
     Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
     static_scores[height] = score;
   }
-
+  
   int32_t get_history_score(const Color color, const Square src, const Square des) const;
-
   void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
+
+  int32_t get_capture_score(const Piece piece, const Square des,
+                            const PieceType piece_type) const;
+  void update_capture_score(const Piece piece, const Square des,
+                            const PieceType piece_type, const int32_t score);
 
   template<int moves_ago>
   int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
@@ -125,6 +137,7 @@ struct Thread {
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
   Array3d<int32_t, 2, 64, 64> history;
+  Array3d<int32_t, GetPiece(1, kNoPiece), 64, kNumPieceTypes> capture_history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   Depth root_height;

@@ -98,8 +98,23 @@ int32_t Thread::get_history_score(const Color color, const Square src,
 }
 
 void Thread::update_history_score(const Color color, const Square src, const Square des,
-                             const int32_t score) {
+                                  const int32_t score) {
   history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
+  assert(history[color][src][des] >= -(1 << 14));
+  assert(history[color][src][des] <= (1 << 14));
+}
+
+int32_t Thread::get_capture_score(const Piece piece, const Square des,
+                                  const PieceType pt) const {
+  return capture_history[piece][des][pt] / 32;
+}
+void Thread::update_capture_score(const Piece piece, const Square des,
+                                  const PieceType pt, const int32_t score) {
+  capture_history[piece][des][pt] += 32 * score
+                                 - capture_history[piece][des][pt]
+                                   * std::abs(score) / 512;
+  assert(capture_history[piece][des][pt] >= -32 * 512);
+  assert(capture_history[piece][des][pt] <= 32 * 512);
 }
 
 bool Thread::strict_worsening() const {
