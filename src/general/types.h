@@ -250,5 +250,9 @@ inline constexpr BitBoard GetSquareBitBoard(const Square square) {
   return ((BitBoard) 1) << square;
 }
 
+inline constexpr bool IsQuiet(const Move move) {
+  return GetMoveType(move) < kEnPassant;
+}
+
 
 #endif /* GENERAL_TYPES_H_ */
