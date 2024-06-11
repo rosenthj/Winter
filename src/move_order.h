@@ -37,8 +37,6 @@
 namespace move_order {
 
 void Init();
-void SortSimple(std::vector<Move> &moves, search::Thread &t,
-          const size_t start_idx = 0);
 void Sort(std::vector<Move> &moves, search::Thread &t,
           const size_t start_idx = 0);
 void SortML(std::vector<Move> &moves, search::Thread &t,

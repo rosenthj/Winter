@@ -106,32 +106,61 @@ struct Sorter {
   //~ //return 1001;
 //~ }
 
+//~ MoveScore get_move_priority(const Move move, search::Thread &t,
+                            //~ const Square last_destination) {
+  //~ MoveScore score = 0;
+  //~ if (last_destination == GetMoveDestination(move)) {
+    //~ //score += 100;
+  //~ }
+  
+  //~ if (GetMoveType(move) > kCapture) {
+    //~ return 10000 + score + GetMoveType(move)
+    //~ - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
+  //~ }
+  //~ else if (GetMoveType(move) == kCapture) {
+    //~ return 1000 + score
+                //~ + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
+                //~ - GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  //~ }
+  //~ return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  //~ //assert(GetMoveType(move) == kEnPassant);
+  //~ //return 1001;
+//~ }
+
 MoveScore get_move_priority(const Move move, search::Thread &t,
                             const Square last_destination) {
-  MoveScore score = 0;
-  if (last_destination == GetMoveDestination(move)) {
-    score += 100;
+  const MoveType move_type = GetMoveType(move);
+  if (!IsQuiet(move)) {
+    const Piece piece = t.board.get_piece(GetMoveSource(move));
+    const Square des = GetMoveDestination(move);
+    const PieceType piece_type = t.board.get_piece_type(des);
+    if (move_type == kCapture) {
+      int32_t capture_score = t.get_capture_score(piece, des, piece_type);
+      return (1 << 9) + (1 << 10) * piece_type + capture_score;
+    }
+    if (move_type == kEnPassant) {
+      int32_t capture_score = t.get_capture_score(piece, des, kPawn);
+      return (1 << 9) + capture_score;
+    }
+    int32_t capture_score = t.get_capture_score(piece, des, piece_type);
+    const int32_t promo_value = move_type - kKnightPromotion + kKnight;
+    if (piece_type == kNoPiece) {
+      return (1 << 9) + (1 << 10) * promo_value + capture_score;
+    }
+    return (1 << 9) + (1 << 10) * (promo_value + piece_type) + capture_score;
   }
-  
-  if (GetMoveType(move) > kCapture) {
-    return 10000 + score + GetMoveType(move)
-    - (GetPieceType(t.board.get_piece(GetMoveDestination(move))) / kNoPiece);
-  }
-  else if (GetMoveType(move) == kCapture) {
-    return 1000 + score
-                + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
-                - GetPieceType(t.board.get_piece(GetMoveSource(move)));
-  }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1024;
   //assert(GetMoveType(move) == kEnPassant);
   //return 1001;
 }
 
-void SortSimple(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
+void Sort(std::vector<Move> &moves, search::Thread &t, const size_t start_idx) {
   //if (!t.board.InCheck()) {
   Square last = GetMoveDestination(t.board.get_last_move());
   for (size_t i = start_idx; i < moves.size(); ++i) {
-    moves[i] |= (get_move_priority(moves[i], t, last) << 16);
+    int32_t priority = get_move_priority(moves[i], t, last);
+    assert (priority >= 0);
+    moves[i] |= priority << 16;
   }
   std::sort(moves.begin()+start_idx, moves.end(), Sorter());
   for (size_t i = start_idx; i < moves.size(); ++i) {
@@ -254,35 +283,40 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
       AddFeature<in_check>(move_weight, kPWICounterMove);
     }
-    if (GetMoveType(move) < kCapture) {
+    if (IsQuiet(move)) {
       const Color color = t.board.get_turn();
-      const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+      const PieceType moving_piece_type = t.board.get_piece_type(GetMoveSource(move));
       const Square source = GetMoveSource(move);
       const Square destination = GetMoveDestination(move);
       const int32_t score = t.get_continuation_score<1>(last_moved_piece, last_destination,
-                                         moving_piece, destination);
+                                         moving_piece_type, destination);
       AddFeature<in_check>(move_weight, kPWICMH, score);
       AddFeature<in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move));
       AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination));
     }
   }
-  const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  const Piece moving_piece = t.board.get_piece(GetMoveSource(move));
+  const PieceType moving_piece_type = GetPieceType(moving_piece);
   PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
   const MoveType move_type = GetMoveType(move);
-  if (SEE_enabled && move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
+  if (SEE_enabled && move_type >= kCapture && (target < moving_piece_type || target == kNoPiece)) {
     if (!t.board.NonNegativeSEE(move)) {
       AddFeature<in_check>(move_weight, kPWISEE);
     }
   }
+  if (!IsQuiet(move)) {
+    const PieceType victim = move_type == kEnPassant ? kPawn : target;
+    move_weight += 2560 * t.get_capture_score(moving_piece, GetMoveDestination(move), victim);
+  }
   target -= target / kKing;//The target cannot be a king, so we ignore that case.
   AddFeature<in_check>(move_weight, kPWIPieceTypeXTargetPieceType
-                            + (moving_piece * 6) + target);
+                            + (moving_piece_type * 6) + target);
   AddFeature<in_check>(move_weight, kPWIMoveType + GetMoveType(move));
   if (move_type == kNormalMove || move_type == kDoublePawnMove) {
     if (GetSquareBitBoard(GetMoveSource(move)) & info.under_threat) {
       AddFeature<in_check>(move_weight, kPWIPieceUnderAttack + 1);
     }
-    if (moving_piece == kPawn) {
+    if (moving_piece_type == kPawn) {
       if (true || !in_check) {
         const BitBoard des = GetSquareBitBoard(GetMoveDestination(move));
         if (des & info.passed_pawn_squares) {
@@ -300,7 +334,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
         }
       }
     }
-    else if (moving_piece == kKnight) {
+    else if (moving_piece_type == kKnight) {
       AddFeature<in_check>(move_weight, kPWIKnightMoveSource + kPSTindex[GetMoveSource(move)]);
       AddFeature<in_check>(move_weight, kPWIKnightMoveDestination + kPSTindex[GetMoveDestination(move)]);
     }
@@ -328,7 +362,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   if (info.last_move != kNullMove && GetMoveDestination(info.last_move) == GetMoveDestination(move)) {
     AddFeature<in_check>(move_weight, kPWICaptureLastMoved);
   }
-  if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece]) {
+  if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece_type]) {
     if (GetMoveType(move) >= kEnPassant) {
       AddFeature<in_check>(move_weight, kPWIGivesCheck);
     }
@@ -338,7 +372,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   }
   if ((GetMoveType(move) == kNormalMove || GetMoveType(move) == kDoublePawnMove)
       && (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[kKing])) {
-    if (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece]) {
+    if (GetSquareBitBoard(GetMoveDestination(move)) & info.taboo_squares[moving_piece_type]) {
       AddFeature<in_check>(move_weight, kPWITabooDestination);
     }
     else if (SEE_enabled && !t.board.NonNegativeSEE(move)) {
@@ -377,11 +411,6 @@ void SortHelper(std::vector<Move> &moves, search::Thread &t,
 void SortML(std::vector<Move> &moves, search::Thread &t,
            const size_t start_idx) {
   SortHelper<true>(moves, t, start_idx);
-}
-
-void Sort(std::vector<Move> &moves, search::Thread &t,
-           const size_t start_idx) {
-  SortHelper<false>(moves, t, start_idx);
 }
 
 #ifdef TUNE_ORDER
