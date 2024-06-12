@@ -305,10 +305,10 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
       AddFeature<in_check>(move_weight, kPWISEE);
     }
   }
-  if (!IsQuiet(move)) {
-    const PieceType victim = move_type == kEnPassant ? kPawn : target;
-    move_weight += 2560 * t.get_capture_score(moving_piece, GetMoveDestination(move), victim);
-  }
+  //~ if (!IsQuiet(move)) {
+    //~ const PieceType victim = move_type == kEnPassant ? kPawn : target;
+    //~ move_weight += 0 * t.get_capture_score(moving_piece, GetMoveDestination(move), victim);
+  //~ }
   target -= target / kKing;//The target cannot be a king, so we ignore that case.
   AddFeature<in_check>(move_weight, kPWIPieceTypeXTargetPieceType
                             + (moving_piece_type * 6) + target);

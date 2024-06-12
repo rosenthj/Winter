@@ -796,10 +796,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (score > alpha) {
       if (IsQuiet(move)) {
         update_counter_move_history(t, quiets, depth);
-        update_capture_history(t, captures, depth, -1);
+        //update_capture_history(t, captures, depth, -1);
       }
       else {
-        update_capture_history(t, captures, depth, 1);
+        //update_capture_history(t, captures, depth, 1);
       }
       //Update score and expected best move
       alpha = score;
