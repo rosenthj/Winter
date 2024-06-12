@@ -399,16 +399,19 @@ void update_capture_history(Thread &t, const Move capture,
 }
 
 void update_capture_history(Thread &t, const std::vector<Move> &captures,
-                            const Depth depth, const MoveScore last_sign) {
+                            const Depth depth, const Move best_move) {
   if (captures.size() == 0) {
     return;
   }
-  const int32_t score = std::min(depth * depth, 512);
-  for (size_t i = 0; i < captures.size() - 1; ++i) {
+  const int32_t score = std::min(depth * depth * 32, 2048);
+  for (size_t i = 0; i < captures.size(); ++i) {
     update_capture_history(t, captures[i], -score);
   }
-  size_t i = captures.size() - 1;
-  update_capture_history(t, captures[i], last_sign * score);
+  if (!IsQuiet(best_move)) {
+    update_capture_history(t, best_move, score);
+  }
+  //size_t i = captures.size() - 1;
+  //update_capture_history(t, captures[i], last_sign * score);
 }
 
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets,
@@ -726,9 +729,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (IsQuiet(move)) {
       quiets.emplace_back(move);
     }
-    else {
-      captures.emplace_back(move);
-    }
+    //~ else {
+      //~ captures.emplace_back(move);
+    //~ }
 
     //Make moves, search and unmake
     t.set_move(move);
@@ -767,16 +770,17 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (IsQuiet(move)) {
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
-        update_capture_history(t, captures, depth, -1);
+        //update_capture_history(t, captures, depth, -1);
       }
-      else {
-        update_capture_history(t, captures, depth, 1);
-      }
+      update_capture_history(t, captures, depth, move);
+      //~ else {
+        //~ update_capture_history(t, captures, depth, 1);
+      //~ }
       if (is_root) {
         t.best_root_move = move;
       }
       
-      if (node_type == NodeType::kNW) {
+      //~ if (node_type == NodeType::kNW) {
         //~ if (entry.has_value() && entry->get_best_move() == moves[0]) {
           //~ if (i > 0) {
             //~ avg_nw_count++;
@@ -787,7 +791,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
           //~ avg_nh_count++;
           //~ avg_nh_return += i;
         //~ }
-      }
+      //~ }
 
       return score;
     }
@@ -796,11 +800,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (score > alpha) {
       if (IsQuiet(move)) {
         update_counter_move_history(t, quiets, depth);
-        update_capture_history(t, captures, depth, -1);
+        //~ update_capture_history(t, captures, depth, -1);
       }
-      else {
-        update_capture_history(t, captures, depth, 1);
-      }
+      //~ else {
+        //~ update_capture_history(t, captures, depth, 1);
+      //~ }
       //Update score and expected best move
       alpha = score;
       alpha_nw = get_next_score(alpha);
@@ -810,6 +814,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
         t.best_root_move = move;
       }
     }
+    if (!IsQuiet(move)) {
+      captures.emplace_back(move);
+    }
     if (score > lower_bound_score) {
       lower_bound_score = score;
     }
@@ -818,6 +825,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   if (node_type != NodeType::kNW && alpha > original_alpha) {
     assert(best_local_move != kNullMove);
     assert(exclude_move == kNullMove);
+    //update_capture_history(t, captures, depth, best_local_move);
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
   }

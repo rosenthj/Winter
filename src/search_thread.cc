@@ -110,11 +110,11 @@ int32_t Thread::get_capture_score(const Piece piece, const Square des,
 }
 void Thread::update_capture_score(const Piece piece, const Square des,
                                   const PieceType pt, const int32_t score) {
-  capture_history[piece][des][pt] += 32 * score
+  capture_history[piece][des][pt] += score
                                  - capture_history[piece][des][pt]
-                                   * std::abs(score) / 512;
-  assert(capture_history[piece][des][pt] >= -32 * 512);
-  assert(capture_history[piece][des][pt] <= 32 * 512);
+                                   * std::abs(score) / (1 << 14);
+  assert(capture_history[piece][des][pt] >= -(1 << 14));
+  assert(capture_history[piece][des][pt] <= (1 << 14));
 }
 
 bool Thread::strict_worsening() const {

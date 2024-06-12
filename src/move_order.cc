@@ -127,6 +127,8 @@ struct Sorter {
   //~ //return 1001;
 //~ }
 
+const std::array<MoveScore, 7> v{1, 3, 3, 5, 10, 0, 0};
+
 MoveScore get_move_priority(const Move move, search::Thread &t,
                             const Square last_destination) {
   const MoveType move_type = GetMoveType(move);
@@ -136,18 +138,16 @@ MoveScore get_move_priority(const Move move, search::Thread &t,
     const PieceType piece_type = t.board.get_piece_type(des);
     if (move_type == kCapture) {
       int32_t capture_score = t.get_capture_score(piece, des, piece_type);
-      return (1 << 9) + (1 << 10) * piece_type + capture_score;
+      return (1 << 9) + (1 << 8) * v[piece_type] + capture_score;
     }
     if (move_type == kEnPassant) {
       int32_t capture_score = t.get_capture_score(piece, des, kPawn);
-      return (1 << 9) + capture_score;
+      return (2 << 8) + capture_score;
     }
     int32_t capture_score = t.get_capture_score(piece, des, piece_type);
-    const int32_t promo_value = move_type - kKnightPromotion + kKnight;
-    if (piece_type == kNoPiece) {
-      return (1 << 9) + (1 << 10) * promo_value + capture_score;
-    }
-    return (1 << 9) + (1 << 10) * (promo_value + piece_type) + capture_score;
+    const MoveScore promo_value = v[move_type - kKnightPromotion + kKnight];
+    const MoveScore target_value = v[piece_type];
+    return (1 << 9) + (1 << 8) * (promo_value + target_value) + capture_score;
   }
   return 20 + t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1024;
   //assert(GetMoveType(move) == kEnPassant);
