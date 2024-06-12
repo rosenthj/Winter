@@ -128,7 +128,6 @@ void SymmetrySuite() {
   while(std::getline(file, line)) {
     test_sets.emplace_back(line);
   }
-  //Time start = now();
   size_t test_sets_passed = 0;
   for (SymmetryTest test_set : test_sets) {
     if (net_evaluation::ScoreBoard(test_set.board1)
@@ -152,7 +151,7 @@ void PerftSuite(std::string filename) {
   while(std::getline(file, line)) {
     test_sets.emplace_back(string_to_perft_test(line));
   }
-    Time start = now();
+  Time start = now();
   size_t test_sets_passed = 0;
   for (size_t i = 0; i < test_sets.size(); i++) {
     bool passed = true;
@@ -161,50 +160,6 @@ void PerftSuite(std::string filename) {
       if (search::Perft(board, test_sets[i].depths[idx]) != test_sets[i].results[idx]) {
         std::cout << "\033[31mFailed set " << i << " on input ("
             << test_sets[i].depths[idx] << "," << test_sets[i].results[idx] << ")\033[0m"<< std::endl;
-        passed = false;
-        break;
-      }
-    }
-    if (passed) {
-      test_sets_passed++;
-      std::cout << "\033[32mPassed set " << i << "\033[0m"<< std::endl;
-    }
-    else {
-    }
-  }
-  Time end = now();
-  auto total_time = std::chrono::duration_cast<Milliseconds>(end-start);
-
-  if (test_sets_passed == test_sets.size()) {
-    std::cout << "\033[32mPassed " << test_sets_passed << "/" << test_sets.size()
-        << " test sets\033[0m"<< std::endl;
-  }
-  else {
-    std::cout << "\033[31mPassed " << test_sets_passed << "/" << test_sets.size()
-        << " test sets\033[0m"<< std::endl;
-  }
-
-  std::cout << "Elapsed Time: " << total_time.count() << std::endl;
-}
-
-void PerftSuite() {
-  std::cout << "Currently not supported" << std::endl;
-  return;
-  std::vector<PerftTestSet> test_sets;
-  std::string line;
-  std::ifstream file("./tests/perft.test");
-  while(std::getline(file, line)) {
-    test_sets.emplace_back(line);
-  }
-  Time start = now();
-  size_t test_sets_passed = 0;
-  for (size_t i = 0; i < test_sets.size(); i++) {
-    PerftTestSet test_set = test_sets[i];
-    bool passed = true;
-    for (std::pair<Depth, size_t> depth_result : test_set.depth_results) {
-      if (search::Perft(test_set.board, depth_result.first) != depth_result.second) {
-        std::cout << "\033[31mFailed set " << i << " on input ("
-            << depth_result.first << "," << depth_result.second << ")\033[0m"<< std::endl;
         passed = false;
         break;
       }
@@ -261,106 +216,14 @@ int TimeToDepthSuite() {
   return total_time.count();
 }
 
-double EntropyLossTimedSuite(Milliseconds time_per_position) {
-  std::cout << "Running benchmark!" << std::endl;
-  std::vector<Game> games = data::LoadGames(6000, settings::kCEGTPath);
-  //We want to count the number of drawn games in order to calculate the
-  //minimal achievable error our engine can achieve on the data.
-  double total_error = 0, decisive_error = 0, draw_error = 0;
-  size_t draws = 0;
-  int l_margin = games.size() / 10;
-  int u_margin = l_margin * 2;
-  search::set_print_info(false);
-  for (size_t idx = 0; idx < games.size(); idx++) {
-    int num_made_moves = games[idx].moves.size();
-    games[idx].set_to_position_after(((l_margin+idx) * num_made_moves)
-                                        / (games.size() + u_margin));
-    Score target = games[idx].result;
-    if (target.is_draw()) {
-      draws++;
-    }
-    if (games[idx].board.get_turn() == kBlack) {
-      target = -target;
-    }
-    table::ClearTable();
-    search::TimeSearch(games[idx].board, time_per_position);
-    total_error += ResultAbsLoss(search::get_last_search_score(), target);
-    if (target.is_draw()) {
-      draw_error +=
-          ResultAbsLoss(search::get_last_search_score(), target);
-    }
-    else {
-      decisive_error += ResultAbsLoss(search::get_last_search_score(), target);
-    }
-    if ((idx + 1) % 100 == 0) {
-      std::cout << (idx + 1) << std::endl
-          << "Total Error: " << (total_error / (idx + 1)) << std::endl;
-      if (idx + 1 > draws) {
-        std::cout << "Decisive Error: " << ((decisive_error) / (idx + 1 - draws)) << std::endl;
-      }
-      if (draws > 0) {
-        std::cout << "Draw Error: " << ((draw_error) / (draws)) << std::endl;
-      }
-    }
-  }
-  search::set_print_info(true);
-  std::cout << "Final Avg Error: " << (total_error / games.size()) << std::endl;
-  return total_error / games.size();
-}
-
 double RunEvalTestSet(const std::vector<EvaluationTest> &test_set) {
   double error_sum = 0;
   for (const EvaluationTest &sample : test_set) {
     Score score = net_evaluation::ScoreBoard(std::get<0>(sample));
     Score target = std::get<1>(sample);
-    //error_sum += std::abs(Sigmoid(evaluation::ScoreBoard(std::get<0>(sample)) / div)-std::get<1>(sample));
     error_sum += ResultAbsLoss(score, target);
   }
   return error_sum / test_set.size();
-}
-
-double ZuriChessDatasetLoss() {
-  std::string line;
-  std::ifstream file("quiet-labeled.epd");
-  std::vector<EvaluationTest> eval_test_set;
-  while(std::getline(file, line)) {
-    std::vector<std::string> tokens = parse::split(line, ' ');
-    std::string fen = tokens[0] + " " + tokens[1] + " " + tokens[2] + " " + tokens[3];
-    Board board(fen);
-    if (board.InCheck()) {
-      continue;
-    }
-    WDLScore result;;
-    if (tokens[5].compare("\"1-0\";") == 0) {
-      result = WDLScore::from_pct(1.0, 1.0);
-    }
-    else if (tokens[5].compare("\"0-1\";") == 0) {
-      result = WDLScore::from_pct(0.0, 0.0);
-    }
-    else if (tokens[5].compare("\"1/2-1/2\";") == 0) {
-      result = WDLScore::from_pct(0.0, 1.0);
-    }
-    else {
-      std::cout << "Error detected! Line:" << std::endl;
-      std::cout << line << std::endl;
-      file.close();
-      return 0;
-    }
-    assert(result.is_valid());
-    if (board.get_turn() == kBlack) {
-      result = -result;
-    }
-    eval_test_set.emplace_back(board, result);
-
-    if (eval_test_set.size() % 10000 == 0) {
-      std::cout << "Processed " << (eval_test_set.size()) << " samples!" << std::endl;
-    }
-  }
-  file.close();
-  std::cout << "Processed " << (eval_test_set.size()) << " samples!" << std::endl;
-  double error = RunEvalTestSet(eval_test_set);
-  std::cout << "Error: " << error << std::endl;
-  return 0;
 }
 
 std::array<std::string, 50> kBenchmarkCommandPositions {

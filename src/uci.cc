@@ -352,7 +352,6 @@ const std::vector<UCICommand> uci_commands {
   {"uci", UCIUci},
   {"ucinewgame", UCINewGame},
   // Non-Standard Commands
-  {"benchmark", commands::Benchmark},
   {"can_repeat", commands::CheckIfRepetitionPossible},
   {"evaluate", commands::EvaluateBoard},
   {"fen", commands::GetFEN},
