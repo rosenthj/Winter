@@ -387,7 +387,6 @@ Board::Board() {
   previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
-  phase = 0;
   for (int player = kWhite; player <= kBlack; ++player) {
     color_bitboards[player] = 0;
     for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
@@ -498,7 +497,6 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   hash = 0;
   en_passant = 0;
   fifty_move_count = 0;
-  phase = 0;
   for (int player = kWhite; player <= kBlack; ++player) {
     color_bitboards[player] = 0;
     for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
@@ -681,7 +679,6 @@ void Board::SetToSamePosition(const Board &board) {
   move_history = board.move_history;
   move_history_information = board.move_history_information;
   previous_hashes = board.previous_hashes;
-  phase = board.phase;
   for (int player = kWhite; player <= kBlack; player++) {
     color_bitboards[player] = board.color_bitboards[player];
     for (int piece_type = 0; piece_type < kNumPieceTypes - 1; ++piece_type) {
@@ -703,7 +700,6 @@ void Board::AddPiece(const Square square, const Piece piece) {
   pt_bitboards[GetPieceType(piece)] |= GetSquareBitBoard(square);
   color_bitboards[GetPieceColor(piece)] |= GetSquareBitBoard(square);
   piece_counts[GetPieceColor(piece)][GetPieceType(piece)]++;
-  phase += piece_phases[GetPieceType(piece)];
   pieces[square] = piece;
   hash ^= hash::get_hash(piece, square);
 }
@@ -715,7 +711,6 @@ Piece Board::RemovePiece(const Square square) {
     pt_bitboards[GetPieceType(piece)] ^= GetSquareBitBoard(square);
     color_bitboards[GetPieceColor(piece)] ^= GetSquareBitBoard(square);
     piece_counts[GetPieceColor(piece)][GetPieceType(piece)]--;
-    phase -= piece_phases[GetPieceType(piece)];
     hash ^= hash::get_hash(piece, square);
   }
   return piece;

@@ -151,8 +151,15 @@ const Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool 
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
 }
 
-//std::vector<MoveScore> search_weights(kNumMoveProbabilityFeatures);
-//std::vector<MoveScore> search_weights_in_check(kNumMoveProbabilityFeatures);
+inline NScore GetSNMPMargin(const bool strict_worsening, const Depth depth) {
+  const NScore multiplier = kSNMPScaling - kSNMPImproving * !strict_worsening;
+  return multiplier * depth + kSNMPOffset;
+}
+
+inline bool SNMPMarginSatisfied(const Score &eval, const Score &beta,
+                                bool strict_worsening, const Depth depth) {
+  return eval.value() > beta.value() + GetSNMPMargin(strict_worsening, depth);
+}
 
 Score last_search_score;
 
@@ -553,15 +560,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     strict_worsening = t.strict_worsening();
 
     //Static Null Move Pruning
-    if (node_type == NodeType::kNW && depth <= 5) {
-      NScore margin = kSNMPOffset + (kSNMPScaling - kSNMPImproving * !strict_worsening) * depth;
-      if (settings::kUseScoreBasedPruning && static_eval.value() > beta.value() + margin
-          && t.board.get_phase() > 1 * piece_phases[kQueen]) {
-        if (static_eval.is_mate_score()) {
-          return beta;
-        }
-        return (static_eval + beta) / 2;
+    if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
+        && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
+                                             strict_worsening, depth)) {
+      if (static_eval.is_mate_score()) {
+        return beta;
       }
+      return (static_eval + beta) / 2;
     }
 
     //Null Move Pruning
@@ -570,7 +575,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       t.board.Make(kNullMove);
       const Depth R = 3 + depth / 5;
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
-                                    depth - R);
+                                              depth - R);
       t.board.UnMake();
       if (score > kMaxStaticEval) {
         score = kMaxStaticEval;
