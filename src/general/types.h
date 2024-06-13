@@ -195,11 +195,6 @@ constexpr int kExactBound = kLowerBound | kUpperBound;
 constexpr int kOpening = 0;
 constexpr int kEnding = 1;
 
-constexpr int piece_phases[7] = {0, 3, 3, 4, 9, 0, 0};
-constexpr int kMaxPhase = 16 * piece_phases[kPawn] + 4 * piece_phases[kKnight]
-              + 4 * piece_phases[kBishop] + 4 * piece_phases[kRook]
-              + 2 * piece_phases[kQueen];
-
 constexpr int64_t kThousand = 1000;
 constexpr int64_t kMillion = kThousand * kThousand;
 constexpr int64_t kBillion = kThousand * kMillion;

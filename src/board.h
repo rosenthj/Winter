@@ -86,7 +86,6 @@ public:
     return piece_counts[kWhite][piece_type] + piece_counts[kBlack][piece_type];
   }
   CastlingRights get_castling_rights() const { return castling_rights; }
-  int get_phase() const { return phase; }
   //Print unicode chess board.
   bool IsMoveLegal(const Move move) const;
   bool IsTriviallyDrawnEnding() const;
@@ -145,7 +144,6 @@ private:
   std::vector<MoveHistoryInformation> move_history_information;
   //4 bits are set representing white and black, queen- and kingside castling
   CastlingRights castling_rights;
-  int phase;
   Square en_passant;
   Color turn;
   //Ply refers to the number of played halfmoves

@@ -31,17 +31,12 @@ void CheckIfDraw(Board &board, const StrArgs) {
   std::cout << board.IsDraw() << std::endl;
 }
 
-void PerftTest(Board &board, const StrArgs) {
-  benchmark::PerftSuite();
+void PerftTest(Board &board, const StrArgs tokens) {
+  benchmark::PerftSuite(tokens[1]);
 }
 
 void SymmetryTest(Board &board, const StrArgs) {
   benchmark::SymmetrySuite();
-}
-
-void Benchmark(Board &board, const StrArgs tokens) {
-  int ms = atoi(tokens[1].c_str());
-  benchmark::EntropyLossTimedSuite(Milliseconds(ms));
 }
 
 void SEE(Board &board, const StrArgs tokens) {

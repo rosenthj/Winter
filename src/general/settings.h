@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "3.1415926";
+const std::string engine_version = "3.15";
 
 const std::string engine_author = "Jonathan Rosenthal";
 
@@ -49,29 +49,13 @@ const std::string compile_arch = "SSE4.1";
 const std::string compile_arch = "";
 #endif
 
-const std::string kSearchParamPath = "search_params/";
-const std::string kSearchParamVersionExtension = "190516";
+constexpr bool kUseExtensions = true;
+constexpr bool kUseScoreBasedPruning = true;
+constexpr bool kUseNullMoves = true && kUseExtensions;
+constexpr Depth kRepsForDraw = 2;
+constexpr Depth kMaxDepth = 128;
 
-const std::string kSearchParamFile = kSearchParamPath + "sparams"
-    + kSearchParamVersionExtension + ".txt";
-const std::string kSearchParamExplanationFile = kSearchParamFile + ".info";
-
-const std::string kSearchParamInCheckFile = kSearchParamPath + "sparams_in_check"
-    + kSearchParamVersionExtension + ".txt";
-const std::string kSearchParamInCheckExplanationFile = kSearchParamInCheckFile + ".info";
-
-const std::string kCCRLPath = "data/CCRL.ucig";
-const std::string kCEGTPath = "data/CEGT.ucig";
-
-const bool kTrainFromScratch = false;
-
-const bool kUseExtensions = true;
-const bool kUseScoreBasedPruning = true;
-const bool kUseNullMoves = true && kUseExtensions;
-const Depth kRepsForDraw = 2;
-const Depth kMaxDepth = 128;
-
-const bool kUseQS = true;
+constexpr bool kUseQS = true;
 
 }
 

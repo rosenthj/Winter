@@ -32,11 +32,8 @@
 namespace benchmark {
 
 int TimeToDepthSuite();
-double EntropyLossTimedSuite(Milliseconds time_per_position);
 void PerftSuite(std::string filename);
-void PerftSuite();
 void SymmetrySuite();
-double ZuriChessDatasetLoss();
 
 void RunBenchCommand(int argc, char **argv);
 
