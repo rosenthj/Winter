@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "3.1415926";
+const std::string engine_version = "3.15";
 
 const std::string engine_author = "Jonathan Rosenthal";
 
@@ -48,20 +48,6 @@ const std::string compile_arch = "SSE4.1";
 #else
 const std::string compile_arch = "";
 #endif
-
-//const std::string kSearchParamPath = "search_params/";
-//const std::string kSearchParamVersionExtension = "190516";
-
-//const std::string kSearchParamFile = kSearchParamPath + "sparams"
-//    + kSearchParamVersionExtension + ".txt";
-//const std::string kSearchParamExplanationFile = kSearchParamFile + ".info";
-
-//const std::string kSearchParamInCheckFile = kSearchParamPath + "sparams_in_check"
-//    + kSearchParamVersionExtension + ".txt";
-//const std::string kSearchParamInCheckExplanationFile = kSearchParamInCheckFile + ".info";
-
-//const std::string kCCRLPath = "data/CCRL.ucig";
-//const std::string kCEGTPath = "data/CEGT.ucig";
 
 constexpr bool kUseExtensions = true;
 constexpr bool kUseScoreBasedPruning = true;
