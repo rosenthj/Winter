@@ -105,18 +105,18 @@ inline void AddAllPieceTypes(const Board &board,
 
 namespace net_evaluation {
 
-Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &full_layer) {
+Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &_full_layer) {
   std::vector<NetLayerType> output_helpers(3, 0);
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
-    piece_modules[piece_idx].features.clipped_relu(8);
+    auto features = piece_modules[piece_idx].features.clipped_relu(8);
     size_t idx = 3 * (piece_modules[piece_idx].pt * 8 * 8 + piece_modules[piece_idx].sq);
     assert(idx + 2 < output_weights.size());
     for (size_t output_idx = 0; output_idx < 3; output_idx++) {
-      output_helpers[output_idx].FMA(output_weights[idx + output_idx], piece_modules[piece_idx].features);
+      output_helpers[output_idx].FMA(output_weights[idx + output_idx], features);
     }
   }
   
-  full_layer.clipped_relu(8);
+  auto full_layer = _full_layer.clipped_relu(8);
   
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
