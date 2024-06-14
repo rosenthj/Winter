@@ -54,17 +54,21 @@ struct NetPieceModule {
   NetLayerType features;
 };
 
-void AddRelative(const NetPieceModule &p_src, NetPieceModule &p_des) {
+void AddRelative(const NetPieceModule &p_src, const NetPieceModule &p_des, NetLayerType &features) {
   size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_src.sq][p_des.sq];
-  p_des.features += net_input_weights[idx];
+  features += net_input_weights[idx];
 }
 
 void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
   for (size_t i = 0; i < piece_modules.size(); ++i) {
-    for (size_t j = i+1; j < piece_modules.size(); ++j) {
-      AddRelative(piece_modules[i], piece_modules[j]);
-      AddRelative(piece_modules[j], piece_modules[i]);
+    NetLayerType features = piece_modules[i].features;
+    for (size_t j = 0; j < i; ++j) {
+      AddRelative(piece_modules[j], piece_modules[i], features);
     }
+    for (size_t j = i+1; j < piece_modules.size(); ++j) {
+      AddRelative(piece_modules[j], piece_modules[i], features);
+    }
+    piece_modules[i].features = features;
   }
 }
 
