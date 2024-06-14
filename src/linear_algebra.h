@@ -157,7 +157,7 @@ struct Vec<float, length> {
     return *this;
   }
   
-  inline Vec<float, length> clipped_relu(const float max_val) {
+  [[nodiscard]] inline Vec<float, length> clipped_relu(const float max_val) const {
     const SIMDFloat zero = simd::set(0);
     const SIMDFloat max_simd = simd::set(max_val);
     Vec<float, length> result;
