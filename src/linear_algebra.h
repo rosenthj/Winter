@@ -157,15 +157,16 @@ struct Vec<float, length> {
     return *this;
   }
   
-  inline Vec<float, length>& clipped_relu(const float max_val) {
+  [[nodiscard]] inline Vec<float, length> clipped_relu(const float max_val) const {
     const SIMDFloat zero = simd::set(0);
     const SIMDFloat max_simd = simd::set(max_val);
+    Vec<float, length> result;
     #pragma GCC unroll 32
     for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
-      simd::store(&values[i], simd::min(simd::max(v1, zero), max_simd));
+      simd::store(&result.values[i], simd::min(simd::max(v1, zero), max_simd));
     }
-    return *this;
+    return result;
   }
   
   inline Vec<float, length>& FMA(const Vec<float, length> &a, const float &b) {

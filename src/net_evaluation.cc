@@ -49,10 +49,9 @@ void init_square_offset() {
 }
 
 struct NetPieceModule {
-  PieceType pt;
-  Square sq;
+  const PieceType pt;
+  const Square sq;
   NetLayerType features;
-  NetPieceModule() = default;
 };
 
 void AddRelative(const NetPieceModule &p_src, NetPieceModule &p_des) {
@@ -73,7 +72,7 @@ template<Color color, Color our_color>
 inline void AddPieceType(const Board &board, const PieceType pt,
                          std::vector<NetPieceModule> &piece_modules,
                          FullLayerType &full_layer) {
-  constexpr size_t c_offset = color == our_color ? 0 : 6;
+  constexpr int32_t c_offset = color == our_color ? 0 : 6;
   
   for (BitBoard pieces = board.get_piece_bitboard(color, pt); pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
@@ -81,10 +80,7 @@ inline void AddPieceType(const Board &board, const PieceType pt,
         piece_square = GetMirroredSquare(piece_square);
     }
     size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
-    NetPieceModule npm;
-    npm.pt = pt + c_offset;
-    npm.sq = piece_square;
-    npm.features = bias_layer_one[bias_idx];
+    NetPieceModule npm = {(pt + c_offset), piece_square, bias_layer_one[bias_idx]};
     piece_modules.push_back(npm);
     
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
@@ -105,18 +101,19 @@ inline void AddAllPieceTypes(const Board &board,
 
 namespace net_evaluation {
 
-Score NetForward(std::vector<NetPieceModule> &piece_modules, FullLayerType &full_layer) {
-  std::vector<NetLayerType> output_helpers(3, 0);
+Score NetForward(const std::vector<NetPieceModule> &piece_modules,
+                 const FullLayerType &_full_layer) {
+  std::array<NetLayerType, 3> output_helpers{};
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
-    piece_modules[piece_idx].features.clipped_relu(8);
+    auto features = piece_modules[piece_idx].features.clipped_relu(8);
     size_t idx = 3 * (piece_modules[piece_idx].pt * 8 * 8 + piece_modules[piece_idx].sq);
     assert(idx + 2 < output_weights.size());
     for (size_t output_idx = 0; output_idx < 3; output_idx++) {
-      output_helpers[output_idx].FMA(output_weights[idx + output_idx], piece_modules[piece_idx].features);
+      output_helpers[output_idx].FMA(output_weights[idx + output_idx], features);
     }
   }
   
-  full_layer.clipped_relu(8);
+  auto full_layer = _full_layer.clipped_relu(8);
   
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
