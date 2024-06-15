@@ -107,7 +107,7 @@ namespace net_evaluation {
 
 Score NetForward(const std::vector<NetPieceModule> &piece_modules,
                  const FullLayerType &_full_layer) {
-  std::array<NetLayerType, 3> output_helpers{};
+  std::array<NetLayerType, 3> output_helpers{0, 0, 0};
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
     auto features = piece_modules[piece_idx].features.clipped_relu(8);
     size_t idx = 3 * (piece_modules[piece_idx].pt * 8 * 8 + piece_modules[piece_idx].sq);
