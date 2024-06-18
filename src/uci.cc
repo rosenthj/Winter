@@ -130,7 +130,7 @@ const std::vector<UCIOption> uci_options {
   OPTION(kLMPBasePV, 1, 20)
   OPTION(kLMPScalar, 0, 24)
   OPTION(kLMPQuad, 0, 16)
-  OPTION(kNMPBase, 0, 4*128)
+  OPTION(kNMPBase, 0, 16*128)
   OPTION(kNMPScale, 0, 64)
 
 #undef OPTION

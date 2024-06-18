@@ -80,8 +80,8 @@ EXPR Depth kLMPBasePV = 6;
 EXPR int32_t kLMPScalar = 10;
 EXPR int32_t kLMPQuad = 6;
 EXPR Depth kSingularExtensionDepth = 9;
-EXPR Depth kNMPBase = 3 * 128;
-EXPR Depth kNMPScale = 26;
+EXPR Depth kNMPBase = 430;
+EXPR Depth kNMPScale = 32;
 
 EXPR std::array<NScore, 4> init_futility_margins() {
   EXPR std::array<NScore, 4> kFutilityMargins = {
