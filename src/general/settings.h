@@ -51,7 +51,6 @@ const std::string compile_arch = "";
 
 constexpr bool kUseExtensions = true;
 constexpr bool kUseScoreBasedPruning = true;
-constexpr bool kUseNullMoves = true && kUseExtensions;
 constexpr Depth kRepsForDraw = 2;
 constexpr Depth kMaxDepth = 128;
 

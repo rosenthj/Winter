@@ -107,26 +107,33 @@ const std::vector<UCIOption> uci_options {
   {"Threads", search::SetNumThreads, 1, 1, 256},
   {"Contempt", search::SetContempt, 0, -100, 100},
 #ifdef TUNE
-  {"AspirationDelta", search::SetInitialAspirationDelta, 77, 10, 800},
-  {"SNMPScaling", search::SetSNMPScaling, 631, 0, 1500},
-  {"SNMPOffset", search::SetSNMPOffset, -46, -1500, 1500},
-  {"SNMPImproving", search::SetSNMPImproving, 126, 0, 1500},
-  {"FutilityScaling", search::SetFutilityScaling, 546, 0, 1500},
-  {"FutilityOffset", search::SetFutilityOffset, -10, -1500, 1500},
-  {"FutilityImproving", search::SetFutilityImproving, 62, 0, 1500},
-  {"SingularDepth", search::SetSingularExtensionDepth, 9, 4, 20},
-  {"LMROffset", search::SetLMROffset, -16, -55, 100},
-  {"LMRMultiplier", search::SetLMRMultiplier, 86, 0, 250},
-  {"LMROffsetCap", search::SetLMROffsetCap, 15, -55, 100},
-  {"LMRMultiplierCap", search::SetLMRMultiplierCap, 51, 0, 100},
-  {"LMROffsetPV", search::SetLMROffsetPV, 21, -55, 100},
-  {"LMRMultiplierPV", search::SetLMRMultiplierPV, 86, 0, 100},
-  {"LMROffsetPVCap", search::SetLMROffsetPVCap, 23, -155, 100},
-//  {"LMRMultiplierPVCap", search::SetLMRMultiplierPVCap, 23, 0, 100},
-  {"LMPBaseNW", search::SetLMPBaseNW, 4, 1, 20},
-  {"LMPBasePV", search::SetLMPBasePV, 6, 1, 20},
-  {"LMPScalar", search::SetLMPScalar, 10, 0, 24},
-  {"LMPQuadratic", search::SetLMPQuadratic, 6, 0, 16},
+#define OPTION(x, min, max) \
+  {#x, search::Set##x, search::Get##x(), min, max},
+  
+  OPTION(kInitialAspirationDelta, 10, 800)
+  OPTION(kSNMPScaling, 0, 1500)
+  OPTION(kSNMPOffset, -1500, 1500)
+  OPTION(kSNMPImproving, 0, 1500)
+
+  OPTION(kFutilityScaling, 0, 1500)
+  OPTION(kFutilityOffset, -1500, 1500)
+  OPTION(kFutilityImproving, 0, 1500)
+  OPTION(kSingularExtensionDepth, 4, 20)
+  OPTION(kLMROffset, -55, 100)
+  OPTION(kLMRMult, 0, 250)
+  OPTION(kLMROffsetCap, -55, 100)
+  OPTION(kLMRMultCap, 0, 100)
+  OPTION(kLMROffsetPV, -55, 100)
+  OPTION(kLMRMultPV, 0, 100)
+  OPTION(kLMROffsetPVCap, -155, 100)
+  OPTION(kLMPBaseNW, 1, 20)
+  OPTION(kLMPBasePV, 1, 20)
+  OPTION(kLMPScalar, 0, 24)
+  OPTION(kLMPQuad, 0, 16)
+  OPTION(kNMPBase, 0, 4*128)
+  OPTION(kNMPScale, 0, 64)
+
+#undef OPTION
 #endif
 };
 
@@ -341,6 +348,14 @@ void UCIUci(Board &board, const StrArgs) {
   Reply(kOk);
 }
 
+void SPSAFormatOptionPrint(Board &board , const StrArgs) {
+  for (UCIOption option : uci_options) {
+    std::cout << option.name << ", int, " << option.default_value << ", "
+              << option.lower_bound << ", " << option.upper_bound
+              << ", 10, 0.002" << std::endl;
+  }
+}
+
 const std::vector<UCICommand> uci_commands {
   // UCI Commands
   {"go", UCIGo},
@@ -364,6 +379,7 @@ const std::vector<UCICommand> uci_commands {
   {"see", commands::SEE},
   {"symmetry_test", commands::SymmetryTest},
   {"isdraw", commands::CheckIfDraw},
+  {"spsa", SPSAFormatOptionPrint},
 };
 
 }
