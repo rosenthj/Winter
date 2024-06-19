@@ -435,7 +435,7 @@ inline std::tuple<Score, Score, Depth> get_singular_bounds(
                                           const OptEntry &entry) {
   const Score beta = entry->get_score(t.board);
   Score rBeta = get_singular_beta(beta, depth);
-  Score rAlpha = get_previous_score(rBeta);
+  Score rAlpha = rBeta.get_previous_score();
   Depth rDepth = (depth - 3) / 2;
   assert(beta.is_static_eval());
   assert(rBeta.is_static_eval());
@@ -739,7 +739,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       }
       //Update score and expected best move
       alpha = score;
-      alpha_nw = get_next_score(alpha);
+      alpha_nw = alpha.get_next_score();
       lower_bound_score = score;
       best_local_move = move;
       if (is_root) {
@@ -783,7 +783,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
         }
         alpha = (score-delta).get_valid_score();
         if (alpha == score) {
-          alpha = get_previous_score(score);
+          alpha = score.get_previous_score();
         }
       }
       else if (score >= beta) {
@@ -793,7 +793,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
         }
         beta = (score + delta).get_valid_score();
         if (beta == score) {
-          beta = get_next_score(score);
+          beta = score.get_next_score();
         }
       }
       assert(score > alpha && score < beta);
