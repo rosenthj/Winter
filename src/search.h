@@ -58,27 +58,34 @@ void SetContempt(int32_t contempt);
 void SetUCIShowWDL(bool show_wdl);
 
 #ifdef TUNE
-void SetInitialAspirationDelta(int32_t delta);
-void SetSNMPScaling(int32_t score);
-void SetSNMPOffset(int32_t score);
-void SetSNMPImproving(int32_t score);
-void SetFutilityScaling(int32_t score);
-void SetFutilityOffset(int32_t score);
-void SetFutilityImproving(int32_t score);
-void SetLMROffset(int32_t value);
-void SetLMRMultiplier(int32_t value);
-void SetLMROffsetPV(int32_t value);
-void SetLMRMultiplierPV(int32_t value);
-void SetLMROffsetCap(int32_t value);
-void SetLMRMultiplierCap(int32_t value);
-void SetLMROffsetPVCap(int32_t value);
-//void SetLMRMultiplierPVCap(int32_t value);
-void SetLMPBaseNW(int32_t value);
-void SetLMPBasePV(int32_t value);
-void SetLMPScalar(int32_t value);
-void SetLMPQuadratic(int32_t value);
-void SetLMPDepth(int32_t value);
-void SetSingularExtensionDepth(int32_t depth);
+#define OPTION(x) \
+void Set##x(int32_t value); \
+int32_t Get##x();
+
+OPTION(kInitialAspirationDelta)
+OPTION(kSNMPScaling)
+OPTION(kSNMPOffset)
+OPTION(kSNMPImproving)
+OPTION(kFutilityScaling)
+OPTION(kFutilityOffset)
+OPTION(kFutilityImproving)
+OPTION(kLMROffset)
+OPTION(kLMRMult)
+OPTION(kLMROffsetPV)
+OPTION(kLMRMultPV)
+OPTION(kLMROffsetCap)
+OPTION(kLMRMultCap)
+OPTION(kLMROffsetPVCap)
+//OPTION(kLMRMultiplierPVCap)
+OPTION(kLMPBaseNW)
+OPTION(kLMPBasePV)
+OPTION(kLMPScalar)
+OPTION(kLMPQuad)
+OPTION(kLMPDepth)
+OPTION(kNMPBase)
+OPTION(kNMPScale)
+OPTION(kSingularExtensionDepth)
+#undef OPTION
 #endif
 
 }

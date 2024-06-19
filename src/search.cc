@@ -54,98 +54,94 @@ Depth rsearch_depth;
 
 int skip_time_check = 0;
 
-struct LMRInitializer {
-  double off;
-  double mult;
-  double off_cap;
-  double mult_cap;
-  double off_pv;
-  double mult_pv;
-  double off_pv_cap;
-  double mult_pv_cap;
-};
+#ifdef TUNE
+#define EXPR
+#else
+#define EXPR constexpr
+#endif
 
-Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
+EXPR Depth kLMROffset = -16;
+EXPR int32_t kLMRMult = 86;
+EXPR Depth kLMROffsetCap = 15;
+EXPR int32_t kLMRMultCap = 51;
+EXPR Depth kLMROffsetPV = 21;
+EXPR int32_t kLMRMultPV = 86;
+EXPR Depth kLMROffsetPVCap = 23;
+
+EXPR NScore kInitialAspirationDelta = 72;
+EXPR NScore kSNMPScaling = 631;
+EXPR NScore kSNMPOffset = -46;
+EXPR NScore kSNMPImproving = 126;
+EXPR NScore kFutilityScaling = 546;
+EXPR NScore kFutilityOffset = -10;
+EXPR NScore kFutilityImproving = 62;
+EXPR Depth kLMPBaseNW = 4;
+EXPR Depth kLMPBasePV = 6;
+EXPR int32_t kLMPScalar = 10;
+EXPR int32_t kLMPQuad = 6;
+EXPR Depth kSingularExtensionDepth = 9;
+EXPR Depth kNMPBase = 485;
+EXPR Depth kNMPScale = 40;
+
+EXPR std::array<NScore, 4> init_futility_margins() {
+  EXPR std::array<NScore, 4> kFutilityMargins = {
+    kFutilityOffset, kFutilityOffset + kFutilityScaling, kFutilityOffset + kFutilityScaling * 2, kFutilityOffset + kFutilityScaling * 3};
+  return kFutilityMargins;
+}
+
+EXPR std::array<NScore, 4> kFutileMargin = init_futility_margins();
+
+EXPR Array2d<Depth, 2, 6> init_lmp_breakpoints() {
+  
+  Array2d<Depth, 2, 6> lmp{};
+  lmp[0][0] = 0;
+  lmp[1][0] = 0;
+  for (int32_t i = 1; i < lmp[0].size(); ++i) {
+    int32_t j = i-1;
+    lmp[0][i] = kLMPBaseNW + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
+    lmp[1][i] = kLMPBasePV + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
+  }
+  return lmp;
+}
+
+EXPR Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints();
+
+constexpr Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
   Depth res = std::floor(offset + (std::log(i+1) * std::log(j+1) * multiplier));
   return std::max(std::min(res, i), 0);
 }
 
-Array3d<Depth, 64, 64, 4> init_lmr_reductions(const LMRInitializer &x) {
-  Array3d<Depth, 64, 64, 4> lmr_reductions;
+Array3d<Depth, 64, 64, 4> init_lmr_reductions() {
+  constexpr double scale = 0.01;
+  const double x = kLMROffset * scale, y = kLMRMult * scale;
+  const double x_cap = kLMROffsetCap * scale, y_cap = y * kLMRMultCap * scale;
+  const double x_pv = kLMROffsetPV * scale, y_pv = y * kLMRMultPV * scale;
+  const double x_pv_cap = kLMROffsetPVCap * scale;
+  const double y_pv_cap = y * kLMRMultPV * scale * kLMRMultCap * scale;
+
+  Array3d<Depth, 64, 64, 4> lmr_reductions{};
   for (Depth i = 0; i < 64; ++i) {
     for (size_t j = 0; j < 64; ++j) {
-      lmr_reductions[i][j][0] = lmr_calculator(i, j, x.off, x.mult);
-      lmr_reductions[i][j][1] = lmr_calculator(i, j, x.off_cap, x.mult * x.mult_cap);
-      lmr_reductions[i][j][2] = lmr_calculator(i, j, x.off_pv, x.mult * x.mult_pv);
-      lmr_reductions[i][j][3] = lmr_calculator(i, j, x.off_pv_cap, x.mult * x.mult_cap * x.mult_pv);
+      lmr_reductions[i][j][0] = lmr_calculator(i, j, x, y);
+      lmr_reductions[i][j][1] = lmr_calculator(i, j, x_cap, y_cap);
+      lmr_reductions[i][j][2] = lmr_calculator(i, j, x_pv, y_pv);
+      lmr_reductions[i][j][3] = lmr_calculator(i, j, x_pv_cap, y_pv_cap);
     }
   }
   return lmr_reductions;
 }
 
-const Array2d<Depth, 2, 6> init_lmp_breakpoints(Depth base_nw, Depth base_pv,
-                                                    int32_t x, int32_t y) {
-  Array2d<Depth, 2, 6> lmp;
-  lmp[0][0] = 0;
-  lmp[1][0] = 0;
-  for (int32_t i = 1; i < lmp[0].size(); ++i) {
-    int32_t j = i-1;
-    lmp[0][i] = base_nw + ((x*j + y*j*j) / 8);
-    lmp[1][i] = base_pv + ((x*j + y*j*j) / 8);
-  }
-  return lmp;
-}
-
-std::array<NScore, 4> init_futility_margins(NScore scaling, NScore offset) {
-  std::array<NScore, 4> kFutilityMargins;
-  for (size_t i = 0; i < kFutilityMargins.size(); ++i) {
-    kFutilityMargins[i] = offset + scaling * i;
-  }
-  return kFutilityMargins;
-}
-
-#ifdef TUNE
-NScore kInitialAspirationDelta = 72;
-NScore kSNMPScaling = 631;
-NScore kSNMPOffset = -46;
-NScore kSNMPImproving = 126;
-NScore kFutilityScaling = 546;
-NScore kFutilityOffset = -10;
-NScore kFutilityImproving = 62;
-std::array<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
-                                                     kFutilityOffset);
-Depth kLMPBaseNW = 4, kLMPBasePV = 6;
-int32_t kLMPScalar = 10, kLMPQuad = 6;
-Depth kSingularExtensionDepth = 9;
-Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
-#else
-constexpr NScore kInitialAspirationDelta = 72;
-constexpr NScore kSNMPScaling = 631;
-constexpr NScore kSNMPOffset = -46;
-constexpr NScore kSNMPImproving = 126;
-constexpr NScore kFutilityScaling = 546;
-constexpr NScore kFutilityOffset = -10;
-constexpr NScore kFutilityImproving = 62;
-const std::array<NScore, 4> kFutileMargin = init_futility_margins(kFutilityScaling,
-                                                           kFutilityOffset);
-const Depth kLMPBaseNW = 4, kLMPBasePV = 6;
-const int32_t kLMPScalar = 10, kLMPQuad = 6;
-const Depth kSingularExtensionDepth = 9;
-const Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
+#ifndef TUNE
+#undef EXPR
+#define EXPR const
 #endif
-bool uci_show_wdl = true;
 
-// Parameters used to initialize the LMR reduction table
-LMRInitializer lmr_initializer {
-  -0.16, 0.86,
-  0.15, 0.51,
-  0.21, 0.86,
-  0.23, 0.51 * 0.86
-};
-Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions(lmr_initializer);
+EXPR Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions();
+
+#undef EXPR
 
 template<NodeType node_type>
-const Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
+Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   assert(depth > 0);
   size_t is_pv = node_type == NodeType::kPV ? 2 : 0;
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
@@ -160,6 +156,8 @@ inline bool SNMPMarginSatisfied(const Score &eval, const Score &beta,
                                 bool strict_worsening, const Depth depth) {
   return eval.value() > beta.value() + GetSNMPMargin(strict_worsening, depth);
 }
+
+bool uci_show_wdl = true;
 
 Score last_search_score;
 
@@ -177,7 +175,7 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
 
 std::mt19937_64 rng;
 size_t min_ply = 0;
-const size_t kInfiniteNodes = 1000000000000;
+constexpr size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
 bool fixed_search_time;
 
@@ -233,10 +231,9 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
           || (entry->get_bound() == kUpperBound && score <= alpha));
 }
 
-inline bool is_null_move_allowed(const Board &board, const Depth depth) {
-  return settings::kUseNullMoves && depth > 1
-      && board.has_non_pawn_material(board.get_turn());
-      //&& board.get_phase() > 1 * piece_phases[kQueen];// && !board.InCheck();
+inline bool is_null_move_allowed(const Score &eval, const Score &beta,
+                                 const Board &board, const Depth depth) {
+  return  eval >= beta && depth > 1 && board.has_non_pawn_material(board.get_turn());
 }
 
 }
@@ -421,7 +418,7 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
 }
 
-inline const Score get_singular_beta(Score beta, Depth depth) {
+inline Score get_singular_beta(Score beta, Depth depth) {
   WDLScore result = WDLScore{beta.win - 2*depth, beta.win_draw - 2*depth};
   if (result.win < 0) {
     result.win_draw += result.win;
@@ -437,9 +434,9 @@ inline std::tuple<Score, Score, Depth> get_singular_bounds(
                                           Thread &t, const Depth depth,
                                           const OptEntry &entry) {
   const Score beta = entry->get_score(t.board);
-  const Score rBeta = get_singular_beta(beta, depth);
-  const Score rAlpha = get_previous_score(rBeta);
-  const Depth rDepth = (depth - 3) / 2;
+  Score rBeta = get_singular_beta(beta, depth);
+  Score rAlpha = get_previous_score(rBeta);
+  Depth rDepth = (depth - 3) / 2;
   assert(beta.is_static_eval());
   assert(rBeta.is_static_eval());
   assert(rAlpha.is_static_eval());
@@ -504,7 +501,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   //We drop to QSearch if we run out of depth.
   if (depth <= 0) {
-    if (!settings::kUseQS) {
+    if constexpr (!settings::kUseQS) {
       t.nodes++;
       return net_evaluation::ScoreBoard(t.board);
     }
@@ -570,10 +567,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     }
 
     //Null Move Pruning
-    if (static_eval >= beta && is_null_move_allowed(t.board, depth)) {
+    if (is_null_move_allowed(static_eval, beta, t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
-      const Depth R = 3 + depth / 5;
+      const Depth R = (kNMPBase + depth * kNMPScale) / 128;
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                               depth - R);
       t.board.UnMake();
@@ -1018,10 +1015,6 @@ Score QSearch(Board &board) {
   return QuiescentSearch((*Threads.main_thread), kMinScore, kMaxScore);
 }
 
-void SetContempt(int32_t contempt_) {
-  contempt = contempt_;
-}
-
 void SetArmageddon(bool armageddon_) {
   armageddon = armageddon_;
 }
@@ -1030,101 +1023,51 @@ void SetUCIShowWDL(bool show_wdl) {
   uci_show_wdl = show_wdl;
 }
 
+void SetContempt(int32_t contempt_) {
+  contempt = contempt_;
+}
+
 #ifdef TUNE
-void SetInitialAspirationDelta(int32_t delta) {
-  kInitialAspirationDelta = delta;
-}
 
-void SetFutilityScaling(int32_t scaling) {
-  kFutilityScaling = scaling;
-  kFutileMargin = init_futility_margins(kFutilityScaling, kFutilityOffset);
-}
+#define SETTER(x) \
+void Set##x(int32_t value) { \
+  x = value; \
+  kFutileMargin = init_futility_margins(); \
+  lmr_reductions = init_lmr_reductions(); \
+  kLMP = init_lmp_breakpoints(); \
+} \
+  \
+int32_t Get##x() { return x; }
 
-void SetFutilityOffset(int32_t offset) {
-  kFutilityOffset = offset;
-  kFutileMargin = init_futility_margins(kFutilityScaling, kFutilityOffset);
-}
+SETTER(kInitialAspirationDelta)
 
-void SetFutilityImproving(int32_t offset) {
-  kFutilityImproving = offset;
-}
+SETTER(kFutilityScaling)
+SETTER(kFutilityOffset)
+SETTER(kFutilityImproving)
 
-void SetSNMPScaling(int32_t score) {
-  kSNMPScaling = score;
-}
+SETTER(kSNMPScaling)
+SETTER(kSNMPOffset)
+SETTER(kSNMPImproving)
 
-void SetSNMPOffset(int32_t score) {
-  kSNMPOffset = score;
-}
+SETTER(kLMROffset)
+SETTER(kLMRMult)
+SETTER(kLMROffsetCap)
+SETTER(kLMRMultCap)
+SETTER(kLMROffsetPV)
+SETTER(kLMRMultPV)
+SETTER(kLMROffsetPVCap)
+//SETTER(kLMRMultPVCap)
 
-void SetSNMPImproving(int32_t score) {
-  kSNMPImproving = score;
-}
+SETTER(kLMPBaseNW)
+SETTER(kLMPBasePV)
+SETTER(kLMPScalar)
+SETTER(kLMPQuad)
 
-void SetLMROffset(int32_t value) {
-  lmr_initializer.off = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
+SETTER(kNMPBase)
+SETTER(kNMPScale)
+SETTER(kSingularExtensionDepth)
 
-void SetLMRMultiplier(int32_t value) {
-  lmr_initializer.mult = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-void SetLMROffsetCap(int32_t value) {
-  lmr_initializer.off_cap = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-void SetLMRMultiplierCap(int32_t value) {
-  lmr_initializer.mult_cap = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-void SetLMROffsetPV(int32_t value) {
-  lmr_initializer.off_pv = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-void SetLMRMultiplierPV(int32_t value) {
-  lmr_initializer.mult_pv = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-void SetLMROffsetPVCap(int32_t value) {
-  lmr_initializer.off_pv_cap = 0.01 * value;
-  lmr_reductions = init_lmr_reductions(lmr_initializer);
-}
-
-//void SetLMRMultiplierPVCap(int32_t value) {
-//  lmr_initializer.mult_pv_cap = 0.01 * value;
-//  lmr_reductions = init_lmr_reductions(lmr_initializer);
-//}
-
-void ResetLMP() {
-  kLMP = init_lmp_breakpoints(kLMPBaseNW, kLMPBasePV, kLMPScalar, kLMPQuad);
-}
-
-void SetLMPBaseNW(int32_t value) {
-  kLMPBaseNW = value;
-  ResetLMP();
-}
-void SetLMPBasePV(int32_t value) {
-  kLMPBasePV = value;
-  ResetLMP();
-}
-void SetLMPScalar(int32_t value) {
-  kLMPScalar = value;
-  ResetLMP();
-}
-void SetLMPQuadratic(int32_t value) {
-  kLMPQuad = value;
-  ResetLMP();
-}
-
-void SetSingularExtensionDepth(int32_t depth) {
-  kSingularExtensionDepth = depth;
-}
+#undef SETTER
 
 #endif
 
