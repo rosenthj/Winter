@@ -231,9 +231,11 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
           || (entry->get_bound() == kUpperBound && score <= alpha));
 }
 
-inline bool is_null_move_allowed(const Score &eval, const Score &beta,
-                                 const Board &board, const Depth depth) {
-  return  eval >= beta && depth > 1 && board.has_non_pawn_material(board.get_turn());
+inline bool is_null_move_allowed(const Score &eval, const Score &static_eval,
+                                 const Score &beta, const Board &board,
+                                 const Depth depth) {
+  return  eval >= beta && static_eval >= beta && depth > 1
+                       && board.has_non_pawn_material(board.get_turn());
 }
 
 }
@@ -529,45 +531,42 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   }
 
   const bool in_check = t.board.InCheck();
-  Score static_eval = alpha;
+  Score eval = alpha;
   t.set_static_score(kNoScore);
   bool strict_worsening = false;
   bool nmp_failed_node = false;
 
   //Speculative pruning methods
   if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
-
+    const Score static_eval = net_evaluation::ScoreBoard(t.board);
+    eval = static_eval;
     //Set static eval from board and TT entry.
     if (entry.has_value()) {
       if (entry->get_bound() == kExactBound) {
-        static_eval = entry->get_score(t.board);
+        eval = entry->get_score(t.board);
       }
       else {
-        static_eval = net_evaluation::ScoreBoard(t.board);
-        if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
-            || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
-          static_eval = entry->get_score(t.board);
+        if ( (entry->get_bound() == kLowerBound && eval < entry->get_score(t.board))
+            || (entry->get_bound() == kUpperBound && eval > entry->get_score(t.board)) ) {
+          eval = entry->get_score(t.board);
         }
       }
     }
-    else {
-      static_eval = net_evaluation::ScoreBoard(t.board);
-    }
-    t.set_static_score(static_eval);
+    t.set_static_score(eval);
     strict_worsening = t.strict_worsening();
 
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-        && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
+        && depth <= 5 && SNMPMarginSatisfied(eval, beta,
                                              strict_worsening, depth)) {
-      if (static_eval.is_mate_score()) {
+      if (eval.is_mate_score()) {
         return beta;
       }
-      return (static_eval + beta) / 2;
+      return (eval + beta) / 2;
     }
 
     //Null Move Pruning
-    if (is_null_move_allowed(static_eval, beta, t.board, depth)) {
+    if (is_null_move_allowed(eval, static_eval, beta, t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = (kNMPBase + depth * kNMPScale) / 128;
@@ -677,7 +676,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
+          && eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
