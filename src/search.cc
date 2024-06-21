@@ -75,10 +75,14 @@ EXPR NScore kSNMPImproving = 126;
 EXPR NScore kFutilityScaling = 546;
 EXPR NScore kFutilityOffset = -10;
 EXPR NScore kFutilityImproving = 62;
-EXPR Depth kLMPBaseNW = 4;
-EXPR Depth kLMPBasePV = 6;
-EXPR int32_t kLMPScalar = 10;
-EXPR int32_t kLMPQuad = 6;
+EXPR Depth kLMPBaseNW = 4 * 128;
+EXPR Depth kLMPBasePV = 6 * 128;
+EXPR int32_t kLMPScalar = 10 * 16;
+EXPR int32_t kLMPQuad = 6 * 16;
+EXPR Depth kLMPImpBaseNW = 4 * 128;
+EXPR Depth kLMPImpBasePV = 6 * 128;
+EXPR int32_t kLMPImpScalar = 10 * 16;
+EXPR int32_t kLMPImpQuad = 6 * 16;
 EXPR Depth kSingularExtensionDepth = 9;
 EXPR Depth kNMPBase = 485;
 EXPR Depth kNMPScale = 40;
@@ -91,20 +95,24 @@ EXPR std::array<NScore, 4> init_futility_margins() {
 
 EXPR std::array<NScore, 4> kFutileMargin = init_futility_margins();
 
-EXPR Array2d<Depth, 2, 6> init_lmp_breakpoints() {
+EXPR Array3d<Depth, 2, 2, 6> init_lmp_breakpoints() {
   
-  Array2d<Depth, 2, 6> lmp{};
-  lmp[0][0] = 0;
-  lmp[1][0] = 0;
-  for (int32_t i = 1; i < lmp[0].size(); ++i) {
+  Array3d<Depth, 2, 2, 6> lmp{};
+  lmp[0][0][0] = 0;
+  lmp[0][1][0] = 0;
+  lmp[1][0][0] = 0;
+  lmp[1][1][0] = 0;
+  for (int32_t i = 1; i < lmp[0][0].size(); ++i) {
     int32_t j = i-1;
-    lmp[0][i] = kLMPBaseNW + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
-    lmp[1][i] = kLMPBasePV + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
+    lmp[0][0][i] = (kLMPBaseNW + (kLMPScalar*j + kLMPQuad*j*j)) / 128;
+    lmp[0][1][i] = (kLMPImpBaseNW + (kLMPImpScalar*j + kLMPImpQuad*j*j)) / 128;
+    lmp[1][0][i] = (kLMPBasePV + (kLMPScalar*j + kLMPQuad*j*j)) / 128;
+    lmp[1][1][i] = (kLMPImpBasePV + (kLMPImpScalar*j + kLMPImpQuad*j*j)) / 128;
   }
   return lmp;
 }
 
-EXPR Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints();
+EXPR Array3d<Depth, 2, 2, 6> kLMP = init_lmp_breakpoints();
 
 constexpr Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
   Depth res = std::floor(offset + (std::log(i+1) * std::log(j+1) * multiplier));
@@ -656,7 +664,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if (!is_root && (size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
+      if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -1058,6 +1066,11 @@ SETTER(kLMPBaseNW)
 SETTER(kLMPBasePV)
 SETTER(kLMPScalar)
 SETTER(kLMPQuad)
+
+SETTER(kLMPImpBaseNW)
+SETTER(kLMPImpBasePV)
+SETTER(kLMPImpScalar)
+SETTER(kLMPImpQuad)
 
 SETTER(kNMPBase)
 SETTER(kNMPScale)

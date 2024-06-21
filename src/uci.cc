@@ -126,10 +126,16 @@ const std::vector<UCIOption> uci_options {
   OPTION(kLMROffsetPV, -55, 100)
   OPTION(kLMRMultPV, 0, 100)
   OPTION(kLMROffsetPVCap, -155, 100)
-  OPTION(kLMPBaseNW, 1, 20)
-  OPTION(kLMPBasePV, 1, 20)
-  OPTION(kLMPScalar, 0, 24)
-  OPTION(kLMPQuad, 0, 16)
+  
+  OPTION(kLMPBaseNW, 1, 1024)
+  OPTION(kLMPBasePV, 1, 2048)
+  OPTION(kLMPScalar, 0, 512)
+  OPTION(kLMPQuad, 0, 256)
+  OPTION(kLMPImpBaseNW, 1, 2048)
+  OPTION(kLMPImpBasePV, 1, 4096)
+  OPTION(kLMPImpScalar, 0, 1024)
+  OPTION(kLMPImpQuad, 0, 512)
+  
   OPTION(kNMPBase, 0, 16*128)
   OPTION(kNMPScale, 0, 64)
 
