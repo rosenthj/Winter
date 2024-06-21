@@ -530,32 +530,28 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   const bool in_check = t.board.InCheck();
   Score static_eval = alpha;
-  t.set_static_score(kNoScore);
-  bool strict_worsening = false;
+  if (entry.has_value() && entry->get_bound() == kExactBound) {
+      static_eval = entry->get_score(t.board);
+      t.set_static_score(static_eval);
+  }
+  else if (!in_check) {
+    static_eval = net_evaluation::ScoreBoard(t.board);
+    if (entry.has_value()) {
+      if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
+          || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
+        static_eval = entry->get_score(t.board);
+      }
+    }
+    t.set_static_score(static_eval);
+  }
+  else {
+    t.set_static_score(kNoScore);
+  }
+  bool strict_worsening = t.strict_worsening();
   bool nmp_failed_node = false;
 
   //Speculative pruning methods
   if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
-
-    //Set static eval from board and TT entry.
-    if (entry.has_value()) {
-      if (entry->get_bound() == kExactBound) {
-        static_eval = entry->get_score(t.board);
-      }
-      else {
-        static_eval = net_evaluation::ScoreBoard(t.board);
-        if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
-            || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
-          static_eval = entry->get_score(t.board);
-        }
-      }
-    }
-    else {
-      static_eval = net_evaluation::ScoreBoard(t.board);
-    }
-    t.set_static_score(static_eval);
-    strict_worsening = t.strict_worsening();
-
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
         && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
@@ -660,9 +656,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if (!is_root && (size_t)depth < kLMP[0].size()
-          && ((strict_worsening && i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
-               || i >= (size_t)kLMP[node_type == NodeType::kPV][depth]*2)
+      if (!is_root && (size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
