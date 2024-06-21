@@ -147,14 +147,14 @@ Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
 }
 
-inline NScore GetSNMPMargin(const bool strict_worsening, const Depth depth) {
-  const NScore multiplier = kSNMPScaling - kSNMPImproving * !strict_worsening;
+inline NScore GetSNMPMargin(const bool improving, const Depth depth) {
+  const NScore multiplier = kSNMPScaling - kSNMPImproving * improving;
   return multiplier * depth + kSNMPOffset;
 }
 
 inline bool SNMPMarginSatisfied(const Score &eval, const Score &beta,
-                                bool strict_worsening, const Depth depth) {
-  return eval.value() > beta.value() + GetSNMPMargin(strict_worsening, depth);
+                                bool improving, const Depth depth) {
+  return eval.value() > beta.value() + GetSNMPMargin(improving, depth);
 }
 
 bool uci_show_wdl = true;
@@ -547,7 +547,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   else {
     t.set_static_score(kNoScore);
   }
-  bool strict_worsening = t.strict_worsening();
+  bool improving = t.improving();
   bool nmp_failed_node = false;
 
   //Speculative pruning methods
@@ -555,7 +555,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
         && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
-                                             strict_worsening, depth)) {
+                                             improving, depth)) {
       if (static_eval.is_mate_score()) {
         return beta;
       }
@@ -673,7 +673,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }

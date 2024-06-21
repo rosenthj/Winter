@@ -83,9 +83,9 @@ struct Thread {
   // The following functions return the trend of the score. Regular and strict effect the handling of
   // kNoMove scores from the previous position.
   bool improving() const;
-  bool strict_improving() const;
-  bool worsening() const;
-  bool strict_worsening() const;
+  //bool strict_improving() const;
+  //bool worsening() const;
+  //bool strict_worsening() const;
 
   void set_static_score(const Score score) {
     assert((Depth)board.get_num_made_moves() >= root_height);
