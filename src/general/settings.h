@@ -33,7 +33,7 @@
 namespace settings {
 
 const std::string engine_name = "Winter";
-const std::string engine_version = "3.18a";
+const std::string engine_version = "3.19";
 
 const std::string engine_author = "Jonathan Rosenthal";
 

@@ -69,16 +69,20 @@ EXPR int32_t kLMRMultPV = 86;
 EXPR Depth kLMROffsetPVCap = 23;
 
 EXPR NScore kInitialAspirationDelta = 72;
-EXPR NScore kSNMPScaling = 631;
-EXPR NScore kSNMPOffset = -46;
-EXPR NScore kSNMPImproving = 126;
-EXPR NScore kFutilityScaling = 546;
-EXPR NScore kFutilityOffset = -10;
-EXPR NScore kFutilityImproving = 62;
-EXPR Depth kLMPBaseNW = 4;
-EXPR Depth kLMPBasePV = 6;
-EXPR int32_t kLMPScalar = 10;
-EXPR int32_t kLMPQuad = 6;
+EXPR NScore kSNMPScaling = 702;
+EXPR NScore kSNMPOffset = -6;
+EXPR NScore kSNMPImproving = 184;
+EXPR NScore kFutilityScaling = 701;
+EXPR NScore kFutilityOffset = -34;
+EXPR NScore kFutilityImproving = 144;
+EXPR Depth kLMPBaseNW = 408;
+EXPR Depth kLMPBasePV = 817;
+EXPR int32_t kLMPScalar = 122;
+EXPR int32_t kLMPQuad = 53;
+EXPR Depth kLMPImpBaseNW = 678;
+EXPR Depth kLMPImpBasePV = 569;
+EXPR int32_t kLMPImpScalar = 188;
+EXPR int32_t kLMPImpQuad = 83;
 EXPR Depth kSingularExtensionDepth = 9;
 EXPR Depth kNMPBase = 485;
 EXPR Depth kNMPScale = 40;
@@ -91,20 +95,24 @@ EXPR std::array<NScore, 4> init_futility_margins() {
 
 EXPR std::array<NScore, 4> kFutileMargin = init_futility_margins();
 
-EXPR Array2d<Depth, 2, 6> init_lmp_breakpoints() {
+EXPR Array3d<Depth, 2, 2, 6> init_lmp_breakpoints() {
   
-  Array2d<Depth, 2, 6> lmp{};
-  lmp[0][0] = 0;
-  lmp[1][0] = 0;
-  for (int32_t i = 1; i < lmp[0].size(); ++i) {
+  Array3d<Depth, 2, 2, 6> lmp{};
+  lmp[0][0][0] = 0;
+  lmp[0][1][0] = 0;
+  lmp[1][0][0] = 0;
+  lmp[1][1][0] = 0;
+  for (int32_t i = 1; i < lmp[0][0].size(); ++i) {
     int32_t j = i-1;
-    lmp[0][i] = kLMPBaseNW + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
-    lmp[1][i] = kLMPBasePV + ((kLMPScalar*j + kLMPQuad*j*j) / 8);
+    lmp[0][0][i] = (kLMPBaseNW + (kLMPScalar*j + kLMPQuad*j*j)) / 128;
+    lmp[0][1][i] = (kLMPImpBaseNW + (kLMPImpScalar*j + kLMPImpQuad*j*j)) / 128;
+    lmp[1][0][i] = (kLMPBasePV + (kLMPScalar*j + kLMPQuad*j*j)) / 128;
+    lmp[1][1][i] = (kLMPImpBasePV + (kLMPImpScalar*j + kLMPImpQuad*j*j)) / 128;
   }
   return lmp;
 }
 
-EXPR Array2d<Depth, 2, 6> kLMP = init_lmp_breakpoints();
+EXPR Array3d<Depth, 2, 2, 6> kLMP = init_lmp_breakpoints();
 
 constexpr Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
   Depth res = std::floor(offset + (std::log(i+1) * std::log(j+1) * multiplier));
@@ -147,14 +155,14 @@ Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
 }
 
-inline NScore GetSNMPMargin(const bool strict_worsening, const Depth depth) {
-  const NScore multiplier = kSNMPScaling - kSNMPImproving * !strict_worsening;
+inline NScore GetSNMPMargin(const bool improving, const Depth depth) {
+  const NScore multiplier = kSNMPScaling - kSNMPImproving * improving;
   return multiplier * depth + kSNMPOffset;
 }
 
 inline bool SNMPMarginSatisfied(const Score &eval, const Score &beta,
-                                bool strict_worsening, const Depth depth) {
-  return eval.value() > beta.value() + GetSNMPMargin(strict_worsening, depth);
+                                bool improving, const Depth depth) {
+  return eval.value() > beta.value() + GetSNMPMargin(improving, depth);
 }
 
 bool uci_show_wdl = true;
@@ -530,36 +538,32 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   const bool in_check = t.board.InCheck();
   Score static_eval = alpha;
-  t.set_static_score(kNoScore);
-  bool strict_worsening = false;
+  if (entry.has_value() && entry->get_bound() == kExactBound) {
+      static_eval = entry->get_score(t.board);
+      t.set_static_score(static_eval);
+  }
+  else if (!in_check) {
+    static_eval = net_evaluation::ScoreBoard(t.board);
+    if (entry.has_value()) {
+      if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
+          || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
+        static_eval = entry->get_score(t.board);
+      }
+    }
+    t.set_static_score(static_eval);
+  }
+  else {
+    t.set_static_score(kNoScore);
+  }
+  bool improving = t.improving();
   bool nmp_failed_node = false;
 
   //Speculative pruning methods
   if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
-
-    //Set static eval from board and TT entry.
-    if (entry.has_value()) {
-      if (entry->get_bound() == kExactBound) {
-        static_eval = entry->get_score(t.board);
-      }
-      else {
-        static_eval = net_evaluation::ScoreBoard(t.board);
-        if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
-            || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
-          static_eval = entry->get_score(t.board);
-        }
-      }
-    }
-    else {
-      static_eval = net_evaluation::ScoreBoard(t.board);
-    }
-    t.set_static_score(static_eval);
-    strict_worsening = t.strict_worsening();
-
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
         && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
-                                             strict_worsening, depth)) {
+                                             improving, depth)) {
       if (static_eval.is_mate_score()) {
         return beta;
       }
@@ -660,7 +664,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
       //Late Move Pruning
       assert(depth > 0);
-      if (!is_root && (size_t)depth < kLMP[0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][depth])
+      if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -677,7 +681,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, !strict_worsening))
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -1062,6 +1066,11 @@ SETTER(kLMPBaseNW)
 SETTER(kLMPBasePV)
 SETTER(kLMPScalar)
 SETTER(kLMPQuad)
+
+SETTER(kLMPImpBaseNW)
+SETTER(kLMPImpBasePV)
+SETTER(kLMPImpScalar)
+SETTER(kLMPImpQuad)
 
 SETTER(kNMPBase)
 SETTER(kNMPScale)

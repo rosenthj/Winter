@@ -71,26 +71,28 @@ bool Thread::improving() const {
   // kNoScore is defined as smaller than min score, so the second condition also implies
   // that we have a score at current height.
   assert(height >= 0);
-  return height >= 2 && static_scores[height] > static_scores[height-2];
+  return height >= 2 && static_scores[height-2] != kNoScore
+         && static_scores[height] != kNoScore
+         && static_scores[height] > static_scores[height-2];
 }
 
-bool Thread::strict_improving() const {
-  Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  // kNoScore is defined as smaller than min score, so the second condition also implies
-  // that we have a score at current height.
-  assert(height >= 0);
-  return height >= 2 && static_scores[height] > static_scores[height-2]
-                     && static_scores[height-2] != kNoScore;
-}
+//~ bool Thread::strict_improving() const {
+  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
+  //~ // that we have a score at current height.
+  //~ assert(height >= 0);
+  //~ return height >= 2 && static_scores[height] > static_scores[height-2]
+                     //~ && static_scores[height-2] != kNoScore;
+//~ }
 
-bool Thread::worsening() const {
-  Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  // kNoScore is defined as smaller than min score, so the second condition also implies
-  // that we have a score at current height.
-  assert(height >= 0);
-  return height >= 2 && (static_scores[height] < static_scores[height-2]
-                      || static_scores[height] == kNoScore);
-}
+//~ bool Thread::worsening() const {
+  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
+  //~ // that we have a score at current height.
+  //~ assert(height >= 0);
+  //~ return height >= 2 && (static_scores[height] < static_scores[height-2]
+                      //~ || static_scores[height] == kNoScore);
+//~ }
 
 int32_t Thread::get_history_score(const Color color, const Square src,
                                   const Square des) const {
@@ -102,13 +104,13 @@ void Thread::update_history_score(const Color color, const Square src, const Squ
   history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
 }
 
-bool Thread::strict_worsening() const {
-  Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  // kNoScore is defined as smaller than min score, so the second condition also implies
-  // that we have a score at current height.
-  assert(height >= 0);
-  return height >= 2 && static_scores[height] < static_scores[height-2];
-}
+//~ bool Thread::strict_worsening() const {
+  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
+  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
+  //~ // that we have a score at current height.
+  //~ assert(height >= 0);
+  //~ return height >= 2 && static_scores[height] < static_scores[height-2];
+//~ }
 
 template<int moves_ago>
 int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
