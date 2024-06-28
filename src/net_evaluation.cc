@@ -193,6 +193,7 @@ Score ScoreBoard(const Board &board) {
 //}
 
 Score FromScratch(search::Thread &t) {
+  //std::cout << "------------------------"<< "From scratch!" << "------------------------" << std::endl;
   const Depth h = t.get_height();
   std::vector<NetPieceModule> piece_modules;
   piece_modules.reserve(32);
@@ -210,6 +211,7 @@ Score FromScratch(search::Thread &t) {
 
 Score ScoreThread(search::Thread &t) {
   const Depth h = t.get_height();
+  //std::cout << "------------------------"<< "ScoreThread at h=" << h  << "------------------------" << std::endl;
   if (h==0) {
     return FromScratch(t);
   }
@@ -221,11 +223,17 @@ Score ScoreThread(search::Thread &t) {
   std::vector<NetPieceModule> no_longer;
   BitBoard mask = 0;
   for (const NetPieceModule &piece : t.evaluations[h-1].pieces) {
-    if (t.board.get_piece(piece.sq) == piece.pt) {
+    Piece b_piece = t.board.get_piece(piece.sq);
+    if (GetPieceColor(b_piece) == kBlack) {
+      b_piece = GetPieceType(b_piece) + 6;
+    }
+    if (b_piece == piece.pt) {
+      //std::cout << "Keep: (" << piece.pt << "," << piece.sq << ")" << std::endl;
       pieces.push_back(piece);
       mask |= GetSquareBitBoard(piece.sq);
     }
     else {
+      //std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
       no_longer.push_back(piece);
     }
   }
