@@ -13,7 +13,7 @@
 //INCBIN(float_t, NetWeights, "rnet16H64h.bin");
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
 //INCBIN(float_t, NetWeights, "rnet16H64o.bin");
-INCBIN(float_t, NetWeights, "rn16HD64a.bin");
+INCBIN(float_t, NetWeights, "rn16HD64a2.bin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -51,8 +51,9 @@ void AddRelative(const NetPieceModule &p_src, const NetPieceModule &p_des, NetLa
   features += net_input_weights[idx];
 }
 
-void RemoveRelative(const NetPieceModule &p_src, const NetPieceModule &p_des, NetLayerType &features) {
-  size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_src.sq][p_des.sq];
+void RemoveRelative(const std::tuple<Piece, Square> &p_src, const NetPieceModule &p_des, NetLayerType &features) {
+  const auto [src_pt, src_sq] = p_src;
+  size_t idx = (src_pt * 12 + p_des.pt) * 225 + square_offset[src_sq][p_des.sq];
   features -= net_input_weights[idx];
 }
 
@@ -210,7 +211,7 @@ Score FromScratch(search::Thread &t) {
 }
 
 Score ScoreThread(search::Thread &t) {
-  if (bitops::PopCount(t.board.get_all_pieces()) < 7) {
+  if (bitops::PopCount(t.board.get_all_pieces()) < 6) {
     return ScoreBoard(t.board);
   }
   const Depth h = t.get_height();
@@ -222,23 +223,23 @@ Score ScoreThread(search::Thread &t) {
   std::vector<NetPieceModule> pieces;
   pieces.reserve(32);
   // Pieces which are no longer on the same squares
-  std::vector<NetPieceModule> no_longer;
+  std::vector<std::tuple<Piece, Square>> no_longer;
   BitBoard mask = 0;
   for (const NetPieceModule &piece : t.evaluations[h-1].pieces) {
     Piece b_piece = t.board.get_piece(piece.sq);
     if (b_piece == kNoPiece) {
-      no_longer.push_back(piece);
+      no_longer.emplace_back(piece.pt, piece.sq);
       continue;
     }
     if (GetPieceColor(b_piece) == kBlack) {
       b_piece = GetPieceType(b_piece) + 6;
     }
     if (b_piece == piece.pt) {
-      pieces.push_back(piece);
+      pieces.emplace_back(piece);
       mask |= GetSquareBitBoard(piece.sq);
     }
     else {
-      no_longer.push_back(piece);
+      no_longer.emplace_back(piece.pt, piece.sq);
     }
   }
   
@@ -249,17 +250,9 @@ Score ScoreThread(search::Thread &t) {
   
   // Get partially computed full layer.
   FullLayerType full_layer = t.evaluations[h-1].global_features;
-  for (const NetPieceModule &removed_piece : no_longer) {
-    full_layer -= full_layer_weights[removed_piece.pt * 64 + removed_piece.sq];
-  }
-  
-  // Remove influence from moved pieces
-  for (size_t i = 0; i < pieces.size(); ++i) {
-    NetLayerType features = pieces[i].features;
-    for (const NetPieceModule &removed_piece : no_longer) {
-      RemoveRelative(removed_piece, pieces[i], features);
-    }
-    pieces[i].features = features;
+  for (const std::tuple<Piece, Square> &removed_piece : no_longer) {
+    const auto [piece, square] = removed_piece;
+    full_layer -= full_layer_weights[piece * 64 + square];
   }
   
   // Add missing pieces
@@ -270,6 +263,11 @@ Score ScoreThread(search::Thread &t) {
   // Finish partial evaluation
   for (size_t i = 0; i < kept; ++i) {
     NetLayerType features = pieces[i].features;
+    // Remove influence from moved pieces
+    for (const std::tuple<Piece, Square> &removed_piece : no_longer) {
+      RemoveRelative(removed_piece, pieces[i], features);
+    }
+    // Add influence from new pieces
     for (size_t j = kept; j < pieces.size(); ++j) {
       AddRelative(pieces[j], pieces[i], features);
     }
