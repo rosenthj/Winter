@@ -214,7 +214,6 @@ Score ScoreThread(search::Thread &t) {
     return ScoreBoard(t.board);
   }
   const Depth h = t.get_height();
-  //~ std::cout << "------------------------"<< "ScoreThread at h=" << h  << "------------------------" << std::endl;
   if (h==0) {
     return FromScratch(t);
   }
@@ -228,8 +227,6 @@ Score ScoreThread(search::Thread &t) {
   for (const NetPieceModule &piece : t.evaluations[h-1].pieces) {
     Piece b_piece = t.board.get_piece(piece.sq);
     if (b_piece == kNoPiece) {
-      //~ std::cout << "No piece at: " << piece.sq << std::endl;
-      //std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
       no_longer.push_back(piece);
       continue;
     }
@@ -237,12 +234,10 @@ Score ScoreThread(search::Thread &t) {
       b_piece = GetPieceType(b_piece) + 6;
     }
     if (b_piece == piece.pt) {
-      //~ std::cout << "Keep: (" << piece.pt << "," << piece.sq << ") features: [" << piece.features[0] << ","  << piece.features[1] << ","  << piece.features[2] << "]" << std::endl;
       pieces.push_back(piece);
       mask |= GetSquareBitBoard(piece.sq);
     }
     else {
-      //~ std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
       no_longer.push_back(piece);
     }
   }
@@ -281,7 +276,6 @@ Score ScoreThread(search::Thread &t) {
     pieces[i].features = features;
   }
   for (size_t i = kept; i < pieces.size(); ++i) {
-    //~ std::cout << "Added: (" << pieces[i].pt << "," << pieces[i].sq << ")" << std::endl;
     NetLayerType features = pieces[i].features;
     for (size_t j = 0; j < i; ++j) {
       AddRelative(pieces[j], pieces[i], features);
@@ -292,7 +286,6 @@ Score ScoreThread(search::Thread &t) {
     pieces[i].features = features;
   }
   
-  //~ std::cout << "First piece(" << pieces[0].pt << "," << pieces[0].sq << ") features: [" << pieces[0].features[0] << ","  << pieces[0].features[1] << ","  << pieces[0].features[2] << "]" << std::endl;
   // Store partial evaluation
   t.evaluations[h].pieces = pieces;
   t.evaluations[h].global_features = full_layer;
@@ -323,13 +316,9 @@ void init_conv_weights(size_t &offset) {
           size_t idx = wrapped_idx({IP(piece_in,12), IP(piece_out,12),
                                     IP(h,15), IP(w,15)});
           assert(idx < net_input_weights.size());
-          // size_t idx = (((((piece_in * 12) + piece_out) * 15) + h) * 15) + w;
-          //idx *= block_size;
           for (size_t d = 0; d < block_size; ++d) {
             size_t idx2 = wrapped_idx({IP(piece_out,12), IP(d,block_size),
                                        IP(piece_in,12), IP(h,15), IP(w,15)});
-            //size_t idx2 = (((piece_out * block_size) + d) * 12) + piece_in;
-            //idx2 = (idx2 * 15 + h) * 15 + w;
             assert(idx2 < net_input_weights.size() * block_size);
             net_input_weights[idx][d] = gNetWeightsData[idx2];
           }
@@ -457,8 +446,6 @@ void init_mirrored_out_weights(size_t &offset) {
             if (c) {
               idx2 = wrapped_idx({IP(res,3), IP(c,2), IP(m_pt,12),
                                   IP(d-(block_size/2), block_size/2), IP(m_h, 8), IP(w, 8)});
-            //  idx2 = wrapped_idx({IP(res,3), IP(pt,12), IP(d, block_size),
-            //                           IP(m_h, 8), IP(w, 8)});
             }
             assert(idx2 < output_weights.size() * block_size);
             output_weights[idx][d] = gNetWeightsData[idx2 + offset];
@@ -564,12 +551,6 @@ void init_weights() {
   init_mirrored_full_layer_weights(offset);
   init_full_output_weights(offset);
   init_mirrored_outputs();
-  //~ init_conv_weights(offset);
-  //~ init_conv_bias_weights(offset);
-  //~ init_out_weights(offset);
-  //~ init_out_bias(offset);
-  //~ init_full_layer_weights(offset);
-  //~ init_full_output_weights(offset);
 }
 
 void SetContempt(Color color, int32_t value) {
