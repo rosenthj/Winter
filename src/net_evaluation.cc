@@ -193,7 +193,7 @@ Score ScoreBoard(const Board &board) {
 //}
 
 Score FromScratch(search::Thread &t) {
-  //std::cout << "------------------------"<< "From scratch!" << "------------------------" << std::endl;
+  //~ std::cout << "------------------------"<< "From scratch!" << "------------------------" << std::endl;
   const Depth h = t.get_height();
   std::vector<NetPieceModule> piece_modules;
   piece_modules.reserve(32);
@@ -210,8 +210,11 @@ Score FromScratch(search::Thread &t) {
 }
 
 Score ScoreThread(search::Thread &t) {
+  if (bitops::PopCount(t.board.get_all_pieces()) < 7) {
+    return ScoreBoard(t.board);
+  }
   const Depth h = t.get_height();
-  //std::cout << "------------------------"<< "ScoreThread at h=" << h  << "------------------------" << std::endl;
+  //~ std::cout << "------------------------"<< "ScoreThread at h=" << h  << "------------------------" << std::endl;
   if (h==0) {
     return FromScratch(t);
   }
@@ -224,16 +227,22 @@ Score ScoreThread(search::Thread &t) {
   BitBoard mask = 0;
   for (const NetPieceModule &piece : t.evaluations[h-1].pieces) {
     Piece b_piece = t.board.get_piece(piece.sq);
+    if (b_piece == kNoPiece) {
+      //~ std::cout << "No piece at: " << piece.sq << std::endl;
+      //std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
+      no_longer.push_back(piece);
+      continue;
+    }
     if (GetPieceColor(b_piece) == kBlack) {
       b_piece = GetPieceType(b_piece) + 6;
     }
     if (b_piece == piece.pt) {
-      //std::cout << "Keep: (" << piece.pt << "," << piece.sq << ")" << std::endl;
+      //~ std::cout << "Keep: (" << piece.pt << "," << piece.sq << ") features: [" << piece.features[0] << ","  << piece.features[1] << ","  << piece.features[2] << "]" << std::endl;
       pieces.push_back(piece);
       mask |= GetSquareBitBoard(piece.sq);
     }
     else {
-      //std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
+      //~ std::cout << "Remove: (" << piece.pt << "," << piece.sq << ")" << std::endl;
       no_longer.push_back(piece);
     }
   }
@@ -272,6 +281,7 @@ Score ScoreThread(search::Thread &t) {
     pieces[i].features = features;
   }
   for (size_t i = kept; i < pieces.size(); ++i) {
+    //~ std::cout << "Added: (" << pieces[i].pt << "," << pieces[i].sq << ")" << std::endl;
     NetLayerType features = pieces[i].features;
     for (size_t j = 0; j < i; ++j) {
       AddRelative(pieces[j], pieces[i], features);
@@ -282,6 +292,7 @@ Score ScoreThread(search::Thread &t) {
     pieces[i].features = features;
   }
   
+  //~ std::cout << "First piece(" << pieces[0].pt << "," << pieces[0].sq << ") features: [" << pieces[0].features[0] << ","  << pieces[0].features[1] << ","  << pieces[0].features[2] << "]" << std::endl;
   // Store partial evaluation
   t.evaluations[h].pieces = pieces;
   t.evaluations[h].global_features = full_layer;
