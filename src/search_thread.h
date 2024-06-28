@@ -31,6 +31,7 @@
 #include "board.h"
 #include "general/types.h"
 #include "general/settings.h"
+#include "net_types.h"
 #include <array>
 #include <thread>
 #include <vector>
@@ -73,6 +74,13 @@ struct Thread {
             }
           }
         }
+      }
+    }
+    
+    for (size_t idx = 0; idx < evaluations.size(); ++idx) {
+      evaluations[idx].pieces.clear();
+      for (size_t j = 0; j < full_block_size; ++j) {
+        evaluations[idx].global_features[j] = 0;
       }
     }
 
@@ -127,6 +135,7 @@ struct Thread {
   Array3d<int32_t, 2, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
+  std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
   std::array<Score, settings::kMaxDepth> static_scores;
   std::atomic<size_t> nodes;

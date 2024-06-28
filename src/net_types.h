@@ -18,44 +18,34 @@
  */
 
 /*
- * settings.h
+ * linear_algebra.h
  *
- *  Created on: Nov 4, 2016
+ *  Created on: June 28, 2024
  *      Author: Jonathan Rosenthal
  */
 
-#ifndef GENERAL_SETTINGS_H_
-#define GENERAL_SETTINGS_H_
+#ifndef NET_TYPES_H_
+#define NET_TYPES_H_
 
-#include "types.h"
-#include <string>
+#include "general/types.h"
+#include "linear_algebra.h"
 
-namespace settings {
+// NN types
+constexpr size_t block_size = 32;
+using NetLayerType = Vec<float_t, block_size>;
 
-const std::string engine_name = "Winter";
-const std::string engine_version = "3.20";
+constexpr size_t full_block_size = 128;
+using FullLayerType = Vec<float_t, full_block_size>;
 
-const std::string engine_author = "Jonathan Rosenthal";
+struct NetPieceModule {
+  PieceType pt;
+  Square sq;
+  NetLayerType features;
+};
 
-#if defined(__BMI2__)
-const std::string compile_arch = "BMI2";
-#elif defined(__AVX__)
-const std::string compile_arch = "AVX";
-#elif defined(__SSE4_2__)
-const std::string compile_arch = "SSE4.2";
-#elif defined(__SSE4_1__)
-const std::string compile_arch = "SSE4.1";
-#else
-const std::string compile_arch = "";
-#endif
+struct PartialEvaluation {
+  std::vector<NetPieceModule> pieces;
+  FullLayerType global_features;
+};
 
-constexpr bool kUseExtensions = true;
-constexpr bool kUseScoreBasedPruning = true;
-constexpr Depth kRepsForDraw = 2;
-constexpr Depth kMaxDepth = 128;
-
-constexpr bool kUseQS = true;
-
-}
-
-#endif /* GENERAL_SETTINGS_H_ */
+#endif /* NET_TYPES_H_*/
