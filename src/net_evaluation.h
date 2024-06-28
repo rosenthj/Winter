@@ -33,11 +33,14 @@
 #include "general/types.h"
 #include "general/settings.h"
 #include "board.h"
+#include "search_thread.h"
 #include <vector>
 
 namespace net_evaluation {
 
 Score ScoreBoard(const Board &board);
+Score ScoreThread(search::Thread &thread);
+
 // Returns the input features for the net for a specific board position.
 // In the future this may become more complicated, depending on how pieces get encoded.
 std::vector<int32_t> GetNetInputs(const Board &board);

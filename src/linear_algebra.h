@@ -57,6 +57,7 @@ inline float sum(__m256 x) {
 }
 
 inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm256_add_ps(a, b); }
+inline SIMDFloat sub(const SIMDFloat a, const SIMDFloat b) { return _mm256_sub_ps(a, b); }
 inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm256_mul_ps(a, b); }
 inline void store(float* mem_addr, SIMDFloat a) { _mm256_storeu_ps(mem_addr, a); }
 inline SIMDFloat load(float const* mem_addr) { return _mm256_loadu_ps(mem_addr); }
@@ -92,6 +93,7 @@ inline float sum(SIMDFloat v) {
 }
 
 inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm_add_ps(a, b); }
+inline SIMDFloat sub(const SIMDFloat a, const SIMDFloat b) { return _mm_sub_ps(a, b); }
 inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm_mul_ps(a, b); }
 inline void store(float* mem_addr, SIMDFloat a) { _mm_storeu_ps(mem_addr, a); }
 inline SIMDFloat load(float const* mem_addr) { return _mm_loadu_ps(mem_addr); }
@@ -135,6 +137,16 @@ struct Vec<float, length> {
       SIMDFloat v1 = simd::load(&values[i]);
       SIMDFloat v2 = simd::load(&rhs.values[i]);
       simd::store(&values[i], simd::add(v1, v2));
+    }
+    return *this;
+  }
+  
+  inline Vec<float, length>& operator-=(const Vec<float, length> &rhs) {
+    #pragma GCC unroll 32
+    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat v1 = simd::load(&values[i]);
+      SIMDFloat v2 = simd::load(&rhs.values[i]);
+      simd::store(&values[i], simd::sub(v1, v2));
     }
     return *this;
   }
