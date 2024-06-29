@@ -770,7 +770,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
 inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previous_scores) {
   if (current_depth <= 4) {
-    return AlphaBeta<NodeType::kPV>(t, kMinScore, kMaxScore, current_depth);
+    Score score = AlphaBeta<NodeType::kPV>(t, kMinScore, kMaxScore, current_depth);
+    if (t.id == 0 && !finished(t)) {
+      last_search_score = score;
+    }
+    return score;
   }
   else {
     Score score = previous_scores.back();
@@ -778,6 +782,9 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     Score alpha = (score-delta).get_valid_score();
     Score beta = (score+delta).get_valid_score();
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
+    if (t.id == 0 && !finished(t)) {
+      last_search_score = score;
+    }
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta.win > 0 && delta.win_draw > 0);
       if (score <= alpha) {
@@ -803,6 +810,9 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
       assert(score > alpha && score < beta);
       score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
       delta *= 2;
+      if (t.id == 0 && !finished(t)) {
+        last_search_score = score;
+      }
     }
     return score;
   }
@@ -853,13 +863,10 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
 }
 
 void Thread::search() {
-  const Time begin = now();
+  const Time begin = end_time-rsearch_duration;
   double time_factor = 1.0;
   current_depth = 1;
   root_height = board.get_num_made_moves();
-  if (id == 0) {
-    end_time = begin+rsearch_duration;
-  }
 
   Score score = net_evaluation::ScoreBoard(board);
   set_static_score(score);
@@ -893,16 +900,16 @@ void Thread::search() {
     current_depth = depth;
 
     score = PVS(*this, current_depth, previous_scores);
-
-    if(!finished(*this)) {
-      last_search_score = score;
-      previous_scores.emplace_back(score);
-      if (id != 0) {
-        continue;
+    
+    previous_scores.emplace_back(score);
+    
+    if (id == 0) {
+      if (finished(*this)) {
+        current_depth--;
       }
       Time end = now();
 
-      PrintUCIInfoString(*this, current_depth, begin, end, score, best_root_move);
+      PrintUCIInfoString(*this, current_depth, begin, end, last_search_score, best_root_move);
 
       auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
       if (!fixed_search_time) {
@@ -924,6 +931,9 @@ void Thread::search() {
 
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
   Threads.is_searching = true;
+  rsearch_depth = std::min(depth, settings::kMaxDepth);
+  rsearch_duration = duration;
+  end_time = now()+rsearch_duration;
   table::UpdateGeneration();
   if (armageddon) {
     net_evaluation::SetContempt(kWhite, 60);
@@ -936,8 +946,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
-  rsearch_depth = std::min(depth, settings::kMaxDepth);
-  rsearch_duration = duration;
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   assert(moves.size() != 0);
   if (moves.size() == 1 && !fixed_search_time) {
