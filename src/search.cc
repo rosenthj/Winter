@@ -45,7 +45,7 @@ enum class NodeType {
   kPV, kNW
 };
 
-int32_t contempt = 0;
+int32_t contempt = 20;
 bool armageddon = false;
 std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
 

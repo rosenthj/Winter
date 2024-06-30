@@ -105,7 +105,7 @@ struct UCICheck {
 const std::vector<UCIOption> uci_options {
   {"Hash", table::SetTableSize, 32, 1, 104576},
   {"Threads", search::SetNumThreads, 1, 1, 256},
-  {"Contempt", search::SetContempt, 0, -100, 100},
+  {"Contempt", search::SetContempt, 20, -100, 100},
 #ifdef TUNE
 #define OPTION(x, min, max) \
   {#x, search::Set##x, search::Get##x(), min, max},
