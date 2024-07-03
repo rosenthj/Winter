@@ -474,7 +474,7 @@ inline void update_killers(Thread &t, const Move move) {
 
 inline void reset_child_killers(Thread &t) {
   assert(GetMoveType(move) < kCapture);
-  int child_height = t.get_height()+1;
+  int child_height = t.get_height()+2;
   t.killers[child_height][1] = kNullMove;
   t.killers[child_height][0] = kNullMove;
 }
