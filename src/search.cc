@@ -45,7 +45,7 @@ enum class NodeType {
   kPV, kNW
 };
 
-int32_t contempt = 20;
+int32_t contempt = 0;
 bool armageddon = false;
 std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
 
@@ -474,7 +474,7 @@ inline void update_killers(Thread &t, const Move move) {
 
 inline void reset_child_killers(Thread &t) {
   assert(GetMoveType(move) < kCapture);
-  int child_height = t.get_height()+2;
+  int child_height = t.get_height()+1;
   t.killers[child_height][1] = kNullMove;
   t.killers[child_height][0] = kNullMove;
 }
