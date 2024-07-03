@@ -130,7 +130,7 @@ struct Thread {
   Board board;
   Move best_root_move;
   Depth current_depth;
-  Array2d<Move, 1024, 2> killers;
+  Array2d<Move, settings::kMaxDepth+1, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
   Array3d<int32_t, 2, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;

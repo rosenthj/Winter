@@ -186,11 +186,11 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   if (move == info.tt_entry) {
     return (1 << 15) - 1;
   }
-  int num_made_moves = t.board.get_num_made_moves();
-  if (move == t.killers[num_made_moves][0]) {
+  int height = t.get_height();
+  if (move == t.killers[height][0]) {
     AddFeature<in_check>(move_weight, kPWIKiller);
   }
-  else if (move == t.killers[num_made_moves][1]) {
+  else if (move == t.killers[height][1]) {
     AddFeature<in_check>(move_weight, kPWIKiller + 1);
   }
   if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
