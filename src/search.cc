@@ -686,7 +686,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
         continue;
       }
       
-      if (depth - reduction <= 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
+      if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
         continue;
       }
     }
