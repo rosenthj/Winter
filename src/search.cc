@@ -685,6 +685,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
+      
+      if (depth - reduction <= 1 && !t.board.NonNegativeSEE(move)) {
+        continue;
+      }
     }
 
     if (GetMoveType(move) < kCapture) {
