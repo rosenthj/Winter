@@ -678,11 +678,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       }
       assert(reduction < depth);
 
+      bool is_capture = GetMoveType(move) == kCapture;
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-          && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          && ((GetMoveType(move) < kEnPassant) || (GetMoveType(move) == kCapture && !t.board.NonNegativeSEE(move)))) {
+          && depth - reduction + is_capture <= 3
+          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction + is_capture, improving))
+          && ((GetMoveType(move) < kEnPassant) || (is_capture && !t.board.NonNegativeSEE(move)))) {
         continue;
       }
       
