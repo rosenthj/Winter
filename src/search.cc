@@ -682,13 +682,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
           && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          && GetMoveType(move) < kEnPassant) {
+          && ((GetMoveType(move) < kEnPassant) || (GetMoveType(move) == kCapture && !t.board.NonNegativeSEE(move)))) {
         continue;
       }
       
-      if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
-        continue;
-      }
+      // if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
+      //  continue;
+      //}
     }
 
     if (GetMoveType(move) < kCapture) {
