@@ -458,7 +458,7 @@ inline bool singular_conditions_met(NodeType node_type, const Thread &t,
   return depth >= kSingularExtensionDepth-2
         && entry->depth >= std::max(depth, kSingularExtensionDepth) - 3
         && !(node_type == NodeType::kPV && movecount == 1)
-        && entry->get_bound() != kUpperBound
+        && entry->get_bound() == kLowerBound
         && entry->get_score(t.board).is_static_eval()
         && get_singular_beta(entry->get_score(t.board), depth) > kMinStaticEval;
 }
