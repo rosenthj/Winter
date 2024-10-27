@@ -703,6 +703,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //First move gets searched at full depth and window
       score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
     }
+    else if (node_type != NodeType::kNW && i == 1 && beta.value() - alpha.value() > 64) {
+      score = -AlphaBeta<node_type>(t, -beta, -alpha, depth - 1 + e);
+    } 
     else {
       //Assume we have searched the best move already and search with closed window and possibly reduction
       score = -AlphaBeta<NodeType::kNW>(t, -alpha_nw, -alpha,
