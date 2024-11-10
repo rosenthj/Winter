@@ -192,8 +192,9 @@ Time end_time = now();
 inline bool finished(search::Thread &thread) {
   if (thread.id == 0) {
     if (skip_time_check <= 0) {
-      skip_time_check = 256;
-      return end_time <= now() || max_nodes < search::Threads.get_node_count()
+      size_t current_nodes = search::Threads.get_node_count();
+      skip_time_check = std::min((size_t)256, max_nodes-current_nodes);
+      return end_time <= now() || max_nodes <= current_nodes
                                || search::Threads.end_search.load(std::memory_order_relaxed);
     }
     skip_time_check--;
@@ -950,6 +951,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();
+  skip_time_check = std::min((size_t)256, max_nodes);
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
   assert(moves.size() != 0);
   if (moves.size() == 1 && !fixed_search_time) {

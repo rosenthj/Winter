@@ -262,6 +262,9 @@ void UCIGo(Board &board, const StrArgs tokens) {
 
 void UCINewGame(Board &board, const StrArgs) {
   board = Board();
+  search::clear_killers_and_counter_moves();
+  table::ClearTable();
+  
 }
 
 void UCISetOption(Board &board, const StrArgs tokens) {
