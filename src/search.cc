@@ -47,7 +47,7 @@ enum class NodeType {
 
 int32_t contempt = 0;
 bool armageddon = false;
-std::array<Score, 2> draw_score { kDrawScore, kDrawScore };
+Array2d<Score, 2, 8> draw_score; // { kDrawScore, kDrawScore };
 
 Milliseconds rsearch_duration;
 Depth rsearch_depth;
@@ -284,7 +284,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 
   //End search immediately if trivial draw is reached
   if (t.board.IsTriviallyDrawnEnding()) {
-    return draw_score[t.board.get_turn()];
+    return draw_score[t.board.get_turn()][t.nodes & 7];
   }
 
   //TT probe
@@ -505,7 +505,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kNonQuiescent>().empty()) {
       return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
-    return draw_score[t.board.get_turn()];
+    return draw_score[t.board.get_turn()][t.nodes & 7];
   }
 
   //We drop to QSearch if we run out of depth.
@@ -601,7 +601,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (in_check) {
       return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
-    return draw_score[t.board.get_turn()];
+    return draw_score[t.board.get_turn()][t.nodes & 7];
   }
 
   Move tt_entry = kNullMove;
@@ -947,7 +947,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
     net_evaluation::SetContempt(board.get_turn(), contempt);
   }
   draw_score = net_evaluation::GetDrawArray();
-  assert(armageddon || contempt != 0 || draw_score[kWhite] == kDrawScore);
+  assert(armageddon || contempt != 0 || draw_score[kWhite][0] == kDrawScore);
   min_ply = board.get_num_made_moves();
   Threads.reset_node_count();
   Threads.reset_depths();

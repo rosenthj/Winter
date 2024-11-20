@@ -47,7 +47,7 @@ std::vector<int32_t> GetNetInputs(const Board &board);
 void init_weights();
 
 void SetContempt(Color color, int32_t value);
-std::array<Score, 2> GetDrawArray();
+Array2d<Score, 2, 8> GetDrawArray();
 
 Score AddContempt(Score score, Color color);
 Score RemoveContempt(Score score, Color color);

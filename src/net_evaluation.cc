@@ -559,17 +559,38 @@ void SetContempt(Color color, int32_t value) {
   }
 }
 
-std::array<Score, 2> GetDrawArray() {
-  if (contempt[kWhite] == 0) {
-    return std::array<Score, 2> { kDrawScore, kDrawScore };
+Array2d<Score, 2, 8> GetDrawArray() {
+  Array2d<Score, 2, 8> draw_scores;
+  Score draw_score = kDrawScore;
+  for (size_t nodes = 0; nodes < 8; ++nodes) {
+    draw_scores[kWhite][nodes] = AddContempt(draw_score, kWhite);
+    draw_scores[kBlack][nodes] = AddContempt(draw_score, kBlack);
+    // 4375800
+    draw_score = draw_score.get_next_score();
+    // 4502600
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    //draw_score = draw_score.get_next_score();
+    // 4486000
   }
-  return std::array<Score, 2> { AddContempt(kDrawScore, kWhite), AddContempt(kDrawScore, kBlack) };
+  return draw_scores;
+  //if (contempt[kWhite] == 0) {
+  //  return std::array<Score, 2> { kDrawScore, kDrawScore };
+  //}
+  //return std::array<Score, 2> { AddContempt(kDrawScore, kWhite), AddContempt(kDrawScore, kBlack) };
 }
 
 Score AddContempt(Score score, Color color) {
   assert(score.is_static_eval());
   int32_t diff = score.win_draw - score.win;
-  if (contempt[color] > 0) { // Contempt is positive, draws are counted as losses
+  if (contempt[color] >= 0) { // Contempt is positive, draws are counted as losses
     diff = (diff * contempt[color]) / 100;
     return WDLScore { score.win, score.win_draw - diff };
   }
