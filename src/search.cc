@@ -381,6 +381,7 @@ inline NScore get_futility_margin(Depth depth, bool improving) {
 }
 
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+  assert(quiets.size() > 0);
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
@@ -767,7 +768,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
   }
   else if (!exclude_move) {
-    table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
+    table::SaveEntry(t.board, moves[0], lower_bound_score, depth, kUpperBound);
   }
 
   return lower_bound_score;
