@@ -59,15 +59,15 @@ inline float sum(__m256 x) {
 inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm256_add_ps(a, b); }
 inline SIMDFloat sub(const SIMDFloat a, const SIMDFloat b) { return _mm256_sub_ps(a, b); }
 inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm256_mul_ps(a, b); }
-inline void store(float* mem_addr, SIMDFloat a) { _mm256_storeu_ps(mem_addr, a); }
-inline SIMDFloat load(float const* mem_addr) { return _mm256_loadu_ps(mem_addr); }
+inline void store(float* mem_addr, SIMDFloat a) { _mm256_store_ps(mem_addr, a); }
+inline SIMDFloat load(float const* mem_addr) { return _mm256_load_ps(mem_addr); }
 inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm256_max_ps(a,  b); }
 inline SIMDFloat min(SIMDFloat a, SIMDFloat b) { return _mm256_min_ps(a,  b); }
 inline SIMDFloat set(float a) { return _mm256_set1_ps(a); }
 
 inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
-  //return _mm256_fmadd_ps(a, b, c);
-  return add(multiply(a, b), c);
+  return _mm256_fmadd_ps(a, b, c);
+  //return add(multiply(a, b), c);
 }
 
 }
@@ -95,8 +95,8 @@ inline float sum(SIMDFloat v) {
 inline SIMDFloat add(const SIMDFloat a, const SIMDFloat b) { return _mm_add_ps(a, b); }
 inline SIMDFloat sub(const SIMDFloat a, const SIMDFloat b) { return _mm_sub_ps(a, b); }
 inline SIMDFloat multiply(const SIMDFloat a, const SIMDFloat b) { return _mm_mul_ps(a, b); }
-inline void store(float* mem_addr, SIMDFloat a) { _mm_storeu_ps(mem_addr, a); }
-inline SIMDFloat load(float const* mem_addr) { return _mm_loadu_ps(mem_addr); }
+inline void store(float* mem_addr, SIMDFloat a) { _mm_store_ps(mem_addr, a); }
+inline SIMDFloat load(float const* mem_addr) { return _mm_load_ps(mem_addr); }
 inline SIMDFloat max(SIMDFloat a, SIMDFloat b) { return _mm_max_ps(a,  b); }
 inline SIMDFloat min(SIMDFloat a, SIMDFloat b) { return _mm_min_ps(a,  b); }
 inline SIMDFloat set(float a) { return _mm_set1_ps(a); }
@@ -124,11 +124,14 @@ struct Vec<float, length> {
   }
   
   float sum() const {
-    float t = 0;
-    for (size_t i = 0; i < length; ++i) {
-      t += values[i];
+    SIMDFloat acc = simd::set(0.0f);
+    size_t i = 0;
+    for (; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+      SIMDFloat v = simd::load(&values[i]);
+      acc = simd::add(acc, v);
     }
-    return t;
+    float total = simd::sum(acc); // Horizontal sum of accumulator
+    return total;
   }
   
   inline Vec<float, length>& operator+=(const Vec<float, length> &rhs) {
@@ -292,13 +295,13 @@ inline bool operator==(const Vec<t,l>& lhs, const Vec<t,l>& rhs) {
 template<typename t, size_t l>
 inline bool operator!=(const Vec<t,l>& lhs, const Vec<t,l>& rhs) { return !(lhs == rhs); }
 
-template<typename t, size_t l>
-Vec<t,l> squared_differences(const Vec<t,l> &v1, const Vec<t,l> &v2) {
-  Vec<t,l> v;
-  for (size_t i = 0; i < l; ++i) {
-    v[i] = std::pow(v1[i] - v2[i], 2);
-  }
-  return v;
-}
+//template<typename t, size_t l>
+//Vec<t,l> squared_differences(const Vec<t,l> &v1, const Vec<t,l> &v2) {
+  //Vec<t,l> v;
+  //for (size_t i = 0; i < l; ++i) {
+    //v[i] = std::pow(v1[i] - v2[i], 2);
+  //}
+  //return v;
+//}
 
 #endif /* LEARNING_LINEAR_ALGEBRA_H_ */
