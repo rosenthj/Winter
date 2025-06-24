@@ -525,20 +525,19 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   OptEntry entry = table::GetEntry(t.board.get_hash());
   
   if (node_type != NodeType::kPV && !exclude_move && entry.has_value()) {
-    Score score = entry->get_score(t.board);
     if (sufficient_bounds(t.board, entry, alpha, beta, depth)) {
+      Score score = entry->get_score(t.board);
       if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
         return (score * 3 + beta) / 4;
       }
       return score;
     }
-    else if (score < alpha && entry->depth == depth - 1
-             && !score.is_mate_score() && !alpha.is_mate_score()
-             && entry->get_bound() == kUpperBound
-             && prob_better(score, alpha) < 2.0) {
-      return (score + alpha) / 2;
-               
-    }
+    //else if (score < alpha && entry->depth == depth - 1
+             //&& !score.is_mate_score() && !alpha.is_mate_score()
+             //&& entry->get_bound() == kUpperBound
+             //&& prob_better(score, alpha) < 2.0) {
+      //return (score + alpha) / 2;
+    //}
   }
   
   if (depth >= 2 && !exclude_move && !entry.has_value()) {
@@ -690,7 +689,11 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
+          && alpha.is_static_eval()
+          && static_eval.is_static_eval()
           && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
+          //&& prob_better(static_eval, alpha) < 0.25
+          && prob_better(alpha, static_eval) > 0.4
           && GetMoveType(move) < kEnPassant) {
         continue;
       }

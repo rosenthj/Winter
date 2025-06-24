@@ -211,7 +211,7 @@ struct WDLScore {
 };
 
 inline float prob_better(const WDLScore lhs, const WDLScore rhs) {
-  float p_scale = (WDLScore::scale * WDLScore::scale / 100.0);
+  float p_scale = (WDLScore::scale * WDLScore::scale * 1.0);
   float win_vs_not = lhs.win * (WDLScore::scale - rhs.win);
   float draw_vs_lose = lhs.win_draw * (WDLScore::scale - rhs.win_draw);
   return (win_vs_not + draw_vs_lose) / p_scale;
