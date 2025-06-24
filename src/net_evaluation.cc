@@ -58,15 +58,23 @@ void RemoveRelative(const std::tuple<Piece, Square> &p_src, const NetPieceModule
 }
 
 void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
+  // Create a temporary copy of the initial biases to read from.
+  std::vector<NetLayerType> initial_features;
+  initial_features.reserve(piece_modules.size());
+  for (const auto& pm : piece_modules) {
+    initial_features.push_back(pm.features);
+  }
+
   for (size_t i = 0; i < piece_modules.size(); ++i) {
-    NetLayerType features = piece_modules[i].features;
-    for (size_t j = 0; j < i; ++j) {
-      AddRelative(piece_modules[j], piece_modules[i], features);
+    // Start with the initial bias for piece i
+    NetLayerType final_features = initial_features[i];
+    for (size_t j = 0; j < piece_modules.size(); ++j) {
+      if (i == j) continue;
+      // Add influence from every other piece j onto piece i
+      AddRelative(piece_modules[j], piece_modules[i], final_features);
     }
-    for (size_t j = i+1; j < piece_modules.size(); ++j) {
-      AddRelative(piece_modules[j], piece_modules[i], features);
-    }
-    piece_modules[i].features = features;
+    // Write the final computed value back
+    piece_modules[i].features = final_features;
   }
 }
 
@@ -83,15 +91,6 @@ inline void AddPieceType(const Board &board, const PieceType pt,
     piece_modules.push_back(npm);
     
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
-  }
-}
-
-inline void AddAllPieceTypes(const Board &board,
-                         std::vector<NetPieceModule> &piece_modules,
-                         FullLayerType &full_layer) {
-  for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      AddPieceType<kWhite>(board, piece_type, piece_modules, full_layer);
-      AddPieceType<kBlack>(board, piece_type, piece_modules, full_layer);
   }
 }
 
@@ -118,6 +117,12 @@ inline void AddAllPieceTypes(const Board &board,
       AddPieceType<kWhite>(board, piece_type, piece_modules, full_layer, mask);
       AddPieceType<kBlack>(board, piece_type, piece_modules, full_layer, mask);
   }
+}
+
+inline void AddAllPieceTypes(const Board &board,
+                         std::vector<NetPieceModule> &piece_modules,
+                         FullLayerType &full_layer) {
+  AddAllPieceTypes(board, piece_modules, full_layer, ~BitBoard(0));
 }
 
 }

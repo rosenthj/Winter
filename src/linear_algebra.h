@@ -125,8 +125,8 @@ struct Vec<float, length> {
   
   float sum() const {
     SIMDFloat acc = simd::set(0.0f);
-    size_t i = 0;
-    for (; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat v = simd::load(&values[i]);
       acc = simd::add(acc, v);
     }
@@ -135,8 +135,8 @@ struct Vec<float, length> {
   }
   
   inline Vec<float, length>& operator+=(const Vec<float, length> &rhs) {
-    #pragma GCC unroll 32
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       SIMDFloat v2 = simd::load(&rhs.values[i]);
       simd::store(&values[i], simd::add(v1, v2));
@@ -145,8 +145,8 @@ struct Vec<float, length> {
   }
   
   inline Vec<float, length>& operator-=(const Vec<float, length> &rhs) {
-    #pragma GCC unroll 32
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       SIMDFloat v2 = simd::load(&rhs.values[i]);
       simd::store(&values[i], simd::sub(v1, v2));
@@ -155,7 +155,8 @@ struct Vec<float, length> {
   }
   
   inline Vec<float, length>& operator*=(const Vec<float, length> &rhs) {
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       SIMDFloat v2 = simd::load(&rhs.values[i]);
       simd::store(&values[i], simd::multiply(v1, v2));
@@ -165,7 +166,8 @@ struct Vec<float, length> {
   
   inline Vec<float, length>& relu() {
     const SIMDFloat zero = simd::set(0);
-    for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i += kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       simd::store(&values[i], simd::max(v1, zero));
     }
@@ -176,8 +178,8 @@ struct Vec<float, length> {
     const SIMDFloat zero = simd::set(0);
     const SIMDFloat max_simd = simd::set(max_val);
     Vec<float, length> result;
-    #pragma GCC unroll 32
-    for (size_t i = 0; i <= length-kSIMDWidth; i += kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i += kSIMDWidth) {
       SIMDFloat v1 = simd::load(&values[i]);
       simd::store(&result.values[i], simd::min(simd::max(v1, zero), max_simd));
     }
@@ -185,9 +187,10 @@ struct Vec<float, length> {
   }
   
   inline Vec<float, length>& FMA(const Vec<float, length> &a, const float &b) {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+    static_assert(length % kSIMDWidth == 0, "Input length must be SIMD-aligned");
     SIMDFloat vb = simd::set(b);
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    #pragma unroll
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat c = simd::load(&values[i]);
       SIMDFloat va = simd::load(&a.values[i]);
      simd::store(&values[i], simd::fmadd(va, vb, c));
@@ -196,8 +199,8 @@ struct Vec<float, length> {
   }
 
   inline Vec<float, length>& FMA(const Vec<float, length> &a, const Vec<float, length> &b) {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    static_assert(length % kSIMDWidth == 0, "Input length must be SIMD-aligned");
+    for (size_t i = 0; i < length; i+=kSIMDWidth) {
       SIMDFloat c = simd::load(&values[i]);
       SIMDFloat va = simd::load(&a.values[i]);
       SIMDFloat vb = simd::load(&b.values[i]);
@@ -207,10 +210,10 @@ struct Vec<float, length> {
   }
   
   template<typename t>
-  float dot(const Vec<t, length> &other) const {
-    static_assert(length == 8 * (length / 8), "Input length is not multiple of 16");
+  inline float dot(const Vec<t, length>& other) const {
+    static_assert(length % kSIMDWidth == 0, "Input length must be SIMD-aligned");
     SIMDFloat c = simd::set(0);
-    for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
+    for (size_t i = 0; i < length; i += kSIMDWidth) {
       SIMDFloat va = simd::load(&values[i]);
       SIMDFloat vb = simd::load(&other.values[i]);
       c = simd::fmadd(va, vb, c);
@@ -224,6 +227,7 @@ struct Vec<float, length> {
       static_assert(new_length < length, "Reduction not reducing");
       static_assert(length % new_length == 0, "Invalid reduction size");
       Vec<float, new_length> result;
+      #pragma unroll
       for (size_t i = 0; i <= new_length-kSIMDWidth; i+=kSIMDWidth) {
           SIMDFloat c = simd::set(0);
           for (size_t j = 0; j <= length - new_length; j+=new_length) {
@@ -242,6 +246,8 @@ struct Vec<float, length> {
       static_assert(new_length < length, "Reduction not reducing");
       static_assert(length % new_length == 0, "Invalid reduction size");
       Vec<float, new_length> result;
+      
+      #pragma unroll
       for (size_t i = 0; i <= new_length-kSIMDWidth; i+=kSIMDWidth) {
           SIMDFloat c = simd::set(0);
           for (size_t j = 0; j <= length - new_length; j+=new_length) {
