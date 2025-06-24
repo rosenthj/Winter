@@ -87,6 +87,9 @@ EXPR Depth kSingularExtensionDepth = 9;
 EXPR Depth kNMPBase = 485;
 EXPR Depth kNMPScale = 40;
 
+EXPR NScore kProbCutMargin = 150;
+EXPR Depth kProbCutDepth = 4;
+
 EXPR std::array<NScore, 4> init_futility_margins() {
   EXPR std::array<NScore, 4> kFutilityMargins = {
     kFutilityOffset, kFutilityOffset + kFutilityScaling, kFutilityOffset + kFutilityScaling * 2, kFutilityOffset + kFutilityScaling * 3};
@@ -556,6 +559,19 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   else {
     t.set_static_score(kNoScore);
   }
+  
+  if (node_type == NodeType::kNW && depth >= kProbCutDepth && !in_check && beta.is_static_eval()) {
+    if (entry.has_value() && entry->depth >= depth - kProbCutDepth) {
+      Score probCutScore = entry->get_score(t.board);
+      if (probCutScore.is_static_eval()) {
+        Score probCutBeta = beta + WDLScore{kProbCutMargin, kProbCutMargin};
+        if (probCutScore >= probCutBeta) {
+            return probCutScore; // Or just beta
+        }
+      }
+    }
+  }
+  
   bool improving = t.improving();
   bool nmp_failed_node = false;
 
