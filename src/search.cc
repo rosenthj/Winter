@@ -87,7 +87,7 @@ EXPR Depth kSingularExtensionDepth = 9;
 EXPR Depth kNMPBase = 485;
 EXPR Depth kNMPScale = 40;
 
-EXPR NScore kRFPMargin = 190;
+EXPR NScore kRFPMargin = 750;
 
 EXPR std::array<NScore, 4> init_futility_margins() {
   EXPR std::array<NScore, 4> kFutilityMargins = {
