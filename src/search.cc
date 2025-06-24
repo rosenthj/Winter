@@ -524,13 +524,21 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   //Transposition Table Probe
   OptEntry entry = table::GetEntry(t.board.get_hash());
   
-  if (node_type != NodeType::kPV && !exclude_move && entry.has_value()
-      && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
+  if (node_type != NodeType::kPV && !exclude_move && entry.has_value()) {
     Score score = entry->get_score(t.board);
-    if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
-      return (score * 3 + beta) / 4;
+    if (sufficient_bounds(t.board, entry, alpha, beta, depth)) {
+      if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
+        return (score * 3 + beta) / 4;
+      }
+      return score;
     }
-    return score;
+    else if (score < alpha && entry->depth == depth - 1
+             && !score.is_mate_score() && !alpha.is_mate_score()
+             && entry->get_bound() == kUpperBound
+             && prob_better(score, alpha) < 2.0) {
+      return (score + alpha) / 2;
+               
+    }
   }
   
   if (depth >= 2 && !exclude_move && !entry.has_value()) {
