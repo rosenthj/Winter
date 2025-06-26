@@ -691,9 +691,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
           && depth - reduction <= 3
           && alpha.is_static_eval()
           && static_eval.is_static_eval()
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          //&& prob_better(static_eval, alpha) < 0.25
-          && prob_better(alpha, static_eval) > 0.32 // (0.35 + 0.05 * (depth - reduction))
+          //&& static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
+          //&& prob_better(static_eval, alpha) < 0.24
+          && prob_better(alpha, static_eval) > 0.24 + 0.1 * (depth - reduction)
+          //&& prob_better(alpha, static_eval) > 0.32 // (0.35 + 0.05 * (depth - reduction))
           //&& odds_ratio_better(static_eval, alpha) < 0.5 + 0.05 * (depth - reduction)
           && GetMoveType(move) < kEnPassant) {
         continue;
