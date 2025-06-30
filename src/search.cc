@@ -87,13 +87,16 @@ EXPR Depth kSingularExtensionDepth = 9;
 EXPR Depth kNMPBase = 485;
 EXPR Depth kNMPScale = 40;
 
-EXPR std::array<NScore, 4> init_futility_margins() {
-  EXPR std::array<NScore, 4> kFutilityMargins = {
-    kFutilityOffset, kFutilityOffset + kFutilityScaling, kFutilityOffset + kFutilityScaling * 2, kFutilityOffset + kFutilityScaling * 3};
+constexpr Depth kFutilityMaxDepth = 4;
+constexpr size_t kFutileMarginArraySize = kFutilityMaxDepth + 1;
+
+EXPR std::array<NScore, kFutileMarginArraySize> init_futility_margins() {
+  EXPR std::array<NScore, kFutileMarginArraySize> kFutilityMargins = {
+    kFutilityOffset, kFutilityOffset + kFutilityScaling, kFutilityOffset + kFutilityScaling * 2, kFutilityOffset + kFutilityScaling * 3, kFutilityOffset + kFutilityScaling * 4};
   return kFutilityMargins;
 }
 
-EXPR std::array<NScore, 4> kFutileMargin = init_futility_margins();
+EXPR std::array<NScore, kFutileMarginArraySize> kFutileMargin = init_futility_margins();
 
 EXPR Array3d<Depth, 2, 2, 6> init_lmp_breakpoints() {
   
@@ -377,6 +380,7 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
 }
 
 inline NScore get_futility_margin(Depth depth, bool improving) {
+  assert(depth <= kFutilityMaxDepth);
   return kFutileMargin[depth] + kFutilityImproving * depth * improving;
 }
 
@@ -681,7 +685,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-          && depth - reduction <= 3
+          && depth - reduction <= kFutilityMaxDepth
           && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
           && GetMoveType(move) < kEnPassant) {
         continue;
