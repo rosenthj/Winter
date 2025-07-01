@@ -767,7 +767,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
   }
   else if (!exclude_move) {
-    table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
+    //table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
   }
 
   return lower_bound_score;
