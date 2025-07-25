@@ -56,18 +56,13 @@ void Init() {
   }
 }
 
-struct Sorter {
-  bool operator() (Move i, Move j) {
-    return (i >> 16) > (j >> 16);
-  };
-};
-
 void insertion_sort(std::vector<Move> &moves, int start_idx = 0) {
   const size_t size = moves.size();
   for (int i = start_idx + 1; i < size; ++i) {
     Move key = moves[i];
+    const Move key_val = key >> 16;
     int j = i - 1;
-    while (j >= start_idx && (moves[j] >> 16) < (key >> 16)) {
+    while (j >= start_idx && (moves[j] >> 16) < key_val) {
       moves[j + 1] = moves[j];
       --j;
     }
