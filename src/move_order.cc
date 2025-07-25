@@ -31,11 +31,11 @@
 #include "general/magic.h"
 #include "general/types.h"
 #include "move_order.h"
-//#include "search.h"
 #include "search_thread.h"
 
 #include <algorithm>
 #ifdef TUNE_ORDER
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #endif
@@ -56,11 +56,19 @@ void Init() {
   }
 }
 
-struct Sorter {
-  bool operator() (Move i, Move j) {
-    return (i >> 16) > (j >> 16);
-  };
-};
+void insertion_sort(std::vector<Move> &moves, int start_idx = 0) {
+  const size_t size = moves.size();
+  for (int i = start_idx + 1; i < size; ++i) {
+    Move key = moves[i];
+    const Move key_val = key >> 16;
+    int j = i - 1;
+    while (j >= start_idx && (moves[j] >> 16) < key_val) {
+      moves[j + 1] = moves[j];
+      --j;
+    }
+    moves[j + 1] = key;
+  }
+}
 
 MoveScore get_move_priority(const Move move, search::Thread &t, const Move best) {
   if (move == best)
@@ -79,7 +87,7 @@ void Sort(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
   for (size_t i = 0; i < moves.size(); ++i) {
     moves[i] |= (get_move_priority(moves[i], t, best_move) << 16);
   }
-  std::sort(moves.begin(), moves.end(), Sorter());
+  insertion_sort(moves);
   for (size_t i = 0; i < moves.size(); ++i) {
     moves[i] &= 0xFFFFL;
   }
@@ -311,7 +319,7 @@ void SortML(std::vector<Move> &moves, search::Thread &t,
     }
   }
 
-  std::sort(moves.begin()+start_idx, moves.end(), Sorter());
+  insertion_sort(moves, start_idx);
   for (size_t i = start_idx; i < moves.size(); ++i) {
     moves[i] &= 0xFFFFL;
   }
@@ -351,10 +359,44 @@ void OptionsToFile() {
   std::ofstream f;
   f.open("./order_params.csv");
   for (size_t idx = 0; idx < 2*kNumMoveProbabilityFeatures; ++idx) {
-    f << "order_" << idx << ", int, " << GetWeight(idx)
-      << ", -16000000, 16000000, 160000, 0.002" << std::endl;
+    f << "order_" << idx << ", int, " << GetWeight(idx);
+    if (kNumMoveProbabilityFeatures - (idx % kNumMoveProbabilityFeatures) > 3) {
+      f << ", -16000000, 16000000, 160000, 0.002" << std::endl;
+    }
+    else {
+      f << ", -1000, 1000, 10, 0.002" << std::endl;
+    }
   }
   f.close();
+}
+
+void GenerateCPPHelper(const std::vector<MoveScore>& params,
+                       const std::string& name,
+                       std::ostream& out)               // <-- add param
+{
+  size_t max_len = 0;
+  for (MoveScore p : params)
+    max_len = std::max(max_len, std::to_string(p).length());
+
+  out << "constexpr std::array<int, 117> " << name << " = {\n";
+  size_t idx = 0;
+  std::string feature_name;
+  for (FeatureInfo info : kFeatureInfos) {
+    while (idx < info.idx)
+        out << std::setw(max_len + 2) << params[idx++]
+            << ", // " << feature_name << '\n';
+    feature_name = info.info;
+  }
+  out << "};\n\n";
+}
+
+void GenerateCPP() {
+  const std::string file = "hardcoded_params.h";
+  std::ofstream out(file, std::ios::trunc);
+  if (!out) { std::cout << "could not open " << file << '\n'; return; }
+  GenerateCPPHelper(search_params, "search_params", out);
+  GenerateCPPHelper(search_params_in_check, "search_params_in_check", out);
+  std::cout << "saved parameters to " << file << '\n';
 }
 
 #endif /* TUNE_ORDER */

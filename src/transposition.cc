@@ -183,10 +183,10 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
 void ClearTable() {
   for (size_t bucket_id = 0; bucket_id < _table.size(); bucket_id++) {
     for (size_t i = 0; i < 4; ++i) {
-      _table[bucket_id][i].hash = 0;
-      _table[bucket_id][i].set_best_move(kNullMove);
+      _table[bucket_id][i].clear();
     }
   }
+  current_generation = 0;
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {

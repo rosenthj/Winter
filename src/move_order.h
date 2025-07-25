@@ -47,6 +47,7 @@ void SetWeight(size_t idx, MoveScore value);
 MoveScore GetWeight(size_t idx);
 void PrintOptions();
 void OptionsToFile();
+void GenerateCPP();
 
 #endif /* TUNE_ORDER */
 

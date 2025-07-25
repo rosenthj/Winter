@@ -58,6 +58,10 @@ struct Entry {
   }
 
   void set_gen_and_bound(uint8_t bound);
+  
+  void clear() {
+    *this = Entry{};
+  }
 
   HashType hash;         // 8 bytes
 private:

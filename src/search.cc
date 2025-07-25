@@ -181,7 +181,6 @@ bool SwapToFront(std::vector<Move> &moves, const Move move) {
   return false;
 }
 
-std::mt19937_64 rng;
 size_t min_ply = 0;
 constexpr size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
