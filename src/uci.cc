@@ -365,6 +365,12 @@ void SPSAFormatOptionPrint(Board &board , const StrArgs) {
   }
 }
 
+#ifdef TUNE_ORDER
+void PrintOrderParams(Board &board , const StrArgs) {
+  move_order::GenerateCPP();
+}
+#endif
+
 const std::vector<UCICommand> uci_commands {
   // UCI Commands
   {"go", UCIGo},
@@ -389,6 +395,9 @@ const std::vector<UCICommand> uci_commands {
   {"symmetry_test", commands::SymmetryTest},
   {"isdraw", commands::CheckIfDraw},
   {"spsa", SPSAFormatOptionPrint},
+#ifdef TUNE_ORDER
+  {"print_order_params", PrintOrderParams},
+#endif
 };
 
 }
