@@ -829,10 +829,11 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
   size_t node_count = Threads.get_node_count();
   auto time_used = std::chrono::duration_cast<Milliseconds>(end-begin);
   if (print_info) {
-    std::cout << "info "  << " depth " << depth
+    std::cout << "info"  
+        << " depth "    << depth
         << " seldepth " << (Threads.get_max_depth() - t.board.get_num_made_moves())
-        << " time " << time_used.count()
-        << " nodes " << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
+        << " time "     << time_used.count()
+        << " nodes "    << node_count << " nps " << ((1000*node_count) / (time_used.count()+1));
 
     // Limiting to hashfull above 1 second reduces my anxiety about hashfull impacting performance.
     // This is also found in SF.
@@ -851,10 +852,16 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
       if (score.is_disadvantage()) {
         NScore n_score = -(score.win - kMinScore.win - (int32_t)t.board.get_num_made_moves()) / 2;
         std::cout << " score mate " << n_score;
+        if (uci_show_wdl) {
+          std::cout << " wdl 0 0 1000";
+        }
       }
       else {
         NScore n_score = (kMaxScore.win - score.win - (int32_t)t.board.get_num_made_moves() + 2) / 2;
         std::cout << " score mate " << n_score;
+        if (uci_show_wdl) {
+          std::cout << " wdl 1000 0 0";
+        }
       }
       //std::cout << " w:" << score.win << " wd:" << score.win_draw;
     }
@@ -952,7 +959,23 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.reset_depths();
   skip_time_check = std::min((size_t)256, max_nodes);
   std::vector<Move> moves = board.GetMoves<kNonQuiescent>();
-  assert(moves.size() != 0);
+  if (moves.size() == 0) {
+    std::cout << "info depth 0 score";
+    if (board.InCheck()) {
+      std::cout << " mate 0";
+      if (uci_show_wdl) {
+        std::cout << " wdl 0 0 1000";
+      }
+    }
+    else {
+      std::cout << " cp 0";
+      if (uci_show_wdl) {
+        std::cout << " wdl 0 1000 0";
+      }
+    }
+    std::cout << std::endl;
+    return kNullMove;
+  }
   if (moves.size() == 1 && !fixed_search_time) {
     return moves[0];
   }

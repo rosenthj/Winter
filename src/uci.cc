@@ -187,7 +187,12 @@ void Go(Board *board, Timer timer) {
     Milliseconds duration = Milliseconds(time);
     move = search::TimeSearch((*board), duration);
   }
-  std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
+  if (move != kNullMove) {
+    std::cout << "bestmove " << parse::MoveToString(move) << std::endl;
+  }
+  else {
+    std::cout << "bestmove (none)" << std::endl;
+  }
   search::Threads.is_searching = false;
 }
 
