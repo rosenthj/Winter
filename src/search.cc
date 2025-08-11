@@ -574,7 +574,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (is_null_move_allowed(static_eval, beta, t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
-      const Depth R = (kNMPBase + depth * kNMPScale) / 128;
+      Depth R = (kNMPBase + depth * kNMPScale) / 128;
+      if (R > 2 && static_eval.get_draw_probability() > 0.55) {
+        R -= 1;
+      }
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                               depth - R);
       t.board.UnMake();
