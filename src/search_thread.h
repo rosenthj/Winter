@@ -103,16 +103,14 @@ struct Thread {
   }
 
   int32_t get_history_score(const Color color, const Square src, const Square des) const;
-
-  void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
+  void update_history_scores(const std::vector<Move> &quiets, const int32_t score);
 
   template<int moves_ago>
   int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
                         const PieceType piecetype, const Square des) const;
-
+  
   template<int moves_ago>
-  void update_continuation_score(const PieceType opp_piecetype, const Square opp_des,
-                         const PieceType piecetype, const Square des, const int32_t score);
+  void update_continuation_scores(const std::vector<Move> &quiets, const int32_t score);
 
   template<int moves_ago>
   int32_t get_continuation_score(const Move move) const;

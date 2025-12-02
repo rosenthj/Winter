@@ -94,14 +94,27 @@ bool Thread::improving() const {
                       //~ || static_scores[height] == kNoScore);
 //~ }
 
+inline void gravity_update(int32_t &value, int32_t score) {
+  value += 32 * score - value * std::abs(score) / 512;
+}
+
 int32_t Thread::get_history_score(const Color color, const Square src,
                                   const Square des) const {
   return history[color][src][des];
 }
 
-void Thread::update_history_score(const Color color, const Square src, const Square des,
-                             const int32_t score) {
-  history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
+void Thread::update_history_scores(const std::vector<Move> &quiets, const int32_t score) {
+  const Color color = board.get_turn();
+  
+  for (size_t i = 0; i < quiets.size() - 1; ++i) {
+    Square src = GetMoveSource(quiets[i]);
+    Square des = GetMoveDestination(quiets[i]);
+    gravity_update(history[color][src][des], -score);
+  }
+  size_t i = quiets.size() - 1;
+  Square src = GetMoveSource(quiets[i]);
+  Square des = GetMoveDestination(quiets[i]);
+  gravity_update(history[color][src][des], score);
 }
 
 //~ bool Thread::strict_worsening() const {
@@ -121,21 +134,34 @@ int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Squa
 }
 
 template<int moves_ago>
-void Thread::update_continuation_score(const PieceType opp_piecetype, const Square opp_des,
-                       const PieceType piecetype, const Square des, const int32_t score) {
-  const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
-  assert(idx >= 0 && idx < continuation_history.size());
-  continuation_history[idx][opp_piecetype][opp_des][piecetype][des] += 32 * score
-      - continuation_history[idx][opp_piecetype][opp_des][piecetype][des]
-                    * std::abs(score) / 512;
+void Thread::update_continuation_scores(const std::vector<Move> &quiets, const int32_t score) {
+  if (get_height() < moves_ago) return;
+  const PieceTypeAndDestination previous_move = get_previous_move(moves_ago);
+  const PieceType previous_piecetype = previous_move.pt;
+  if (previous_piecetype == kNoPiece) return;
+  const Square previous_des = previous_move.des;
+  // TODO deal with promotion situations
+  
+  constexpr int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
+  for (size_t i = 0; i < quiets.size() - 1; ++i) {
+    Square des = GetMoveDestination(quiets[i]);
+    PieceType piecetype = GetPieceType(board.get_piece(GetMoveSource(quiets[i])));
+    gravity_update(continuation_history[idx][previous_piecetype][previous_des][piecetype][des], -score);
+  }
+  size_t i = quiets.size() - 1;
+  Square des = GetMoveDestination(quiets[i]);
+  PieceType piecetype = GetPieceType(board.get_piece(GetMoveSource(quiets[i])));
+  gravity_update(continuation_history[idx][previous_piecetype][previous_des][piecetype][des], score);
 }
+
+
 
 template<int moves_ago>
 int32_t Thread::get_continuation_score(const Move move) const {
-  if (get_height() < 2) {
+  if (get_height() < moves_ago) {
     return 0;
   }
-  const PieceTypeAndDestination pt_and_des = get_previous_move(2);
+  const PieceTypeAndDestination pt_and_des = get_previous_move(moves_ago);
   if (pt_and_des.pt == kNoPiece) {
     return 0;
   }
@@ -213,14 +239,10 @@ void ThreadPool::reset_node_count() {
 
 template int32_t Thread::get_continuation_score<1>(const PieceType opp_piecetype, const Square opp_des,
                                                    const PieceType piecetype, const Square des) const;
+template void Thread::update_continuation_scores<1>(const std::vector<Move> &quiets, const int32_t score);
 
-template void Thread::update_continuation_score<1>(const PieceType opp_piecetype, const Square opp_des,
-                                                   const PieceType piecetype, const Square des, const int32_t score);
-
-template int32_t Thread::get_continuation_score<2>(const Move move) const;
-
-template void Thread::update_continuation_score<2>(const PieceType opp_piecetype, const Square opp_des,
-                                                   const PieceType piecetype, const Square des, const int32_t score);
+template int32_t Thread::get_continuation_score<2>(const Move move) const;                                            
+template void Thread::update_continuation_scores<2>(const std::vector<Move> &quiets, const int32_t score);
 
 
 void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }

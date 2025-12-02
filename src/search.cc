@@ -380,50 +380,10 @@ inline NScore get_futility_margin(Depth depth, bool improving) {
 }
 
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
-  if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
-    return;
-  }
-  const Color color = t.board.get_turn();
-  const Move move = t.board.get_last_move();
-  Square opp_des = GetMoveDestination(move);
-  PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
-  // TODO deal with promotion situations
   const int32_t score = std::min(depth * depth, 512);
-
-  for (size_t i = 0; i < quiets.size() - 1; ++i) {
-    Square src = GetMoveSource(quiets[i]);
-    Square des = GetMoveDestination(quiets[i]);
-    PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-    t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
-    t.update_history_score(color, src, des, -score);
-  }
-  size_t i = quiets.size() - 1;
-  Square src = GetMoveSource(quiets[i]);
-  Square des = GetMoveDestination(quiets[i]);
-  PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-  t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
-  t.update_history_score(color, src, des, score);
-
-  if (t.get_height() < 2) {
-    return;
-  }
-
-  const PieceTypeAndDestination last_own_move = t.get_previous_move(2);
-  if (last_own_move.pt == kNoPiece) {
-    return;
-  }
-  const PieceType previous_piecetype = last_own_move.pt;
-  const Square previous_des = last_own_move.des;
-
-  for (i = 0; i < quiets.size() - 1; ++i) {
-    des = GetMoveDestination(quiets[i]);
-    piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-    t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, -score);
-  }
-  i = quiets.size() - 1;
-  des = GetMoveDestination(quiets[i]);
-  piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
-  t.update_continuation_score<2>(previous_piecetype, previous_des, piecetype, des, score);
+  t.update_history_scores(quiets, score);
+  t.update_continuation_scores<1>(quiets, score);
+  t.update_continuation_scores<2>(quiets, score);
 }
 
 inline Score get_singular_beta(Score beta, Depth depth) {
