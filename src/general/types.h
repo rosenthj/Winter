@@ -70,6 +70,9 @@ using Array2d = std::array<std::array< T, j>, i>;
 template<typename T, size_t i, size_t j, size_t k>
 using Array3d = std::array<Array2d< T, j, k>, i>;
 
+template<typename T, size_t i, size_t j, size_t k, size_t x, size_t y, size_t z>
+using Array6d = Array3d<Array3d<T, x, y, z>, i, j, k>;
+
 constexpr Color kWhite = 0;
 constexpr Color kBlack = 1;
 

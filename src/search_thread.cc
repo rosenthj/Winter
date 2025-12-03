@@ -129,8 +129,9 @@ template<int moves_ago>
 int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
                       const PieceType piecetype, const Square des) const {
   const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
-  assert(idx >= 0 && idx < continuation_history.size());
-  return continuation_history[idx][opp_piecetype][opp_des][piecetype][des];
+  assert(idx >= 0 && idx < continuation_history[0].size());
+  Color turn = board.get_turn();
+  return continuation_history[turn][idx][opp_piecetype][opp_des][piecetype][des];
 }
 
 template<int moves_ago>
@@ -140,18 +141,19 @@ void Thread::update_continuation_scores(const std::vector<Move> &quiets, const i
   const PieceType previous_piecetype = previous_move.pt;
   if (previous_piecetype == kNoPiece) return;
   const Square previous_des = previous_move.des;
+  const Color turn = board.get_turn();
   // TODO deal with promotion situations
   
   constexpr int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
   for (size_t i = 0; i < quiets.size() - 1; ++i) {
     Square des = GetMoveDestination(quiets[i]);
     PieceType piecetype = GetPieceType(board.get_piece(GetMoveSource(quiets[i])));
-    gravity_update(continuation_history[idx][previous_piecetype][previous_des][piecetype][des], -score);
+    gravity_update(continuation_history[turn][idx][previous_piecetype][previous_des][piecetype][des], -score);
   }
   size_t i = quiets.size() - 1;
   Square des = GetMoveDestination(quiets[i]);
   PieceType piecetype = GetPieceType(board.get_piece(GetMoveSource(quiets[i])));
-  gravity_update(continuation_history[idx][previous_piecetype][previous_des][piecetype][des], score);
+  gravity_update(continuation_history[turn][idx][previous_piecetype][previous_des][piecetype][des], score);
 }
 
 
@@ -167,9 +169,10 @@ int32_t Thread::get_continuation_score(const Move move) const {
   }
   const PieceType piece_type = GetPieceType(board.get_piece(GetMoveSource(move)));
   const Square des = GetMoveDestination(move);
+  const Color turn = board.get_turn();
   const int idx = moves_ago > 2 ? moves_ago - 2 : moves_ago - 1;
-  assert(idx >= 0 && idx < continuation_history.size());
-  return continuation_history[idx][pt_and_des.pt][pt_and_des.des][piece_type][des];
+  assert(idx >= 0 && idx < continuation_history[0].size());
+  return continuation_history[turn][idx][pt_and_des.pt][pt_and_des.des][piece_type][des];
 }
 
 ThreadPool::ThreadPool() {

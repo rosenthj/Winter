@@ -65,12 +65,14 @@ struct Thread {
       }
     }
 
-    for (size_t idx = 0; idx < continuation_history.size(); idx++) {
-      for (PieceType pt = kPawn; pt <= kKing; ++pt) {
-        for (Square sq = 0; sq < kBoardSize; ++sq) {
-          for (PieceType pt_i = kPawn; pt_i <= kKing; ++pt_i) {
-            for (Square sq_i = 0; sq_i < kBoardSize; ++sq_i) {
-              continuation_history[idx][pt][sq][pt_i][sq_i] = 0;
+    for (Color c = kWhite; c <= kBlack; ++c) {
+      for (size_t idx = 0; idx < continuation_history[0].size(); idx++) {
+        for (PieceType pt = kPawn; pt <= kKing; ++pt) {
+          for (Square sq = 0; sq < kBoardSize; ++sq) {
+            for (PieceType pt_i = kPawn; pt_i <= kKing; ++pt_i) {
+              for (Square sq_i = 0; sq_i < kBoardSize; ++sq_i) {
+                continuation_history[c][idx][pt][sq][pt_i][sq_i] = 0;
+              }
             }
           }
         }
@@ -131,7 +133,8 @@ struct Thread {
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
   Array3d<int32_t, 2, 64, 64> history;
-  Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
+  // Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
+  Array6d<int32_t, 2, 2, 6, 64, 6, 64> continuation_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
