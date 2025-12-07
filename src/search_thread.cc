@@ -104,26 +104,25 @@ inline void gravity_float_update(float &entry, float value) {
 }
 
 void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
-                       float &win_error, float &draw_error, float &loss_error) {
+                       float &win_error, float &draw_error, float &loss_error,
+                       float scale=1.0) {
   size_t idx = error_hash % kErrorHistorySize;
   
-  win_error  += history[idx][0];
-  draw_error += history[idx][1];
-  loss_error += history[idx][2];
+  win_error  += history[idx][0] * scale;
+  draw_error += history[idx][1] * scale;
+  loss_error += history[idx][2] * scale;
 }
 
 Score Thread::adjust_static_eval(const Score static_eval) const {
   if (!static_eval.is_static_eval())
     return static_eval;
   
-  float win_error = 0;
-  float draw_error = 0;
-  float loss_error = 0;
+  float win_error = 0, draw_error = 0, loss_error = 0;
   
   accumulate_errors(pawn_error_history, board.get_pawn_hash(),
                     win_error, draw_error, loss_error);
   accumulate_errors(major_error_history, board.get_major_hash(),
-                    win_error, draw_error, loss_error);
+                    win_error, draw_error, loss_error, 0.5);
   
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
