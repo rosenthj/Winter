@@ -54,7 +54,7 @@ const Array3d<HashType, 2, 7, 64> init_hashes() {
   return hashes;
 }
 
-const Array3d<HashType, 2, 7, 64> init_pawn_hashes() {
+const Array3d<HashType, 2, 7, 64> init_pawn_hashes(const Array3d<HashType, 2, 7, 64> &hashes) {
   Array3d<HashType, 2, 7, 64> pawn_hashes;
   for (Color color = kWhite; color <= kBlack; ++color) {
     for (PieceType piece_type = kPawn + 1; piece_type <= kKing; ++piece_type) {
@@ -63,15 +63,15 @@ const Array3d<HashType, 2, 7, 64> init_pawn_hashes() {
       }
     }
     for (Square square = 0; square < 64; ++square) {
-      pawn_hashes[color][kPawn][square] = rng();
+      pawn_hashes[color][kPawn][square] = hashes[color][kPawn][square];
     }
   }
   return pawn_hashes;
 }
 
 const Array3d<HashType, 2, 7, 64> hashes = init_hashes();
+const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes(hashes);
 const HashType color_hash = rng();
-const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes();
 
 inline HashType get_hash(const Color color, const PieceType piece_type, const Square square) {
   return hashes[color][piece_type][square];
@@ -356,6 +356,13 @@ void PrintStandardRow(std::string first_delim, std::string mid_delim, std::strin
     }
   }
   std::cout << std::endl;
+}
+
+HashType Board::get_non_pawn_hash() const {
+  if (get_turn() == kBlack) {
+    return hash ^ hash::get_color_hash() ^ pawn_hash;
+  }
+  return hash ^ pawn_hash;
 }
 
 Board::Board() {

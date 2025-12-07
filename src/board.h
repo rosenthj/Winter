@@ -60,8 +60,8 @@ public:
   HashType get_pawn_hash() const {
     return pawn_hash;
   }
+  HashType get_non_pawn_hash() const;
   //This needs to be public for the evaluation function.
-  //PieceBitboardSet get_piece_bitboards() const;
   Piece get_piece(const Square square) const { return pieces[square]; }
   Color get_turn() const { return turn; }
   Color get_not_turn() const { return turn ^ 0x1; }

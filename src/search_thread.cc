@@ -103,19 +103,33 @@ inline void gravity_float_update(float &entry, float value) {
   entry += value - entry * std::abs(value) / 1024;
 }
 
+void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
+                       float &win_error, float &draw_error, float &loss_error) {
+  size_t idx = error_hash % kErrorHistorySize;
+  
+  win_error  += history[idx][0];
+  draw_error += history[idx][1];
+  loss_error += history[idx][2];
+}
+
 Score Thread::adjust_static_eval(const Score static_eval) const {
   if (!static_eval.is_static_eval())
     return static_eval;
-  auto [win, draw, loss] = static_eval.get_wdl_probabilities();
   
-  size_t idx = board.get_pawn_hash() % pawn_error_history.size();
-  float win_error = pawn_error_history[idx][0];
-  float draw_error = pawn_error_history[idx][1];
-  float loss_error = pawn_error_history[idx][2];
+  float win_error = 0;
+  float draw_error = 0;
+  float loss_error = 0;
+  
+  accumulate_errors(pawn_error_history, board.get_pawn_hash(),
+                    win_error, draw_error, loss_error);
+  accumulate_errors(piece_error_history, board.get_non_pawn_hash(),
+                    win_error, draw_error, loss_error);
   
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
   }
+  
+  auto [win, draw, loss] = static_eval.get_wdl_probabilities();
   
   constexpr float divisor = 8192.0f;
   win += win_error / divisor;
@@ -134,7 +148,16 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   return WDLScore::from_pct(win, win+draw);
 }
 
-void Thread::update_pawn_error(const Score eval, Depth depth) {
+void update_specific_history(ErrorHistory &history, const HashType error_hash,
+                             float win_val, float draw_val, float loss_val) {
+  size_t idx = error_hash % kErrorHistorySize;
+
+  gravity_float_update(history[idx][0], win_val);
+  gravity_float_update(history[idx][1], draw_val);
+  gravity_float_update(history[idx][2], loss_val);
+}
+
+void Thread::update_error_history(const Score eval, Depth depth) {
   assert((Depth)board.get_num_made_moves() >= root_height);
   if (!eval.is_static_eval()) return;
   
@@ -149,20 +172,16 @@ void Thread::update_pawn_error(const Score eval, Depth depth) {
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
   }
-  size_t idx = board.get_pawn_hash() % pawn_error_history.size();
   
   constexpr float scale = 64.0f;
+  constexpr float limit = 200.0f; // To prevent single-move spikes
 
-  float win_val = win_error * depth * scale;
-  float draw_val = draw_error * depth * scale;
-  float loss_val = loss_error * depth * scale;
-
-  // To prevent single-move spikes
-  constexpr float limit = 200.0f;
-
-  gravity_float_update(pawn_error_history[idx][0], sclamp(win_val, -limit, limit));
-  gravity_float_update(pawn_error_history[idx][1], sclamp(draw_val, -limit, limit));
-  gravity_float_update(pawn_error_history[idx][2], sclamp(loss_val, -limit, limit));
+  float win_val = sclamp(win_error * depth * scale, -limit, limit);
+  float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
+  float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
+  
+  update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val);
+  update_specific_history(piece_error_history, board.get_non_pawn_hash(), win_val, draw_val, loss_val);
 }
 
 int32_t Thread::get_history_score(const Color color, const Square src,
