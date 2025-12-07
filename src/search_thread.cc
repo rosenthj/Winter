@@ -117,7 +117,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
     std::swap(win_error, loss_error);
   }
   
-  constexpr int32_t divisor = 512;
+  constexpr float divisor = 8192.0f;
   win += win_error / divisor;
   draw += draw_error / divisor;
   loss += loss_error / divisor;
@@ -150,9 +150,19 @@ void Thread::update_pawn_error(const Score eval, Depth depth) {
     std::swap(win_error, loss_error);
   }
   size_t idx = board.get_pawn_hash() % pawn_error_history.size();
-  gravity_float_update(pawn_error_history[idx][0], sclamp((win_error * depth / 8), -0.3, 0.3));
-  gravity_float_update(pawn_error_history[idx][1], sclamp((draw_error * depth / 8), -0.3, 0.3));
-  gravity_float_update(pawn_error_history[idx][2], sclamp((loss_error * depth / 8), -0.3, 0.3));
+  
+  constexpr float scale = 512.0f;
+
+  float win_val = win_error * depth * scale / 8.0f;
+  float draw_val = draw_error * depth * scale / 8.0f;
+  float loss_val = loss_error * depth * scale / 8.0f;
+
+  // To prevent single-move spikes
+  constexpr float limit = 200.0f;
+
+  gravity_float_update(pawn_error_history[idx][0], sclamp(win_val, -limit, limit));
+  gravity_float_update(pawn_error_history[idx][1], sclamp(draw_val, -limit, limit));
+  gravity_float_update(pawn_error_history[idx][2], sclamp(loss_val, -limit, limit));
 }
 
 int32_t Thread::get_history_score(const Color color, const Square src,
