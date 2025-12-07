@@ -14,6 +14,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <tuple>
 
 struct WDLScore {
   static constexpr int32_t scale = 4000;
@@ -34,6 +35,9 @@ struct WDLScore {
   constexpr float get_draw_probability() const { return (win_draw - win) / static_cast<float>(scale); }
   constexpr float get_win_draw_probability() const { return win_draw / static_cast<float>(scale); }
   constexpr float get_loss_probability() const { return 1.0 - get_win_draw_probability(); }
+  inline std::tuple<float, float, float> get_wdl_probabilities() const {
+    return {get_win_probability(), get_draw_probability(), get_loss_probability()};
+  }
 
   std::string get_uci_string() const {
     std::string output = "wdl";
