@@ -117,7 +117,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
     std::swap(win_error, loss_error);
   }
   
-  constexpr float divisor = 4096.0f;
+  constexpr float divisor = 8192.0f;
   win += win_error / divisor;
   draw += draw_error / divisor;
   loss += loss_error / divisor;
@@ -151,11 +151,11 @@ void Thread::update_pawn_error(const Score eval, Depth depth) {
   }
   size_t idx = board.get_pawn_hash() % pawn_error_history.size();
   
-  constexpr float scale = 512.0f;
+  constexpr float scale = 64.0f;
 
-  float win_val = win_error * depth * scale / 8.0f;
-  float draw_val = draw_error * depth * scale / 8.0f;
-  float loss_val = loss_error * depth * scale / 8.0f;
+  float win_val = win_error * depth * scale;
+  float draw_val = draw_error * depth * scale;
+  float loss_val = loss_error * depth * scale;
 
   // To prevent single-move spikes
   constexpr float limit = 200.0f;
