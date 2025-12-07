@@ -109,7 +109,7 @@ struct Thread {
   }
   
   Score adjust_static_eval(const Score static_eval) const;
-  void update_pawn_error(const Score eval);
+  void update_pawn_error(const Score eval, Depth depth);
 
   int32_t get_history_score(const Color color, const Square src, const Square des) const;
   void update_history_score(const Color color, const Square src, const Square des, const int32_t score);

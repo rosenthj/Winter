@@ -766,7 +766,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
     if (!in_check) {
-      t.update_pawn_error(lower_bound_score);
+      t.update_pawn_error(lower_bound_score, depth);
     }
   }
   else if (!exclude_move) {

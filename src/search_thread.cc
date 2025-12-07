@@ -94,8 +94,13 @@ bool Thread::improving() const {
                       //~ || static_scores[height] == kNoScore);
 //~ }
 
-inline void gravity_float_update(float &entry, float value, float x=0.99, float y=0.0095) {
-  entry = entry*x + value*y;
+inline float sclamp(const float value, const float lower, const float upper) {
+  assert(lower < upper);
+  return std::min(std::max(value, lower), upper);
+}
+
+inline void gravity_float_update(float &entry, float value) {
+  entry += value - entry * std::abs(value) / 1024;
 }
 
 Score Thread::adjust_static_eval(const Score static_eval) const {
@@ -112,9 +117,10 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
     std::swap(win_error, loss_error);
   }
   
-  win += win_error * 0.2;
-  draw += draw_error * 0.2;
-  loss += loss_error * 0.2;
+  constexpr int32_t divisor = 512;
+  win += win_error / divisor;
+  draw += draw_error / divisor;
+  loss += loss_error / divisor;
   
   win = std::max(win, 0.0f);
   draw = std::max(draw, 0.0f);
@@ -128,7 +134,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   return WDLScore::from_pct(win, win+draw);
 }
 
-void Thread::update_pawn_error(const Score eval) {
+void Thread::update_pawn_error(const Score eval, Depth depth) {
   assert((Depth)board.get_num_made_moves() >= root_height);
   if (!eval.is_static_eval()) return;
   
@@ -144,9 +150,9 @@ void Thread::update_pawn_error(const Score eval) {
     std::swap(win_error, loss_error);
   }
   size_t idx = board.get_pawn_hash() % pawn_error_history.size();
-  gravity_float_update(pawn_error_history[idx][0], win_error);
-  gravity_float_update(pawn_error_history[idx][1], draw_error);
-  gravity_float_update(pawn_error_history[idx][2], loss_error);
+  gravity_float_update(pawn_error_history[idx][0], sclamp((win_error * depth / 8), -0.3, 0.3));
+  gravity_float_update(pawn_error_history[idx][1], sclamp((draw_error * depth / 8), -0.3, 0.3));
+  gravity_float_update(pawn_error_history[idx][2], sclamp((loss_error * depth / 8), -0.3, 0.3));
 }
 
 int32_t Thread::get_history_score(const Color color, const Square src,
