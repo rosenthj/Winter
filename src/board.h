@@ -57,6 +57,9 @@ public:
   HashType get_hash() const {
     return hash ^ (castling_rights | GetSquareBitBoard(en_passant + 8));
   }
+  HashType get_pawn_hash() const {
+    return pawn_hash;
+  }
   //This needs to be public for the evaluation function.
   //PieceBitboardSet get_piece_bitboards() const;
   Piece get_piece(const Square square) const { return pieces[square]; }
@@ -147,7 +150,8 @@ private:
   Square en_passant;
   Color turn;
   //Ply refers to the number of played halfmoves
-  HashType hash;    // Standard zobrist Hash
+  HashType hash;      // Standard zobrist Hash
+  HashType pawn_hash; // Standard pawn Hash
 
   int32_t fifty_move_count;
 };

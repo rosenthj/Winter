@@ -302,7 +302,8 @@ Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   bool in_check = t.board.InCheck();
   Score static_eval = kMinScore;
   if (!in_check) {
-    static_eval = net_evaluation::ScoreThread(t);
+    static_eval = t.adjust_static_eval(net_evaluation::ScoreThread(t));
+
     if (entry.has_value() && entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board)) {
       static_eval = entry->get_score(t.board);
     }
@@ -511,7 +512,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   if (depth <= 0) {
     if constexpr (!settings::kUseQS) {
       t.nodes++;
-      return net_evaluation::ScoreThread(t);
+      return t.adjust_static_eval(net_evaluation::ScoreThread(t));
     }
     return QuiescentSearch(t, alpha, beta);
   }
@@ -543,7 +544,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       t.set_static_score(static_eval);
   }
   else if (!in_check) {
-    static_eval = net_evaluation::ScoreThread(t);
+    static_eval = t.adjust_static_eval(net_evaluation::ScoreThread(t));
     if (entry.has_value()) {
       if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
           || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
@@ -764,6 +765,9 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     assert(exclude_move == kNullMove);
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
+    if (!in_check) {
+      t.update_pawn_error(lower_bound_score);
+    }
   }
   else if (!exclude_move) {
     table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);

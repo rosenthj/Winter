@@ -384,6 +384,7 @@ void PrintStandardRow(std::string first_delim, std::string mid_delim, std::strin
 
 Board::Board() {
   hash = 0;
+  pawn_hash = 0;
   previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
@@ -495,6 +496,7 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   move_history_information.clear();
   previous_hashes.clear();
   hash = 0;
+  pawn_hash = 0;
   en_passant = 0;
   fifty_move_count = 0;
   for (int player = kWhite; player <= kBlack; ++player) {
@@ -674,6 +676,7 @@ void Board::SetStartBoard() {
 
 void Board::SetToSamePosition(const Board &board) {
   hash = board.hash;
+  pawn_hash = board.pawn_hash;
   en_passant = board.en_passant;
   fifty_move_count = board.fifty_move_count;
   move_history = board.move_history;
@@ -702,6 +705,7 @@ void Board::AddPiece(const Square square, const Piece piece) {
   piece_counts[GetPieceColor(piece)][GetPieceType(piece)]++;
   pieces[square] = piece;
   hash ^= hash::get_hash(piece, square);
+  pawn_hash = hash::get_pawn_hash(piece, square);
 }
 
 Piece Board::RemovePiece(const Square square) {
@@ -712,6 +716,7 @@ Piece Board::RemovePiece(const Square square) {
     color_bitboards[GetPieceColor(piece)] ^= GetSquareBitBoard(square);
     piece_counts[GetPieceColor(piece)][GetPieceType(piece)]--;
     hash ^= hash::get_hash(piece, square);
+    pawn_hash = hash::get_pawn_hash(piece, square);
   }
   return piece;
 }
