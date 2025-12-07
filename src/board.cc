@@ -57,38 +57,21 @@ const Array3d<HashType, 2, 7, 64> init_hashes() {
 const Array3d<HashType, 2, 7, 64> init_pawn_hashes() {
   Array3d<HashType, 2, 7, 64> pawn_hashes;
   for (Color color = kWhite; color <= kBlack; ++color) {
-    for (PieceType piece_type = kPawn + 1; piece_type < kKing; ++piece_type) {
+    for (PieceType piece_type = kPawn + 1; piece_type <= kKing; ++piece_type) {
       for (Square square = 0; square < 64; ++square) {
         pawn_hashes[color][piece_type][square] = 0;
       }
     }
     for (Square square = 0; square < 64; ++square) {
       pawn_hashes[color][kPawn][square] = rng();
-      pawn_hashes[color][kKing][square] = rng();
     }
   }
   return pawn_hashes;
 }
 
-const Array3d<HashType, 2, 7, 64> get_mirrored_hashes(
-    const Array3d<HashType, 2, 7, 64> hashes) {
-  Array3d<HashType, 2, 7, 64> mirrored_hashes;
-  for (Color color = kWhite; color <= kBlack; ++color) {
-    Color not_color = color ^ 0x1;
-    for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      for (Square square = 0; square < 64; ++square) {
-        mirrored_hashes[not_color][piece_type][GetMirroredSquare(square)] =
-            hashes[color][piece_type][square];
-      }
-    }
-  }
-  return mirrored_hashes;
-}
-
 const Array3d<HashType, 2, 7, 64> hashes = init_hashes();
 const HashType color_hash = rng();
 const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes();
-const Array3d<HashType, 2, 7, 64> mirrored_pawn_hashes = get_mirrored_hashes(pawn_hashes);
 
 inline HashType get_hash(const Color color, const PieceType piece_type, const Square square) {
   return hashes[color][piece_type][square];
@@ -102,13 +85,6 @@ inline HashType get_pawn_hash(const Color color, const PieceType piece_type, con
 }
 inline HashType get_pawn_hash(const Piece piece,const Square square) {
   return pawn_hashes[GetPieceColor(piece)][GetPieceType(piece)][square];
-}
-
-inline HashType get_pawn_hash_mirrored(const Color color, const PieceType piece_type, const Square square) {
-  return mirrored_pawn_hashes[color][piece_type][square];
-}
-inline HashType get_pawn_hash_mirrored(const Piece piece,const Square square) {
-  return mirrored_pawn_hashes[GetPieceColor(piece)][GetPieceType(piece)][square];
 }
 
 inline HashType get_color_hash() {

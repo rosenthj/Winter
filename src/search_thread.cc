@@ -117,7 +117,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
     std::swap(win_error, loss_error);
   }
   
-  constexpr float divisor = 8192.0f;
+  constexpr float divisor = 4096.0f;
   win += win_error / divisor;
   draw += draw_error / divisor;
   loss += loss_error / divisor;
