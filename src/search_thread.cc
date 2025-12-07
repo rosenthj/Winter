@@ -122,12 +122,12 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   
   accumulate_errors(pawn_error_history, board.get_pawn_hash(),
                     win_error, draw_error, loss_error);
-  accumulate_errors(piece_error_history, board.get_non_pawn_hash(),
+  accumulate_errors(major_error_history, board.get_major_hash(),
                     win_error, draw_error, loss_error);
   
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
-  }
+  } 
   
   auto [win, draw, loss] = static_eval.get_wdl_probabilities();
   
@@ -181,7 +181,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
   
   update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val);
-  update_specific_history(piece_error_history, board.get_non_pawn_hash(), win_val, draw_val, loss_val);
+  update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val);
 }
 
 int32_t Thread::get_history_score(const Color color, const Square src,

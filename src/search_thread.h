@@ -87,7 +87,7 @@ struct Thread {
     for (size_t idx = 0; idx < pawn_error_history.size(); ++idx) {
       for (size_t prob = 0; prob < 3; ++prob) {
         pawn_error_history[idx][prob] = 0;
-        piece_error_history[idx][prob] = 0;
+        major_error_history[idx][prob] = 0;
       } 
     }
 
@@ -144,7 +144,7 @@ struct Thread {
   Array3d<int32_t, 2, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   ErrorHistory pawn_error_history;
-  ErrorHistory piece_error_history;
+  ErrorHistory major_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
