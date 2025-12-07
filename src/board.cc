@@ -705,7 +705,7 @@ void Board::AddPiece(const Square square, const Piece piece) {
   piece_counts[GetPieceColor(piece)][GetPieceType(piece)]++;
   pieces[square] = piece;
   hash ^= hash::get_hash(piece, square);
-  pawn_hash = hash::get_pawn_hash(piece, square);
+  pawn_hash ^= hash::get_pawn_hash(piece, square);
 }
 
 Piece Board::RemovePiece(const Square square) {
@@ -716,7 +716,7 @@ Piece Board::RemovePiece(const Square square) {
     color_bitboards[GetPieceColor(piece)] ^= GetSquareBitBoard(square);
     piece_counts[GetPieceColor(piece)][GetPieceType(piece)]--;
     hash ^= hash::get_hash(piece, square);
-    pawn_hash = hash::get_pawn_hash(piece, square);
+    pawn_hash ^= hash::get_pawn_hash(piece, square);
   }
   return piece;
 }
