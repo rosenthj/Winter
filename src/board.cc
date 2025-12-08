@@ -85,9 +85,24 @@ const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7
   return major_hashes;
 }
 
+const Array3d<HashType, 2, 7, 64> init_rng_hashes() {
+  Array3d<HashType, 2, 7, 64> hashes;
+  for (Color color = kWhite; color <= kBlack; ++color) {
+    for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
+      for (Square square = 0; square < 64; ++square) {
+        HashType short_hash = rng() & 0xFFFF;
+        int32_t shift = rng() & 3;
+        hashes[color][piece_type][square] = short_hash << (shift * 16);
+      }
+    }
+  }
+  return hashes;
+}
+
 const Array3d<HashType, 2, 7, 64> hashes = init_hashes();
 const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes(hashes);
 const Array3d<HashType, 2, 7, 64> major_hashes = init_major_hashes(hashes);
+const Array3d<HashType, 2, 7, 64> rng_hashes = init_rng_hashes();
 const HashType color_hash = rng();
 
 inline HashType get_hash(const Color color, const PieceType piece_type, const Square square) {
@@ -109,6 +124,13 @@ inline HashType get_major_hash(const Color color, const PieceType piece_type, co
 }
 inline HashType get_major_hash(const Piece piece,const Square square) {
   return major_hashes[GetPieceColor(piece)][GetPieceType(piece)][square];
+}
+
+inline HashType get_rng_hash(const Color color, const PieceType piece_type, const Square square) {
+  return rng_hashes[color][piece_type][square];
+}
+inline HashType get_rng_hash(const Piece piece,const Square square) {
+  return rng_hashes[GetPieceColor(piece)][GetPieceType(piece)][square];
 }
 
 inline HashType get_color_hash() {
@@ -386,6 +408,7 @@ Board::Board() {
   hash = 0;
   pawn_hash = 0;
   major_hash = 0;
+  rng_hash = 0;
   previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
@@ -499,6 +522,7 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   hash = 0;
   pawn_hash = 0;
   major_hash = 0;
+  rng_hash = 0;
   en_passant = 0;
   fifty_move_count = 0;
   for (int player = kWhite; player <= kBlack; ++player) {
@@ -680,6 +704,7 @@ void Board::SetToSamePosition(const Board &board) {
   hash = board.hash;
   pawn_hash = board.pawn_hash;
   major_hash = board.major_hash;
+  rng_hash = board.rng_hash;
   en_passant = board.en_passant;
   fifty_move_count = board.fifty_move_count;
   move_history = board.move_history;
@@ -710,6 +735,7 @@ void Board::AddPiece(const Square square, const Piece piece) {
   hash ^= hash::get_hash(piece, square);
   pawn_hash ^= hash::get_pawn_hash(piece, square);
   major_hash ^= hash::get_major_hash(piece, square);
+  rng_hash ^= hash::get_rng_hash(piece, square);
 }
 
 Piece Board::RemovePiece(const Square square) {
@@ -722,6 +748,7 @@ Piece Board::RemovePiece(const Square square) {
     hash ^= hash::get_hash(piece, square);
     pawn_hash ^= hash::get_pawn_hash(piece, square);
     major_hash ^= hash::get_major_hash(piece, square);
+    rng_hash ^= hash::get_rng_hash(piece, square);
   }
   return piece;
 }

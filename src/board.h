@@ -63,6 +63,9 @@ public:
   HashType get_major_hash() const {
     return major_hash;
   }
+  HashType get_rng_hash() const {
+    return rng_hash;
+  }
   //This needs to be public for the evaluation function.
   Piece get_piece(const Square square) const { return pieces[square]; }
   Color get_turn() const { return turn; }
@@ -152,9 +155,10 @@ private:
   Square en_passant;
   Color turn;
   //Ply refers to the number of played halfmoves
-  HashType hash;      // Standard zobrist Hash
-  HashType pawn_hash; // Standard pawn Hash
+  HashType hash;      // Standard zobrist hash
+  HashType pawn_hash; // Standard pawn hash
   HashType major_hash;// Zobrist hash for queen and rook
+  HashType rng_hash;  // Randomly partitioned hash
 
   int32_t fifty_move_count;
 };
