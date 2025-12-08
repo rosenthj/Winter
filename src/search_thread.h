@@ -87,6 +87,7 @@ struct Thread {
     for (size_t idx = 0; idx < pawn_error_history.size(); ++idx) {
       for (size_t prob = 0; prob < 3; ++prob) {
         pawn_error_history[idx][prob] = 0;
+        major_error_history[idx][prob] = 0;
       } 
     }
 
@@ -109,7 +110,7 @@ struct Thread {
   }
   
   Score adjust_static_eval(const Score static_eval) const;
-  void update_pawn_error(const Score eval, Depth depth);
+  void update_error_history(const Score eval, Depth depth);
 
   int32_t get_history_score(const Color color, const Square src, const Square des) const;
   void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
@@ -142,7 +143,8 @@ struct Thread {
   Array3d<Move, 2, 6, 64> counter_moves;
   Array3d<int32_t, 2, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
-  Array2d<float, 16384, 3> pawn_error_history;
+  ErrorHistory pawn_error_history;
+  ErrorHistory major_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;

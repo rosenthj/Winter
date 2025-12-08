@@ -734,7 +734,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
         if (!in_check && static_eval < score) {
-          t.update_pawn_error(score, depth);
+          t.update_error_history(score, depth);
         }
       }
       if (is_root) {
@@ -769,13 +769,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
     if (!in_check && GetMoveType(best_local_move) < kCapture) {
-      t.update_pawn_error(lower_bound_score, depth);
+      t.update_error_history(lower_bound_score, depth);
     }
   }
   else if (!exclude_move) {
     table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
     if (!in_check && GetMoveType(best_local_move) < kCapture && static_eval > lower_bound_score) {
-      t.update_pawn_error(lower_bound_score, depth);
+      t.update_error_history(lower_bound_score, depth);
     }
   }
 
