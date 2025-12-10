@@ -73,6 +73,8 @@ using Array3d = std::array<Array2d< T, j, k>, i>;
 constexpr size_t kErrorHistorySize = 16384;
 using ErrorHistory = Array2d<float, kErrorHistorySize, 3>;
 
+constexpr size_t kNumRngHash = 4;
+
 constexpr Color kWhite = 0;
 constexpr Color kBlack = 1;
 

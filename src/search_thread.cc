@@ -123,10 +123,12 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
                     win_error, draw_error, loss_error);
   accumulate_errors(major_error_history, board.get_major_hash(),
                     win_error, draw_error, loss_error, 0.5);
-  for (int shift = 0; shift < 4; ++shift) {
-    HashType rng_hash = (board.get_rng_hash() >> (shift * 16)) & 0xFFFF;
-    accumulate_errors(rng_error_history[shift], rng_hash,
-                      win_error, draw_error, loss_error, 0.25);
+  for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
+    for (int shift = 0; shift < 4; ++shift) {
+      HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
+      accumulate_errors(rng_error_history[e_idx][shift], rng_hash,
+                        win_error, draw_error, loss_error, 0.25);
+    }
   }
   
   if (board.get_turn() == kBlack) {
@@ -186,9 +188,11 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   
   update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val);
   update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val);
-  for (int shift = 0; shift < 4; ++shift) {
-    HashType rng_hash = (board.get_rng_hash() >> (shift * 16)) & 0xFFFF;
-    update_specific_history(rng_error_history[shift], rng_hash, win_val, draw_val, loss_val);
+  for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
+    for (int shift = 0; shift < 4; ++shift) {
+      HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
+      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, draw_val, loss_val);
+    }
   }
 }
 
