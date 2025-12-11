@@ -207,7 +207,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
       AddFeature<in_check>(move_weight, kPWICounterMove);
     }
-    if (GetMoveType(move) < kCapture) {
+    if (!IsMoveForcing(move)) {
       const Color color = t.board.get_turn();
       const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
       const Square source = GetMoveSource(move);
@@ -282,7 +282,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
     AddFeature<in_check>(move_weight, kPWICaptureLastMoved);
   }
   if (GetSquareBitBoard(GetMoveDestination(move)) & info.direct_checks[moving_piece]) {
-    if (GetMoveType(move) >= kEnPassant) {
+    if (IsMoveForcing(move)) {
       AddFeature<in_check>(move_weight, kPWIGivesCheck);
     }
     else {

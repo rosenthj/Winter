@@ -465,7 +465,7 @@ inline bool singular_conditions_met(NodeType node_type, const Thread &t,
 }
 
 inline void update_killers(Thread &t, const Move move) {
-  assert(GetMoveType(move) < kCapture);
+  assert(!IsMoveForcing(move));
   int num_made_moves = t.board.get_num_made_moves();
   if (t.killers[num_made_moves][0] != move) {
     t.killers[num_made_moves][1] = t.killers[num_made_moves][0];
@@ -666,16 +666,16 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Late Move Pruning
       assert(depth > 0);
       if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
-          && GetMoveType(move) < kEnPassant) {
+          && !IsMoveForcing(move)) {
         continue;
       }
 
       //Late Move Reduction factor
       if (!is_root) {
-        reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+        reduction = get_lmr_reduction<node_type>(depth, i, IsMoveForcing(move));
       }
       else if (i > 2) {
-        reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
+        reduction = get_lmr_reduction<node_type>(depth, i-2, IsMoveForcing(move));
       }
       assert(reduction < depth);
 
@@ -683,7 +683,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
           && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          && GetMoveType(move) < kEnPassant) {
+          && !IsMoveForcing(move)) {
         continue;
       }
       
@@ -692,7 +692,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       }
     }
 
-    if (GetMoveType(move) < kCapture) {
+    if (!IsMoveForcing(move)) {
       quiets.emplace_back(move);
     }
 
@@ -730,7 +730,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       
       table::SaveEntry(t.board, move, score, depth);
       update_counter_moves(t, move);
-      if (GetMoveType(move) < kCapture) {
+      if (!IsMoveForcing(move)) {
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
         if (!in_check && static_eval < score) {
@@ -746,7 +746,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
     //In PV nodes we might be improving Alpha without breaking Beta
     if (score > alpha) {
-      if (GetMoveType(move) < kCapture) {
+      if (!IsMoveForcing(move)) {
         update_counter_move_history(t, quiets, depth);
       }
       //Update score and expected best move
@@ -768,13 +768,13 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     assert(exclude_move == kNullMove);
     // We should save any best move which has improved alpha.
     table::SavePVEntry(t.board, best_local_move, lower_bound_score, depth);
-    if (!in_check && GetMoveType(best_local_move) < kCapture) {
+    if (!in_check && !IsMoveForcing(best_local_move)) {
       t.update_error_history(lower_bound_score, depth);
     }
   }
   else if (!exclude_move) {
     table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
-    if (!in_check && GetMoveType(best_local_move) < kCapture && static_eval > lower_bound_score) {
+    if (!in_check && static_eval > lower_bound_score) {
       t.update_error_history(lower_bound_score, depth);
     }
   }
