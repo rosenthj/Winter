@@ -93,7 +93,7 @@ const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes() {
         for (int idx = 0; idx < kNumRngHash; ++idx) {
           hashes[color][piece_type][square][idx] = 0;
         }
-        for (int idx = 0; idx < kNumRngHash; ++idx) {
+        for (int idx = 0; idx < 5 * kNumRngHash / 4; ++idx) {
           HashType short_hash = rng() & 0xFFFF;
           int32_t shift = rng() % (kNumRngHash * 4);
           while ((hashes[color][piece_type][square][shift/4] >> ((shift % 4) * 16)) & 0xFFFF) {
