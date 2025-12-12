@@ -186,7 +186,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
   float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
   
-  constexpr float kBaseLeak = 10;
+  constexpr float kBaseLeak = 1.0f;
   float leak = kBaseLeak * static_cast<float>(std::min(depth, 16));
   
   update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val, leak);
