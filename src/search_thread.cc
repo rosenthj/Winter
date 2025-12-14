@@ -99,8 +99,8 @@ inline float sclamp(const float value, const float lower, const float upper) {
   return std::min(std::max(value, lower), upper);
 }
 
-inline void gravity_float_update(float &entry, float value) {
-  entry += value - entry * std::abs(value) / 1024;
+inline void gravity_float_update(float &entry, float value, float leak) {
+  entry += value - entry * (std::abs(value) + leak) / 1024;
 }
 
 void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
@@ -155,12 +155,12 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
 }
 
 void update_specific_history(ErrorHistory &history, const HashType error_hash,
-                             float win_val, float draw_val, float loss_val) {
+                             float win_val, float draw_val, float loss_val, float leak) {
   size_t idx = error_hash % kErrorHistorySize;
 
-  gravity_float_update(history[idx][0], win_val);
-  gravity_float_update(history[idx][1], draw_val);
-  gravity_float_update(history[idx][2], loss_val);
+  gravity_float_update(history[idx][0], win_val, leak);
+  gravity_float_update(history[idx][1], draw_val, leak);
+  gravity_float_update(history[idx][2], loss_val, leak);
 }
 
 void Thread::update_error_history(const Score eval, Depth depth) {
@@ -186,12 +186,15 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
   float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
   
-  update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val);
-  update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val);
+  constexpr float kBaseLeak = 1.0f;
+  float leak = kBaseLeak * static_cast<float>(std::min(depth, 16));
+  
+  update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val, leak);
+  update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val, leak);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
-      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, draw_val, loss_val);
+      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, draw_val, loss_val, leak);
     }
   }
 }
