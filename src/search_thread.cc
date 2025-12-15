@@ -37,6 +37,19 @@ std::mt19937_64 rng;
 
 namespace search {
 
+#ifdef TUNE
+#define EXPR
+#else
+#define EXPR constexpr
+#endif
+
+EXPR float kPawnCorrectionScale = 1.0;
+EXPR float kMajorCorrectionScale = 0.5;
+EXPR float kRNGCorrectionScale = 0.25;
+EXPR float kCorrectionLeakScale = 1.0;
+
+#undef EXPR
+
 ThreadPool Threads;
 
 Thread::Thread() {
@@ -120,14 +133,14 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   float win_error = 0, draw_error = 0, loss_error = 0;
   
   accumulate_errors(pawn_error_history, board.get_pawn_hash(),
-                    win_error, draw_error, loss_error);
+                    win_error, draw_error, loss_error, kPawnCorrectionScale);
   accumulate_errors(major_error_history, board.get_major_hash(),
-                    win_error, draw_error, loss_error, 0.5);
+                    win_error, draw_error, loss_error, kMajorCorrectionScale);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
       accumulate_errors(rng_error_history[e_idx][shift], rng_hash,
-                        win_error, draw_error, loss_error, 0.25);
+                        win_error, draw_error, loss_error, kRNGCorrectionScale);
     }
   }
   
@@ -186,8 +199,8 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
   float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
   
-  constexpr float kBaseLeak = 1.0f;
-  float leak = kBaseLeak * static_cast<float>(std::min(depth, 16));
+  // constexpr float kBaseLeak = 1.0f;
+  float leak = kCorrectionLeakScale * static_cast<float>(std::min(depth, 16));
   
   update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val, leak);
   update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val, leak);
@@ -329,5 +342,23 @@ template void Thread::update_continuation_score<2>(const PieceType opp_piecetype
 
 
 void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }
+
+#ifdef TUNE
+
+#define SETTER(z) \
+void Set##z(int32_t value) { \
+  z = std::exp2(value / 256.0f); \
+} \
+  \
+int32_t Get##z() { return std::lround(256 * std::log2(z)); }
+
+SETTER(kPawnCorrectionScale)
+SETTER(kMajorCorrectionScale)
+SETTER(kRNGCorrectionScale)
+SETTER(kCorrectionLeakScale)
+
+#undef SETTER
+
+#endif
 
 }

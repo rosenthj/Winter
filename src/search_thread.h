@@ -183,6 +183,19 @@ extern ThreadPool Threads;
 
 void SetNumThreads(int32_t value);
 
+#ifdef TUNE
+#define OPTION(x) \
+void Set##x(int32_t value); \
+int32_t Get##x();
+
+OPTION(kPawnCorrectionScale)
+OPTION(kMajorCorrectionScale)
+OPTION(kRNGCorrectionScale)
+OPTION(kCorrectionLeakScale)
+
+#undef OPTION
+#endif
+
 }
 
 #endif /* SRC_SEARCH_THREAD_H_ */

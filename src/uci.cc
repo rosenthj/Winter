@@ -138,6 +138,12 @@ const std::vector<UCIOption> uci_options {
   
   OPTION(kNMPBase, 0, 16*128)
   OPTION(kNMPScale, 0, 64)
+  
+  // Search Thread Options
+  OPTION(kPawnCorrectionScale, -2048, 2048)
+  OPTION(kMajorCorrectionScale, -2048, 2048)
+  OPTION(kRNGCorrectionScale, -2048, 2048)
+  OPTION(kCorrectionLeakScale, -2048, 2048)
 
 #undef OPTION
 #endif
