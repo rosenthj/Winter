@@ -345,12 +345,12 @@ void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }
 
 #ifdef TUNE
 
-#define SETTER(z) \
-void Set##z(int32_t value) { \
-  z = std::exp2(value / 256.0f); \
+#define SETTER(x) \
+void Set##x(int32_t value) { \
+  x = value / 256.0f; \
 } \
   \
-int32_t Get##z() { return std::lround(256 * std::log2(z)); }
+int32_t Get##x() { return std::lround(256 * x); }
 
 SETTER(kPawnCorrectionScale)
 SETTER(kMajorCorrectionScale)
