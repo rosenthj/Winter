@@ -80,7 +80,7 @@ MoveScore get_move_priority(const Move move, search::Thread &t, const Move best)
     return 1000 + 10 * GetPieceType(t.board.get_piece(GetMoveDestination(move)))
                 - GetPieceType(t.board.get_piece(GetMoveSource(move)));
   }
-  return t.get_history_score(t.board.get_turn(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
+  return t.get_history_score(t.board.get_pawn_hash(), GetMoveSource(move), GetMoveDestination(move)) / 1000;
 }
 
 void Sort(std::vector<Move> &moves, search::Thread &t, const Move best_move) {
@@ -208,7 +208,6 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
       AddFeature<in_check>(move_weight, kPWICounterMove);
     }
     if (GetMoveType(move) < kCapture) {
-      const Color color = t.board.get_turn();
       const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
       const Square source = GetMoveSource(move);
       const Square destination = GetMoveDestination(move);
@@ -216,7 +215,7 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
                                          moving_piece, destination);
       AddFeature<in_check>(move_weight, kPWICMH, score);
       AddFeature<in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move));
-      AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination));
+      AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(t.board.get_pawn_hash(), source, destination));
     }
   }
   const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));

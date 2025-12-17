@@ -59,12 +59,17 @@ struct Thread {
         for (PieceType pt = kPawn; pt <= kKing; ++pt) {
           counter_moves[c][pt][src] = kNullMove;
         }
+      }
+    }
+    
+    for (size_t idx = 0; idx < history.size(); ++idx) {
+      for (Square src = 0; src < kBoardSize; ++src) {
         for (Square des = 0; des < kBoardSize; ++des) {
-          history[c][src][des] = 0;
+          history[idx][src][des] = 0;
         }
       }
     }
-
+    
     for (size_t idx = 0; idx < continuation_history.size(); idx++) {
       for (PieceType pt = kPawn; pt <= kKing; ++pt) {
         for (Square sq = 0; sq < kBoardSize; ++sq) {
@@ -117,8 +122,8 @@ struct Thread {
   Score adjust_static_eval(const Score static_eval) const;
   void update_error_history(const Score eval, Depth depth);
 
-  int32_t get_history_score(const Color color, const Square src, const Square des) const;
-  void update_history_score(const Color color, const Square src, const Square des, const int32_t score);
+  int32_t get_history_score(const HashType pawn_hash, const Square src, const Square des) const;
+  void update_history_score(const HashType pawn_hash, const Square src, const Square des, const int32_t score);
 
   template<int moves_ago>
   int32_t get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
@@ -146,7 +151,7 @@ struct Thread {
   Depth current_depth;
   Array2d<Move, 1024, 2> killers;
   Array3d<Move, 2, 6, 64> counter_moves;
-  Array3d<int32_t, 2, 64, 64> history;
+  Array3d<int32_t, 32, 64, 64> history;
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   ErrorHistory pawn_error_history;
   ErrorHistory major_error_history;
