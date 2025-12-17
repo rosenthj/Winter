@@ -44,8 +44,8 @@ namespace search {
 #endif
 
 EXPR float kPawnCorrectionScale = 1.0;
-EXPR float kMajorCorrectionScale = 0.5;
-EXPR float kRNGCorrectionScale = 0.25;
+EXPR float kMajorCorrectionScale = 0.344;
+EXPR float kRNGCorrectionScale = 0.344;
 EXPR float kCorrectionLeakScale = 1.0;
 
 #undef EXPR
