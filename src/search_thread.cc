@@ -199,16 +199,16 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   }
 }
 
-int32_t Thread::get_history_score(const HashType pawn_hash, const Square src,
-                                  const Square des) const {
-  size_t idx = pawn_hash & (history.size()-1);
-  return history[idx][src][des];
+int32_t Thread::get_history_score(const Square src, const Square des) const {
+  size_t idx = board.get_pawn_hash() % history.size();
+  return history[board.get_turn()][src][des] + ps_history[idx][src][des];
 }
 
-void Thread::update_history_score(const HashType pawn_hash, const Square src, const Square des,
-                             const int32_t score) {
-  size_t idx = pawn_hash & (history.size()-1);
-  history[idx][src][des] += 32 * score - history[idx][src][des] * std::abs(score) / 512;
+void Thread::update_history_score(const Square src, const Square des, const int32_t score) {
+  Color c = board.get_turn();
+  history[c][src][des] += 32 * score - history[c][src][des] * std::abs(score) / 512;
+  size_t idx = board.get_pawn_hash() % history.size();
+  ps_history[idx][src][des] += 32 * score - ps_history[idx][src][des] * std::abs(score) / 512;
 }
 
 //~ bool Thread::strict_worsening() const {

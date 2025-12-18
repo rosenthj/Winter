@@ -384,7 +384,6 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
-  const HashType pawn_hash = t.board.get_pawn_hash();
   const Move move = t.board.get_last_move();
   Square opp_des = GetMoveDestination(move);
   PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
@@ -396,14 +395,14 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
     Square des = GetMoveDestination(quiets[i]);
     PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
     t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
-    t.update_history_score(pawn_hash, src, des, -score);
+    t.update_history_score(src, des, -score);
   }
   size_t i = quiets.size() - 1;
   Square src = GetMoveSource(quiets[i]);
   Square des = GetMoveDestination(quiets[i]);
   PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
   t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
-  t.update_history_score(pawn_hash, src, des, score);
+  t.update_history_score(src, des, score);
 
   if (t.get_height() < 2) {
     return;
