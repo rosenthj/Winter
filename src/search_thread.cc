@@ -207,7 +207,7 @@ int32_t Thread::get_history_score(const Square src, const Square des) const {
 void Thread::update_history_score(const Square src, const Square des, const int32_t score) {
   Color c = board.get_turn();
   history[c][src][des] += 32 * score - history[c][src][des] * std::abs(score) / 512;
-  size_t idx = board.get_pawn_hash() % history.size();
+  size_t idx = board.get_pawn_hash() % ps_history.size();
   ps_history[idx][src][des] += 32 * score - ps_history[idx][src][des] * std::abs(score) / 512;
 }
 
