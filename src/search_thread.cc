@@ -200,7 +200,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
 }
 
 int32_t Thread::get_history_score(const Square src, const Square des) const {
-  size_t idx = board.get_pawn_hash() % history.size();
+  size_t idx = board.get_pawn_hash() % ps_history.size();
   return history[board.get_turn()][src][des] + ps_history[idx][src][des];
 }
 
