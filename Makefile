@@ -12,7 +12,7 @@ CFLAGS=-c -DNDEBUG -D_ARM -O3 -flto -Wall -Wno-sign-compare -m32 -mthumb -mfloat
 LDFLAGS= -flto -Wall -pie -lm -static-libstdc++
 else
 CXX=clang++
-CFLAGS=-c -DNDEBUG -DTUNE -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++17 -Isrc -Isrc/general -Isrc/learning  
+CFLAGS=-c -DNDEBUG -O3 -flto -Wall -Wno-sign-compare -m64 -march=native -std=c++17 -Isrc -Isrc/general -Isrc/learning  
 LDFLAGS= -flto -Wall -lpthread
 endif
 SOURCES=$(wildcard src/general/*.cc src/*.cc)

@@ -43,10 +43,10 @@ namespace search {
 #define EXPR constexpr
 #endif
 
-EXPR float kPawnCorrectionScale = 0.99;
-EXPR float kMajorCorrectionScale = 0.435;
-EXPR float kRNGCorrectionScale = 0.30;
-EXPR float kCorrectionLeakScale = 1.01;
+EXPR float kPawnCorrectionScale = 0.73;
+EXPR float kMajorCorrectionScale = 0.482;
+EXPR float kRNGCorrectionScale = 0.3085;
+EXPR float kCorrectionLeakScale = 1.19;
 
 #undef EXPR
 
