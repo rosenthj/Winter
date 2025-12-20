@@ -177,9 +177,7 @@ void update_specific_history(ErrorHistory &history, const HashType error_hash,
 }
 
 void Thread::update_error_history(const Score eval, Depth depth) {
-  assert((Depth)board.get_num_made_moves() >= root_height);
-  if (!eval.is_static_eval()) return;
-  
+  assert((Depth)board.get_num_made_moves() >= root_height);  
   Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
   Score static_eval = static_scores[height];
   
