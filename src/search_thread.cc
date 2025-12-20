@@ -43,10 +43,11 @@ namespace search {
 #define EXPR constexpr
 #endif
 
-EXPR float kPawnCorrectionScale = 0.73;
-EXPR float kMajorCorrectionScale = 0.482;
-EXPR float kRNGCorrectionScale = 0.3085;
-EXPR float kCorrectionLeakScale = 1.19;
+EXPR float kPawnCorrectionScale = 0.705;
+EXPR float kMajorCorrectionScale = 0.466;
+EXPR float kMinorCorrectionScale = 0.466;
+EXPR float kRNGCorrectionScale = 0.34375;
+EXPR float kCorrectionLeakScale = 1.2;
 
 #undef EXPR
 
@@ -136,6 +137,8 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
                     win_error, draw_error, loss_error, kPawnCorrectionScale);
   accumulate_errors(major_error_history, board.get_major_hash(),
                     win_error, draw_error, loss_error, kMajorCorrectionScale);
+  accumulate_errors(minor_error_history, board.get_major_hash() >> 32,
+                    win_error, draw_error, loss_error, kMinorCorrectionScale);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
@@ -202,6 +205,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   
   update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val, leak);
   update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val, leak);
+  update_specific_history(minor_error_history, board.get_major_hash() >> 32, win_val, draw_val, loss_val, leak);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
@@ -352,6 +356,7 @@ int32_t Get##x() { return std::lround(256 * x); }
 
 SETTER(kPawnCorrectionScale)
 SETTER(kMajorCorrectionScale)
+SETTER(kMinorCorrectionScale)
 SETTER(kRNGCorrectionScale)
 SETTER(kCorrectionLeakScale)
 

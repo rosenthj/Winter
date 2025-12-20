@@ -88,6 +88,7 @@ struct Thread {
       for (size_t prob = 0; prob < 3; ++prob) {
         pawn_error_history[idx][prob] = 0;
         major_error_history[idx][prob] = 0;
+        minor_error_history[idx][prob] = 0;
         for (size_t i = 0; i < kNumRngHash; ++i) {
           for (size_t shift = 0; shift < 4; ++shift) {
             rng_error_history[i][shift][idx][prob] = 0;
@@ -150,6 +151,7 @@ struct Thread {
   Array3d<Array2d<int32_t, 6, 64>, 2, 6, 64> continuation_history;
   ErrorHistory pawn_error_history;
   ErrorHistory major_error_history;
+  ErrorHistory minor_error_history;
   Array2d<ErrorHistory, kNumRngHash, 4> rng_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
@@ -190,6 +192,7 @@ int32_t Get##x();
 
 OPTION(kPawnCorrectionScale)
 OPTION(kMajorCorrectionScale)
+OPTION(kMinorCorrectionScale)
 OPTION(kRNGCorrectionScale)
 OPTION(kCorrectionLeakScale)
 

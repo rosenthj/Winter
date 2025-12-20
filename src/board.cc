@@ -70,6 +70,7 @@ const Array3d<HashType, 2, 7, 64> init_pawn_hashes(const Array3d<HashType, 2, 7,
 }
 
 const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7, 64> &hashes) {
+  constexpr HashType lower_bits = 0xFFFFFFFF;
   Array3d<HashType, 2, 7, 64> major_hashes;
   for (Color color = kWhite; color <= kBlack; ++color) {
     for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
@@ -78,8 +79,11 @@ const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7
       }
     }
     for (Square square = 0; square < 64; ++square) {
-      major_hashes[color][kRook][square] = hashes[color][kRook][square];
-      major_hashes[color][kQueen][square] = hashes[color][kQueen][square];
+      major_hashes[color][kRook][square] = hashes[color][kRook][square] & lower_bits;
+      major_hashes[color][kQueen][square] = hashes[color][kQueen][square] & lower_bits;
+      
+      major_hashes[color][kBishop][square] = hashes[color][kBishop][square] & (~lower_bits);
+      major_hashes[color][kKnight][square] = hashes[color][kKnight][square] & (~lower_bits);
     }
   }
   return major_hashes;
