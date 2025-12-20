@@ -31,9 +31,9 @@ struct WDLScore {
     return std::round(std::log(wpct / (1-wpct)) * 1024);
   }
 
-  constexpr float get_win_probability() const { return win / static_cast<float>(scale); }
+  constexpr float get_win_probability() const { return std::min(std::max(win / static_cast<float>(scale), 0.0f), 1.0f); }
   constexpr float get_draw_probability() const { return (win_draw - win) / static_cast<float>(scale); }
-  constexpr float get_win_draw_probability() const { return win_draw / static_cast<float>(scale); }
+  constexpr float get_win_draw_probability() const { return std::min(std::max(win_draw / static_cast<float>(scale), 0.0f), 1.0f); }
   constexpr float get_loss_probability() const { return 1.0 - get_win_draw_probability(); }
   inline std::tuple<float, float, float> get_wdl_probabilities() const {
     return {get_win_probability(), get_draw_probability(), get_loss_probability()};
