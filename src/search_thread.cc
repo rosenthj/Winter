@@ -49,6 +49,8 @@ EXPR float kMinorCorrectionScale = 0.466;
 EXPR float kRNGCorrectionScale = 0.34375;
 EXPR float kCorrectionLeakScale = 1.2;
 
+EXPR float kCorrectionUpdateLimit = 200.0;
+
 #undef EXPR
 
 ThreadPool Threads;
@@ -194,7 +196,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   }
   
   constexpr float scale = 64.0f;
-  constexpr float limit = 200.0f; // To prevent single-move spikes
+  float limit = kCorrectionUpdateLimit; // To prevent single-move spikes
 
   float win_val = sclamp(win_error * depth * scale, -limit, limit);
   float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
@@ -347,18 +349,19 @@ void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }
 
 #ifdef TUNE
 
-#define SETTER(x) \
+#define SETTER(x,y) \
 void Set##x(int32_t value) { \
-  x = value / 256.0f; \
+  x = value / static_cast<float>(y); \
 } \
   \
-int32_t Get##x() { return std::lround(256 * x); }
+int32_t Get##x() { return std::lround(static_cast<float>(y) * x); }
 
-SETTER(kPawnCorrectionScale)
-SETTER(kMajorCorrectionScale)
-SETTER(kMinorCorrectionScale)
-SETTER(kRNGCorrectionScale)
-SETTER(kCorrectionLeakScale)
+SETTER(kPawnCorrectionScale, 256)
+SETTER(kMajorCorrectionScale, 256)
+SETTER(kMinorCorrectionScale, 256)
+SETTER(kRNGCorrectionScale, 256)
+SETTER(kCorrectionLeakScale, 256)
+SETTER(kCorrectionUpdateLimit,1)
 
 #undef SETTER
 

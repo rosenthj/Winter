@@ -195,6 +195,7 @@ OPTION(kMajorCorrectionScale)
 OPTION(kMinorCorrectionScale)
 OPTION(kRNGCorrectionScale)
 OPTION(kCorrectionLeakScale)
+OPTION(kCorrectionUpdateLimit)
 
 #undef OPTION
 #endif
