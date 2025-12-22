@@ -428,13 +428,15 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
 }
 
 inline Score get_singular_beta(Score beta, Depth depth) {
-  WDLScore result = WDLScore{beta.win - 4*depth, beta.loss};
+  WDLScore result = WDLScore{beta.win - 2*depth, beta.loss + 2*depth};
   if (result.win < 0) {
     result.loss -= result.win;
     result.win = 0;
-    if (result.loss > WDLScore::scale) {
-      result.loss = WDLScore::scale;
-    }
+  }
+  if (result.loss > WDLScore::scale) {
+    result.win -= result.loss - WDLScore::scale;
+    result.loss = WDLScore::scale;
+    result.win = std::max(0, result.win);
   }
   return result;
 }
@@ -800,7 +802,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
       last_search_score = score;
     }
     while (!finished(t) && (score <= alpha || score >= beta)) {
-      assert(delta.win > 0 && delta.loss == 0);
+      assert(delta.win > 0 && delta.loss < 0);
       if (score <= alpha) {
         if (beta.is_static_eval()) {
           beta = (std::max(score, kMinStaticEval) + (beta * 3)) / 4;

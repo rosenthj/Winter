@@ -172,8 +172,8 @@ struct WDLScore {
     
     if (w < 0 || l < 0) {
       int32_t min_val = std::min(w,l);
-      w += min_val;
-      l += min_val;
+      w -= min_val;
+      l -= min_val;
     }
     
     if (w > WDLScore::scale || l > WDLScore::scale) {
