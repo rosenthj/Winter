@@ -792,7 +792,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score delta = WDLScore{kInitialAspirationDelta, 0};
+    Score delta = WDLScore{kInitialAspirationDelta, -kInitialAspirationDelta};
     Score alpha = (score+(-delta)).get_valid_score();
     Score beta = (score+delta).get_valid_score();
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
