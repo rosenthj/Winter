@@ -170,6 +170,12 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   return WDLScore::from_pct(win, win+draw);
 }
 
+inline float quadratic_discount(float value, float threshold) {
+  if (std::abs(value) >= threshold)
+    return value;
+  return value * std::abs(value) / threshold;
+}
+
 void update_specific_history(ErrorHistory &history, const HashType error_hash,
                              float win_val, float draw_val, float loss_val, float leak) {
   size_t idx = error_hash % kErrorHistorySize;
@@ -192,6 +198,10 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
   }
+  
+  win_error = quadratic_discount(win_error, 0.04);
+  draw_error = quadratic_discount(draw_error, 0.04);
+  loss_error = quadratic_discount(loss_error, 0.04);
   
   constexpr float scale = 64.0f;
   constexpr float limit = 200.0f; // To prevent single-move spikes
