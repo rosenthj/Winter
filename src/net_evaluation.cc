@@ -158,13 +158,9 @@ Score PerspectiveNetForward(const std::vector<NetPieceModule> &piece_modules,
     sum += outcomes[i];
   }
   
-  for (size_t i = 0; i < 3; ++i) {
-    outcomes[i] /= sum;
-  }
-  
-  float win = outcomes[0];
-  float win_draw = outcomes[0] + outcomes[1];
-  return WDLScore::from_pct_valid(win, win_draw);
+  float win = outcomes[0] / sum;
+  float loss = outcomes[2] / sum;
+  return WDLScore::from_pct_valid_new(win, loss);
 }
 
 Score NetForward(const std::vector<NetPieceModule> &piece_modules,
@@ -568,14 +564,14 @@ std::array<Score, 2> GetDrawArray() {
 
 Score AddContempt(Score score, Color color) {
   assert(score.is_static_eval());
-  int32_t diff = score.win_draw - score.win;
+  int32_t draw = WDLScore::scale - score.win - score.loss;
   if (contempt[color] > 0) { // Contempt is positive, draws are counted as losses
-    diff = (diff * contempt[color]) / 100;
-    return WDLScore { score.win, score.win_draw - diff };
+    int32_t diff = (draw * contempt[color]) / 100;
+    return WDLScore { score.win, score.loss + diff };
   }
   // contempt is negative, draws are counted as wins
-  diff = -(diff * contempt[color]) / 100;
-  return WDLScore { score.win + diff, score.win_draw};
+  int32_t diff = -(draw * contempt[color]) / 100;
+  return WDLScore { score.win + diff, score.loss};
 }
 
 Score RemoveContempt(Score score, Color color) {
@@ -583,15 +579,17 @@ Score RemoveContempt(Score score, Color color) {
       || contempt[color] >= 100 || contempt[color] <= -100) {
     return score;
   }
-  int32_t diff = score.win_draw - score.win;
+  int32_t draw = WDLScore::scale - score.win - score.loss;
   if (contempt[color] >= 0) {
-    int32_t orig_diff = (diff * 100) / (100 - contempt[color]);
-    diff = orig_diff - diff;
-    return WDLScore { score.win, score.win_draw + diff };
+    int32_t orig_draw = (draw * 100) / (100 - contempt[color]);
+    int32_t diff = orig_draw - draw;
+    int32_t loss = std::max(score.loss - diff, 0);
+    return WDLScore { score.win, loss };
   }
-  int32_t orig_diff = (diff * 100) / (100 + contempt[color]);
-  diff = orig_diff - diff;
-  return WDLScore { score.win - diff, score.win_draw };
+  int32_t orig_draw = (draw * 100) / (100 + contempt[color]);
+  int32_t diff = orig_draw - draw;
+  int32_t win = std::max(score.win - diff, 0);
+  return WDLScore { win, score.loss };
 }
 
 }

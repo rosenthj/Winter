@@ -167,7 +167,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   draw /= sum;
   loss /= sum;
   
-  return WDLScore::from_pct(win, win+draw);
+  return WDLScore::from_pct_new(win, loss);
 }
 
 void update_specific_history(ErrorHistory &history, const HashType error_hash,

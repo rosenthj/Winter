@@ -428,13 +428,13 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
 }
 
 inline Score get_singular_beta(Score beta, Depth depth) {
-  WDLScore result = WDLScore{beta.win - 2*depth, beta.win_draw - 2*depth};
+  WDLScore result = WDLScore{beta.win - 4*depth, beta.loss};
   if (result.win < 0) {
-    result.win_draw += result.win;
+    result.loss -= result.win;
     result.win = 0;
-  }
-  if (result.win_draw < 0) {
-    result.win_draw = 0;
+    if (result.loss > WDLScore::scale) {
+      result.loss = WDLScore::scale;
+    }
   }
   return result;
 }
@@ -792,21 +792,21 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score delta = WDLScore{kInitialAspirationDelta, kInitialAspirationDelta};
-    Score alpha = (score-delta).get_valid_score();
+    Score delta = WDLScore{kInitialAspirationDelta, 0};
+    Score alpha = (score+(-delta)).get_valid_score();
     Score beta = (score+delta).get_valid_score();
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     if (t.id == 0 && !finished(t)) {
       last_search_score = score;
     }
     while (!finished(t) && (score <= alpha || score >= beta)) {
-      assert(delta.win > 0 && delta.win_draw > 0);
+      assert(delta.win > 0 && delta.loss == 0);
       if (score <= alpha) {
         if (beta.is_static_eval()) {
           beta = (std::max(score, kMinStaticEval) + (beta * 3)) / 4;
           assert(beta.is_valid());
         }
-        alpha = (score-delta).get_valid_score();
+        alpha = (score+(-delta)).get_valid_score();
         if (alpha == score) {
           alpha = score.get_previous_score();
         }
