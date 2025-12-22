@@ -160,7 +160,7 @@ Score PerspectiveNetForward(const std::vector<NetPieceModule> &piece_modules,
   
   float win = outcomes[0] / sum;
   float loss = outcomes[2] / sum;
-  return WDLScore::from_pct_valid_new(win, loss);
+  return WDLScore::from_pct(win, loss);
 }
 
 Score NetForward(const std::vector<NetPieceModule> &piece_modules,

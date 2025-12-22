@@ -76,9 +76,9 @@ struct WDLScore {
   // constexpr WDLScore operator-(const WDLScore other) const { return WDLScore{win - other.win, loss - other.loss}; }
   
   static constexpr WDLScore get_no_score() { return WDLScore{-1, -1}; }
-  static constexpr WDLScore get_draw_score() { return from_pct_truncated_new(0.0, 0.0); }
+  static constexpr WDLScore get_draw_score() { return from_pct_truncated(0.0, 0.0); }
   
-  static constexpr WDLScore get_max_static() { return from_pct_truncated_new(1.0, 0.0); }
+  static constexpr WDLScore get_max_static() { return from_pct_truncated(1.0, 0.0); }
   static constexpr WDLScore get_min_static() { return -get_max_static(); }
   static constexpr WDLScore get_min_mating() { return WDLScore{get_max_static().win + 100, 0}; }
   static constexpr WDLScore get_max_mated() { return -get_min_mating(); }
@@ -143,20 +143,20 @@ struct WDLScore {
   }
 
 //  static constexpr WDLScore from_score(int32_t score);
-  static constexpr WDLScore from_pct_truncated_new(const float win, const float loss) {
+  static constexpr WDLScore from_pct_truncated(const float win, const float loss) {
     return WDLScore{static_cast<int32_t>(win * scale),
                     static_cast<int32_t>(loss * scale)};
   }
   
-  static constexpr WDLScore from_pct_valid_new(const float win, const float loss) {
+  static constexpr WDLScore from_pct_valid(const float win, const float loss) {
     if (win + loss <= 1.0) {
-      return from_pct_new(win, loss);
+      return from_pct(win, loss);
     }
     float sum = win + loss;
-    return from_pct_new(win / sum, loss / sum);
+    return from_pct(win / sum, loss / sum);
   }
 
-  static constexpr WDLScore from_pct_new(const float win, const float loss) {
+  static constexpr WDLScore from_pct(const float win, const float loss) {
     return WDLScore{static_cast<int32_t>(std::round(win * scale)),
                     static_cast<int32_t>(std::round(loss * scale))};
   }
