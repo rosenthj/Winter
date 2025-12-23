@@ -36,9 +36,9 @@ namespace {
 Score score_to_tt_score(const Score score, const int32_t num_made_moves) {
   if (score.is_mate_score()) {
     if (score.is_disadvantage()) {
-      return WDLScore{score.win - num_made_moves, score.win_draw - num_made_moves};
+      return WDLScore{0, score.loss + num_made_moves};
     }
-    return WDLScore{score.win + num_made_moves, score.win_draw + num_made_moves};
+    return WDLScore{score.win + num_made_moves, 0};
   }
   return score;
 }
@@ -46,9 +46,9 @@ Score score_to_tt_score(const Score score, const int32_t num_made_moves) {
 Score tt_score_to_score(Score score, int32_t num_made_moves) {
   if (score.is_mate_score()) {
     if (score.is_disadvantage()) {
-      return WDLScore{score.win + num_made_moves, score.win_draw + num_made_moves};
+      return WDLScore{0, score.loss - num_made_moves};
     }
-    return WDLScore{score.win - num_made_moves, score.win_draw - num_made_moves};
+    return WDLScore{score.win - num_made_moves, 0};
   }
   return score;
 }
@@ -192,11 +192,11 @@ void ClearTable() {
 void Entry::set_score(const Score score_new, const Board &board) {
   Score score = score_to_tt_score(score_new, board.get_num_made_moves());
   win = score.win;
-  win_draw = score.win_draw;
+  loss = score.loss;
 }
 
 Score Entry::get_score(const Board &board) const {
-  Score score = WDLScore{win, win_draw};
+  Score score = WDLScore{win, loss};
   return tt_score_to_score(score, board.get_num_made_moves());
 }
 
