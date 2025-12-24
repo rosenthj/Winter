@@ -118,65 +118,62 @@ inline void gravity_float_update(float &entry, float value, float leak) {
 }
 
 void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
-                       float &win_error, float &draw_error, float &loss_error,
-                       float scale=1.0) {
+                       float &win_error, float &loss_error, float scale=1.0) {
   size_t idx = error_hash % kErrorHistorySize;
   
   win_error  += history[idx][0] * scale;
-  draw_error += history[idx][1] * scale;
-  loss_error += history[idx][2] * scale;
+  loss_error += history[idx][1] * scale;
 }
 
 Score Thread::adjust_static_eval(const Score static_eval) const {
   if (!static_eval.is_static_eval())
     return static_eval;
   
-  float win_error = 0, draw_error = 0, loss_error = 0;
+  float win_error = 0, loss_error = 0;
   
   accumulate_errors(pawn_error_history, board.get_pawn_hash(),
-                    win_error, draw_error, loss_error, kPawnCorrectionScale);
+                    win_error, loss_error, kPawnCorrectionScale);
   accumulate_errors(major_error_history, board.get_major_hash(),
-                    win_error, draw_error, loss_error, kMajorCorrectionScale);
+                    win_error, loss_error, kMajorCorrectionScale);
   accumulate_errors(minor_error_history, board.get_major_hash() >> 32,
-                    win_error, draw_error, loss_error, kMinorCorrectionScale);
+                    win_error, loss_error, kMinorCorrectionScale);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
       accumulate_errors(rng_error_history[e_idx][shift], rng_hash,
-                        win_error, draw_error, loss_error, kRNGCorrectionScale);
+                        win_error, loss_error, kRNGCorrectionScale);
     }
   }
   
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
-  } 
+  }
   
-  auto [win, draw, loss] = static_eval.get_wdl_probabilities();
-  
+  float win = static_eval.get_win_probability();
+  float loss = static_eval.get_loss_probability();
+    
   constexpr float divisor = 8192.0f;
   win += win_error / divisor;
-  draw += draw_error / divisor;
   loss += loss_error / divisor;
   
-  win = std::max(win, 0.0f);
-  draw = std::max(draw, 0.0f);
-  loss = std::max(loss, 0.0f);
+  win = sclamp(win, 0.0f, 1.0f);
+  loss = sclamp(loss, 0.0f, 1.0f);
   
-  float sum = win + draw + loss;
-  win /= sum;
-  draw /= sum;
-  loss /= sum;
+  float sum = win + loss;
+  if (sum > 1.0) {
+    win /= sum;
+    loss /= sum;
+  }
   
   return WDLScore::from_pct(win, loss);
 }
 
 void update_specific_history(ErrorHistory &history, const HashType error_hash,
-                             float win_val, float draw_val, float loss_val, float leak) {
+                             float win_val, float loss_val, float leak) {
   size_t idx = error_hash % kErrorHistorySize;
 
   gravity_float_update(history[idx][0], win_val, leak);
-  gravity_float_update(history[idx][1], draw_val, leak);
-  gravity_float_update(history[idx][2], loss_val, leak);
+  gravity_float_update(history[idx][1], loss_val, leak);
 }
 
 void Thread::update_error_history(const Score eval, Depth depth) {
@@ -187,7 +184,6 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   if (!static_eval.is_static_eval()) return;
   
   float win_error  = eval.get_win_probability()  - static_eval.get_win_probability();
-  float draw_error = eval.get_draw_probability() - static_eval.get_draw_probability();
   float loss_error = eval.get_loss_probability() - static_eval.get_loss_probability();
   if (board.get_turn() == kBlack) {
     std::swap(win_error, loss_error);
@@ -197,19 +193,18 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   constexpr float limit = 200.0f; // To prevent single-move spikes
 
   float win_val = sclamp(win_error * depth * scale, -limit, limit);
-  float draw_val = sclamp(draw_error * depth * scale, -limit, limit);
   float loss_val = sclamp(loss_error * depth * scale, -limit, limit);
   
   // constexpr float kBaseLeak = 1.0f;
   float leak = kCorrectionLeakScale * static_cast<float>(std::min(depth, 16));
   
-  update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, draw_val, loss_val, leak);
-  update_specific_history(major_error_history, board.get_major_hash(), win_val, draw_val, loss_val, leak);
-  update_specific_history(minor_error_history, board.get_major_hash() >> 32, win_val, draw_val, loss_val, leak);
+  update_specific_history(pawn_error_history, board.get_pawn_hash(), win_val, loss_val, leak);
+  update_specific_history(major_error_history, board.get_major_hash(), win_val, loss_val, leak);
+  update_specific_history(minor_error_history, board.get_major_hash() >> 32, win_val, loss_val, leak);
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
-      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, draw_val, loss_val, leak);
+      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, loss_val, leak);
     }
   }
 }

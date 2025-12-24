@@ -71,7 +71,7 @@ template<typename T, size_t i, size_t j, size_t k>
 using Array3d = std::array<Array2d< T, j, k>, i>;
 
 constexpr size_t kErrorHistorySize = 16384;
-using ErrorHistory = Array2d<float, kErrorHistorySize, 3>;
+using ErrorHistory = Array2d<float, kErrorHistorySize, 2>;
 
 constexpr size_t kNumRngHash = 4;
 
