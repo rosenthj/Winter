@@ -31,7 +31,6 @@
 #include "general/types.h"
 #include "search.h"
 
-#include <random>
 #include <iostream>
 #include <algorithm>
 #include <array>
@@ -40,7 +39,20 @@
 
 namespace hash {
 
-std::mt19937_64 rng;
+struct SplitMix64 {
+  uint64_t state;
+
+  explicit SplitMix64(uint64_t seed) : state(seed) {}
+
+  uint64_t operator()() {
+    uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+    return z ^ (z >> 31);
+  }
+};
+
+SplitMix64 rng(42);
 
 const Array3d<HashType, 2, 7, 64> init_hashes() {
   Array3d<HashType, 2, 7, 64> hashes;
@@ -89,21 +101,26 @@ const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7
   return major_hashes;
 }
 
-const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes() {
-  Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> hashes;
+const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes(uint64_t seed) {
+  SplitMix64 local_rng(seed);
+  Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> hashes{};
+  constexpr int total_slots = kNumRngHash * 4;
   for (Color color = kWhite; color <= kBlack; ++color) {
     for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
       for (Square square = 0; square < 64; ++square) {
-        for (int idx = 0; idx < kNumRngHash; ++idx) {
-          hashes[color][piece_type][square][idx] = 0;
+        std::array<int, total_slots> available_slots;
+        for(int i = 0; i < total_slots; ++i) {
+          available_slots[i] = i;
         }
         for (int idx = 0; idx < kNumRngHash; ++idx) {
-          HashType short_hash = rng() & 0xFFFF;
-          int32_t shift = rng() % (kNumRngHash * 4);
-          while ((hashes[color][piece_type][square][shift/4] >> ((shift % 4) * 16)) & 0xFFFF) {
-            shift = rng() % (kNumRngHash * 4);
-          }
-          hashes[color][piece_type][square][shift/4] |= short_hash << ((shift % 4) * 16);
+          uint64_t r = local_rng();
+          int pick_idx = idx + (r % (total_slots - idx));
+          std::swap(available_slots[idx], available_slots[pick_idx]);
+          int32_t shift = available_slots[idx];
+                    
+          uint16_t short_hash = static_cast<uint16_t>(local_rng());
+
+          hashes[color][piece_type][square][shift/4] |= static_cast<HashType>(short_hash) << ((shift % 4) * 16);
         }
 
       }
@@ -115,7 +132,7 @@ const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes() {
 const Array3d<HashType, 2, 7, 64> hashes = init_hashes();
 const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes(hashes);
 const Array3d<HashType, 2, 7, 64> major_hashes = init_major_hashes(hashes);
-const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> rng_hashes = init_rng_hashes();
+const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> rng_hashes = init_rng_hashes(0);
 const HashType color_hash = rng();
 
 inline HashType get_hash(const Color color, const PieceType piece_type, const Square square) {
