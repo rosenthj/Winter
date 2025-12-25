@@ -85,7 +85,7 @@ struct Thread {
     }
     
     for (size_t idx = 0; idx < pawn_error_history.size(); ++idx) {
-      for (size_t prob = 0; prob < 3; ++prob) {
+      for (size_t prob = 0; prob < 2; ++prob) {
         pawn_error_history[idx][prob] = 0;
         major_error_history[idx][prob] = 0;
         minor_error_history[idx][prob] = 0;
