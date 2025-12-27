@@ -67,13 +67,8 @@ const Array3d<HashType, 2, 7, 64> init_hashes() {
 }
 
 const Array3d<HashType, 2, 7, 64> init_pawn_hashes(const Array3d<HashType, 2, 7, 64> &hashes) {
-  Array3d<HashType, 2, 7, 64> pawn_hashes;
+  Array3d<HashType, 2, 7, 64> pawn_hashes{};
   for (Color color = kWhite; color <= kBlack; ++color) {
-    for (PieceType piece_type = kPawn + 1; piece_type <= kKing; ++piece_type) {
-      for (Square square = 0; square < 64; ++square) {
-        pawn_hashes[color][piece_type][square] = 0;
-      }
-    }
     for (Square square = 0; square < 64; ++square) {
       pawn_hashes[color][kPawn][square] = hashes[color][kPawn][square];
     }
@@ -83,13 +78,8 @@ const Array3d<HashType, 2, 7, 64> init_pawn_hashes(const Array3d<HashType, 2, 7,
 
 const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7, 64> &hashes) {
   constexpr HashType lower_bits = 0xFFFFFFFF;
-  Array3d<HashType, 2, 7, 64> major_hashes;
+  Array3d<HashType, 2, 7, 64> major_hashes{};
   for (Color color = kWhite; color <= kBlack; ++color) {
-    for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      for (Square square = 0; square < 64; ++square) {
-        major_hashes[color][piece_type][square] = 0;
-      }
-    }
     for (Square square = 0; square < 64; ++square) {
       major_hashes[color][kRook][square] = hashes[color][kRook][square] & lower_bits;
       major_hashes[color][kQueen][square] = hashes[color][kQueen][square] & lower_bits;
@@ -103,16 +93,19 @@ const Array3d<HashType, 2, 7, 64> init_major_hashes(const Array3d<HashType, 2, 7
 
 const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes(uint64_t seed) {
   SplitMix64 local_rng(seed);
-  Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> hashes{};
   constexpr int total_slots = kNumRngHash * 4;
+  
+  Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> hashes{};
+  
   for (Color color = kWhite; color <= kBlack; ++color) {
     for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
+      const size_t num_non_zero = piece_type == kPawn ? kNumRngHash * 2 : kNumRngHash;
       for (Square square = 0; square < 64; ++square) {
         std::array<int, total_slots> available_slots;
         for(int i = 0; i < total_slots; ++i) {
           available_slots[i] = i;
         }
-        for (int idx = 0; idx < kNumRngHash; ++idx) {
+        for (int idx = 0; idx < num_non_zero; ++idx) {
           uint64_t r = local_rng();
           int pick_idx = idx + (r % (total_slots - idx));
           std::swap(available_slots[idx], available_slots[pick_idx]);
