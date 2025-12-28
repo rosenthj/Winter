@@ -99,10 +99,7 @@ const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes(uint6
   
   for (Color color = kWhite; color <= kBlack; ++color) {
     for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
-      if (piece_type == kKing) {
-        continue;
-      }
-      const size_t num_non_zero = kNumRngHash; // piece_type == kPawn ? kNumRngHash * 2 : kNumRngHash;
+      const size_t num_non_zero = piece_type == kKing ? kNumRngHash * 2 : kNumRngHash;
       for (Square square = 0; square < 64; ++square) {
         std::array<int, total_slots> available_slots;
         for(int i = 0; i < total_slots; ++i) {
