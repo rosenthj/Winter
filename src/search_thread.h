@@ -33,6 +33,7 @@
 #include "general/settings.h"
 #include "net_types.h"
 #include <array>
+#include <cstring>
 #include <thread>
 #include <vector>
 #include <atomic>
@@ -49,33 +50,18 @@ struct Thread {
 
   void clear_killers_and_counter_moves() {
     static_scores.fill(kNoScore);
-    for (size_t i = 0; i < killers.size(); ++i) {
-      killers[i][0] = 0;
-      killers[i][1] = 0;
-    }
-
-    for (Color c = kWhite; c <= kBlack; ++c) {
-      for (Square src = 0; src < kBoardSize; ++src) {
-        for (PieceType pt = kPawn; pt <= kKing; ++pt) {
-          counter_moves[c][pt][src] = kNullMove;
-        }
-        for (Square des = 0; des < kBoardSize; ++des) {
-          history[c][src][des] = 0;
-        }
-      }
-    }
-
-    for (size_t idx = 0; idx < continuation_history.size(); idx++) {
-      for (PieceType pt = kPawn; pt <= kKing; ++pt) {
-        for (Square sq = 0; sq < kBoardSize; ++sq) {
-          for (PieceType pt_i = kPawn; pt_i <= kKing; ++pt_i) {
-            for (Square sq_i = 0; sq_i < kBoardSize; ++sq_i) {
-              continuation_history[idx][pt][sq][pt_i][sq_i] = 0;
-            }
-          }
-        }
-      }
-    }
+    
+    // Move order related
+    std::memset(&killers, 0, sizeof(killers));
+    std::memset(&counter_moves, 0, sizeof(counter_moves));
+    std::memset(&history, 0, sizeof(history));
+    std::memset(&continuation_history, 0, sizeof(continuation_history));
+    
+    // Error histories
+    std::memset(&pawn_error_history, 0, sizeof(pawn_error_history));
+    std::memset(&major_error_history, 0, sizeof(major_error_history));
+    std::memset(&minor_error_history, 0, sizeof(minor_error_history));
+    std::memset(&rng_error_history, 0, sizeof(rng_error_history));
     
     for (size_t idx = 0; idx < evaluations.size(); ++idx) {
       evaluations[idx].pieces.clear();
@@ -84,19 +70,7 @@ struct Thread {
       }
     }
     
-    for (size_t idx = 0; idx < pawn_error_history.size(); ++idx) {
-      for (size_t prob = 0; prob < 2; ++prob) {
-        pawn_error_history[idx][prob] = 0;
-        major_error_history[idx][prob] = 0;
-        minor_error_history[idx][prob] = 0;
-        for (size_t i = 0; i < kNumRngHash; ++i) {
-          for (size_t shift = 0; shift < 4; ++shift) {
-            rng_error_history[i][shift][idx][prob] = 0;
-          }
-        }
-      } 
-    }
-
+    initialized = true;
   }
 
   void search();
@@ -140,6 +114,7 @@ struct Thread {
 
   //Multithreading objects
   int id;
+  bool initialized;
 
   //Data for search local to the thread
   Board board;

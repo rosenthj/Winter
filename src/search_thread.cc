@@ -55,7 +55,7 @@ ThreadPool Threads;
 
 Thread::Thread() {
   id = 1;//This should be immediately set to something else. It is set here only to guarantee non-zero for helpers.
-  clear_killers_and_counter_moves();
+  initialized = false;
 }
 
 void Thread::set_move(Move move) {
@@ -286,9 +286,13 @@ void ThreadPool::set_num_threads(size_t num_threads) {
 
 void ThreadPool::clear_killers_and_countermoves() {
   for (Thread* thread : helpers) {
-    thread->clear_killers_and_counter_moves();
+    if (thread->initialized) {
+      thread->clear_killers_and_counter_moves();
+    }
   }
-  main_thread->clear_killers_and_counter_moves();
+  if (main_thread->initialized) {
+    main_thread->clear_killers_and_counter_moves();
+  }
 }
 
 void ThreadPool::reset_depths() {
