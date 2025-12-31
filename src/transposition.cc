@@ -28,10 +28,15 @@
 #include "net_evaluation.h"
 #include <array>
 #include <cassert>
+#include <cstring>
+#include <cstdlib>            // for aligned_alloc, free
 #include <optional>
 #include <vector>
 #include <thread>
-#include <cstring>
+
+#if defined(__linux__)
+  #include <sys/mman.h>       // for madvise/MADV_HUGEPAGE
+#endif
 
 namespace {
 
@@ -68,7 +73,6 @@ namespace {
   
 EntryBucket* _table = nullptr;
 size_t _table_size = 0;
-bool initialized = false;
 uint8_t current_generation = 0;
 
 void* AlignedAlloc(size_t alignment, size_t size) {
@@ -123,8 +127,14 @@ void SetTableSize(const int32_t MB_total_int) {
   
   if (!_table) {
     std::cerr << "Failed to allocate Hash Table!" << std::endl;
+    exit(EXIT_FAILURE);
   }
-  initialized = false;
+  
+#ifdef MADV_HUGEPAGE
+  madvise(_table, new_byte_size, MADV_HUGEPAGE);
+#endif
+
+  ClearTable();
 }
 
 size_t HashFunction(const HashType hash) {
@@ -231,6 +241,8 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
 
 void ClearTable() {
   current_generation = 0;
+  
+  // Figure out how many threads to use
   constexpr size_t kMinMBPerThread = 32;
   const size_t total_bytes = _table_size * sizeof(EntryBucket);
   const size_t total_mb = total_bytes >> 20;
@@ -238,12 +250,13 @@ void ClearTable() {
   
   size_t thread_count = std::min(search::GetNumThreads(), max_threads_by_mem);
   
+  // Use main thread in case we only want one thread.
   if (thread_count == 1) {
     std::memset(_table, 0, _table_size * sizeof(EntryBucket));
-    initialized = true;
     return;
   }
   
+  // Multithreaded initialization
   std::vector<std::thread> threads;
   threads.reserve(thread_count);
   
@@ -265,8 +278,6 @@ void ClearTable() {
   for (auto& t : threads) {
     t.join();
   }
-  
-  initialized = true;
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {
@@ -294,12 +305,6 @@ size_t GetHashfull() {
     result += (_table[i][0].get_generation() == current_generation);
   }
   return result;
-}
-
-void EnsureInitialized() {
-  if (!initialized) {
-    ClearTable();
-  }
 }
 
 }

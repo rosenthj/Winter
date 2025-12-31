@@ -84,7 +84,6 @@ void UpdateGeneration();
 void ClearTable();
 
 size_t GetHashfull();
-void EnsureInitialized();
 
 }
 

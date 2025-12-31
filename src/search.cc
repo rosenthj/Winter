@@ -961,7 +961,6 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
   end_time = now()+rsearch_duration;
-  table::EnsureInitialized();
   table::UpdateGeneration();
   if (armageddon) {
     net_evaluation::SetContempt(kWhite, 60);
