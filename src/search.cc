@@ -887,6 +887,10 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
 
 void Thread::search() {
   const Time begin = end_time-rsearch_duration;
+  // Thread data is initialized here to improve NUMA performance
+  if (!initialized) {
+    clear_killers_and_counter_moves();
+  }
   double time_factor = 1.0;
   current_depth = 1;
   root_height = board.get_num_made_moves();
