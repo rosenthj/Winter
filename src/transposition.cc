@@ -28,8 +28,15 @@
 #include "net_evaluation.h"
 #include <array>
 #include <cassert>
+#include <cstring>
+#include <cstdlib>            // for aligned_alloc, free
 #include <optional>
 #include <vector>
+#include <thread>
+
+#if defined(__linux__)
+  #include <sys/mman.h>       // for madvise/MADV_HUGEPAGE
+#endif
 
 namespace {
 
@@ -59,12 +66,32 @@ namespace table {
 
 struct alignas(64) EntryBucket : public std::array<Entry, 4>{};
 
-// In addition to the main table, a second, smaller table is used for improved PV entry redundancy.
+// In addition to the main table, a subtable is used for improved PV entry redundancy.
 // PV entries are stored in both and TT size is sum of size of main table and PV table.
-size_t size = 1600000;
-std::vector<EntryBucket> _table(size / 4);
 
+namespace {
+  
+EntryBucket* _table = nullptr;
+size_t _table_size = 0;
 uint8_t current_generation = 0;
+
+void* AlignedAlloc(size_t alignment, size_t size) {
+#if defined(_WIN32)
+    return _aligned_malloc(size, alignment);
+#else
+    return std::aligned_alloc(alignment, size);
+#endif
+}
+
+void AlignedFree(void* ptr) {
+#if defined(_WIN32)
+    _aligned_free(ptr);
+#else
+    std::free(ptr);
+#endif
+}
+
+}
 
 void UpdateGeneration() {
   current_generation += (0x1 << 2);
@@ -73,14 +100,46 @@ void UpdateGeneration() {
 void SetTableSize(const int32_t MB_total_int) {
   const size_t MB_total = static_cast<size_t>(MB_total_int);
   const size_t bytes = MB_total << 20;
-  size = bytes >> 4;
-  size -= size % 4;
+  
+  // Calculate new size (bucket count)
+  size_t new_byte_size = bytes - (bytes % sizeof(EntryBucket));
+  size_t new_bucket_count = new_byte_size / sizeof(EntryBucket);
 
-  _table.resize(size / 4);
+  // Only reallocate if size actually changed
+  if (new_bucket_count == _table_size && _table != nullptr) {
+    return;
+  }
+
+  // Free old table
+  if (_table) {
+    AlignedFree(_table);
+    _table = nullptr;
+  }
+
+  _table_size = new_bucket_count;
+  
+  size_t alignment = 2 * 1024 * 1024; 
+    
+  // Fallback to 4096 if size is small
+  if (new_byte_size < alignment) alignment = 4096;
+
+  _table = static_cast<EntryBucket*>(AlignedAlloc(alignment, new_byte_size));
+  
+  if (!_table) {
+    std::cerr << "Failed to allocate Hash Table!" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  
+#ifdef MADV_HUGEPAGE
+  madvise(_table, new_byte_size, MADV_HUGEPAGE);
+#endif
+
+  ClearTable();
 }
 
 size_t HashFunction(const HashType hash) {
-  return hash % _table.size();
+  assert(_table_size != 0);
+  return hash % _table_size;
 }
 
 bool ValidateHash(const Entry &entry, const HashType hash){
@@ -142,7 +201,7 @@ void SaveEntry(const Board &board, const Move best_move, const Score score,
   size_t idx = HashFunction(hash);
   size_t index = GetIdxToReplace(hash, idx);
 
-  assert(idx < _table.size());
+  assert(idx < _table_size);
   assert(index < 3);
   assert(score.is_valid());
 
@@ -167,7 +226,7 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   size_t index = GetIdxToReplace(hash, idx); // HashFunction(hash);
   size_t index_pv = 3;
 
-  assert(index < _table.size());
+  assert(index < _table_size);
 
   HashType best_move_cast = best_move;
   Entry entry;
@@ -181,12 +240,44 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
 }
 
 void ClearTable() {
-  for (size_t bucket_id = 0; bucket_id < _table.size(); bucket_id++) {
-    for (size_t i = 0; i < 4; ++i) {
-      _table[bucket_id][i].clear();
-    }
-  }
   current_generation = 0;
+  
+  // Figure out how many threads to use
+  constexpr size_t kMinMBPerThread = 32;
+  const size_t total_bytes = _table_size * sizeof(EntryBucket);
+  const size_t total_mb = total_bytes >> 20;
+  size_t max_threads_by_mem = std::max<size_t>(1, total_mb / kMinMBPerThread);
+  
+  size_t thread_count = std::min(search::GetNumThreads(), max_threads_by_mem);
+  
+  // Use main thread in case we only want one thread.
+  if (thread_count == 1) {
+    std::memset(_table, 0, _table_size * sizeof(EntryBucket));
+    return;
+  }
+  
+  // Multithreaded initialization
+  std::vector<std::thread> threads;
+  threads.reserve(thread_count);
+  
+  const size_t total_buckets = _table_size;
+  const size_t chunk_size = total_buckets / thread_count;
+
+  for (size_t i = 0; i < thread_count; ++i) {
+    threads.emplace_back([i, thread_count, chunk_size, total_buckets]() {
+      const size_t start = i * chunk_size;
+      // Ensure the last thread picks up any remainder from integer division
+      const size_t end = (i == thread_count - 1) ? total_buckets : start + chunk_size;
+
+      if (start < end) {
+        std::memset(&_table[start], 0, (end - start) * sizeof(EntryBucket));
+      }
+    });
+  }
+
+  for (auto& t : threads) {
+    t.join();
+  }
 }
 
 void Entry::set_score(const Score score_new, const Board &board) {
