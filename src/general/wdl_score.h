@@ -163,18 +163,13 @@ struct WDLScore {
   
   constexpr WDLScore get_valid_score() const {
     int32_t w = win, l = loss;
-
-    // Enforce w <= wd constraint
-    // if (w > wd) {
-    //  wd = (w + wd) / 2;
-    //  w = wd;
-    // }
     
     if (w < 0 || l < 0) {
       int32_t min_val = std::min(w,l);
       w -= min_val;
       l -= min_val;
     }
+    assert(w >= 0 && l >= 0);
     
     if (w > WDLScore::scale || l > WDLScore::scale) {
       if (l > w) {
@@ -197,6 +192,7 @@ struct WDLScore {
           assert(l == 0);
           return WDLScore{w, 0}; // Valid mate score
         }
+        return get_max_static();
       }
       return WDLScore { WDLScore::scale / 2, WDLScore::scale / 2 };
     }
