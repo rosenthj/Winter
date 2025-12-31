@@ -496,7 +496,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   assert(alpha.is_valid());
   assert(beta.is_valid());
   assert(beta > alpha);
-  assert(beta.value() == get_next_score(alpha).value() || node_type != NodeType::kNW);
+  assert(beta.value() == alpha.get_next_score().value() || node_type != NodeType::kNW);
   
   const bool is_root = (node_type == NodeType::kPV) && (t.root_height == t.board.get_num_made_moves());
   const Score original_alpha = alpha;
@@ -961,6 +961,7 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
   end_time = now()+rsearch_duration;
+  table::EnsureInitialized();
   table::UpdateGeneration();
   if (armageddon) {
     net_evaluation::SetContempt(kWhite, 60);

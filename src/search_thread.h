@@ -159,6 +159,7 @@ struct ThreadPool {
 extern ThreadPool Threads;
 
 void SetNumThreads(int32_t value);
+size_t GetNumThreads();
 
 #ifdef TUNE
 #define OPTION(x) \

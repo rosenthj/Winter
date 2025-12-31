@@ -343,6 +343,7 @@ template void Thread::update_continuation_score<2>(const PieceType opp_piecetype
 
 
 void SetNumThreads(int32_t value) { Threads.set_num_threads(value); }
+size_t GetNumThreads() { return Threads.get_thread_count(); }
 
 #ifdef TUNE
 
