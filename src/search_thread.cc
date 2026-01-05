@@ -125,6 +125,16 @@ void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
   loss_error += history[idx][1] * scale;
 }
 
+// Fast tanh implementation based on:
+// https://math.stackexchange.com/questions/107292/rapid-approximation-of-tanhx
+// https://varietyofsound.wordpress.com/2011/02/14/efficient-tanh-computation-using-lamberts-continued-fraction/
+inline float fast_tanh(const float x){
+  const float x2 = x * x;
+  const float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+  const float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+  return a / b;
+}
+
 Score Thread::adjust_static_eval(const Score static_eval) const {
   if (!static_eval.is_static_eval())
     return static_eval;
@@ -153,8 +163,8 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   float loss = static_eval.get_loss_probability();
     
   constexpr float divisor = 8192.0f;
-  win += win_error / divisor;
-  loss += loss_error / divisor;
+  win += fast_tanh(win_error / divisor);
+  loss += fast_tanh(loss_error / divisor);
   
   win = sclamp(win, 0.0f, 1.0f);
   loss = sclamp(loss, 0.0f, 1.0f);
