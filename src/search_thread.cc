@@ -161,10 +161,11 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   
   float win = static_eval.get_win_probability();
   float loss = static_eval.get_loss_probability();
-    
+  
+  constexpr float alpha = 1.5f;
   constexpr float divisor = 8192.0f;
-  win += fast_tanh(win_error / divisor);
-  loss += fast_tanh(loss_error / divisor);
+  win += fast_tanh(alpha * win_error / divisor) / alpha;
+  loss += fast_tanh(alpha * loss_error / divisor) / alpha;
   
   win = sclamp(win, 0.0f, 1.0f);
   loss = sclamp(loss, 0.0f, 1.0f);
