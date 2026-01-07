@@ -540,24 +540,30 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   }
 
   const bool in_check = t.board.InCheck();
-  Score static_eval = alpha;
+  const Score raw_static_eval = t.adjust_static_eval(net_evaluation::ScoreThread(t));
+  Score eval_estimate = raw_static_eval;
   if (entry.has_value() && entry->get_bound() == kExactBound) {
-      static_eval = entry->get_score(t.board);
-      t.set_static_score(static_eval);
+      eval_estimate = entry->get_score(t.board);
+      if (in_check) {
+        t.set_static_score(eval_estimate);
+      }
+      else {
+        t.set_static_score(raw_static_eval);
+      }
   }
   else if (!in_check) {
-    static_eval = t.adjust_static_eval(net_evaluation::ScoreThread(t));
     if (entry.has_value()) {
-      if ( (entry->get_bound() == kLowerBound && static_eval < entry->get_score(t.board))
-          || (entry->get_bound() == kUpperBound && static_eval > entry->get_score(t.board)) ) {
-        static_eval = entry->get_score(t.board);
+      if ( (entry->get_bound() == kLowerBound && eval_estimate < entry->get_score(t.board))
+          || (entry->get_bound() == kUpperBound && eval_estimate > entry->get_score(t.board)) ) {
+        eval_estimate = entry->get_score(t.board);
       }
     }
-    t.set_static_score(static_eval);
+    t.set_static_score(raw_static_eval);
   }
   else {
     t.set_static_score(kNoScore);
   }
+  
   bool improving = t.improving();
   bool nmp_failed_node = false;
 
@@ -565,16 +571,16 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
     //Static Null Move Pruning
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-        && depth <= 5 && SNMPMarginSatisfied(static_eval, beta,
+        && depth <= 5 && SNMPMarginSatisfied(eval_estimate, beta,
                                              improving, depth)) {
-      if (static_eval.is_mate_score()) {
+      if (eval_estimate.is_mate_score()) {
         return beta;
       }
-      return (static_eval + beta) / 2;
+      return (eval_estimate + beta) / 2;
     }
 
     //Null Move Pruning
-    if (is_null_move_allowed(static_eval, beta, t.board, depth)) {
+    if (is_null_move_allowed(eval_estimate, beta, t.board, depth)) {
       t.set_move(kNullMove);
       t.board.Make(kNullMove);
       const Depth R = (kNMPBase + depth * kNMPScale) / 128;
@@ -684,7 +690,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       //Futility Pruning
       if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
           && depth - reduction <= 3
-          && static_eval.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
+          && eval_estimate.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
           && GetMoveType(move) < kEnPassant) {
         continue;
       }
@@ -735,7 +741,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       if (GetMoveType(move) < kCapture) {
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
-        if (!in_check && static_eval < score) {
+        if (!in_check && raw_static_eval < score) {
           t.update_error_history(score, depth);
         }
       }
@@ -776,7 +782,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   }
   else if (!exclude_move) {
     table::SaveEntry(t.board, best_local_move, lower_bound_score, depth, kUpperBound);
-    if (!in_check && GetMoveType(best_local_move) < kCapture && static_eval > lower_bound_score) {
+    if (!in_check && GetMoveType(best_local_move) < kCapture && raw_static_eval > lower_bound_score) {
       t.update_error_history(lower_bound_score, depth);
     }
   }
