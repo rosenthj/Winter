@@ -540,29 +540,21 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   }
 
   const bool in_check = t.board.InCheck();
-  const Score raw_static_eval = t.adjust_static_eval(net_evaluation::ScoreThread(t));
+  const Score raw_static_eval = in_check ? kNoScore
+                                         : t.adjust_static_eval(
+                                             net_evaluation::ScoreThread(t));
+  t.set_static_score(raw_static_eval);
   Score eval_estimate = raw_static_eval;
-  if (entry.has_value() && entry->get_bound() == kExactBound) {
+  if (!in_check && entry.has_value()) {
+    if ( entry->get_bound() == kExactBound
+         || (entry->get_bound() == kLowerBound
+             && eval_estimate < entry->get_score(t.board))
+         || (entry->get_bound() == kUpperBound
+             && eval_estimate > entry->get_score(t.board)) ) {
       eval_estimate = entry->get_score(t.board);
-      if (in_check) {
-        t.set_static_score(eval_estimate);
-      }
-      else {
-        t.set_static_score(raw_static_eval);
-      }
-  }
-  else if (!in_check) {
-    if (entry.has_value()) {
-      if ( (entry->get_bound() == kLowerBound && eval_estimate < entry->get_score(t.board))
-          || (entry->get_bound() == kUpperBound && eval_estimate > entry->get_score(t.board)) ) {
-        eval_estimate = entry->get_score(t.board);
-      }
     }
-    t.set_static_score(raw_static_eval);
   }
-  else {
-    t.set_static_score(kNoScore);
-  }
+  assert(!in_check || eval_estimate == kNoScore);
   
   bool improving = t.improving();
   bool nmp_failed_node = false;
