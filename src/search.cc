@@ -233,6 +233,9 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
                               const Score alpha, const Score beta,
                               const Depth depth) {
   Score score = entry->get_score(board);
+  if (score.is_mate_score() && score >= beta) {
+    return entry->get_bound() == kExactBound || entry->get_bound() == kLowerBound;
+  }
   return entry->depth >= depth
       && ((entry->get_bound() == kExactBound)
           || (entry->get_bound() == kLowerBound && score >= beta)
