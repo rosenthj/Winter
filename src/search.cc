@@ -897,6 +897,10 @@ void Thread::search() {
   set_static_score(score);
   Move last_best = kNullMove;
   std::vector<Score> previous_scores;
+  
+  if (rsearch_depth > 5) {
+    rsearch_depth += rsearch_depth - 5;
+  }
 
   for (Depth depth = current_depth; depth <= rsearch_depth; ++depth) {
     if(finished(*this)) {
@@ -922,8 +926,8 @@ void Thread::search() {
       }
     }
 
-    current_depth = depth;
-
+    // current_depth = depth;
+    current_depth = depth > 4 ? 5 + (depth - 5) / 2 : depth; 
     score = PVS(*this, current_depth, previous_scores);
     
     previous_scores.emplace_back(score);
