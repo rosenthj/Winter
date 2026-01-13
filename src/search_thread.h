@@ -62,6 +62,7 @@ struct Thread {
     std::memset(&major_error_history, 0, sizeof(major_error_history));
     std::memset(&minor_error_history, 0, sizeof(minor_error_history));
     std::memset(&rng_error_history, 0, sizeof(rng_error_history));
+    std::memset(&safety_error_history, 0, sizeof(safety_error_history));
     
     for (size_t idx = 0; idx < evaluations.size(); ++idx) {
       evaluations[idx].pieces.clear();
@@ -128,6 +129,7 @@ struct Thread {
   ErrorHistory major_error_history;
   ErrorHistory minor_error_history;
   Array2d<ErrorHistory, kNumRngHash, 4> rng_error_history;
+  std::array<ErrorHistory, 12> safety_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
@@ -170,6 +172,7 @@ OPTION(kPawnCorrectionScale)
 OPTION(kMajorCorrectionScale)
 OPTION(kMinorCorrectionScale)
 OPTION(kRNGCorrectionScale)
+OPTION(kSafetyCorrectionScale)
 OPTION(kCorrectionLeakScale)
 
 #undef OPTION

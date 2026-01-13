@@ -27,6 +27,7 @@
 
 #include "search_thread.h"
 #include "general/types.h"
+#include "general/bit_operations.h"
 #include <random>
 #include <algorithm>
 #include <iostream>
@@ -43,11 +44,12 @@ namespace search {
 #define EXPR constexpr
 #endif
 
-EXPR float kPawnCorrectionScale = 0.705;
-EXPR float kMajorCorrectionScale = 0.466;
-EXPR float kMinorCorrectionScale = 0.466;
-EXPR float kRNGCorrectionScale = 0.34375;
-EXPR float kCorrectionLeakScale = 1.2;
+EXPR float kPawnCorrectionScale =  180.5 / 256.0f;
+EXPR float kMinorCorrectionScale = 119.3 / 256.0f;
+EXPR float kMajorCorrectionScale = 119.3 / 256.0f;
+EXPR float kRNGCorrectionScale =      88 / 256.0f;
+EXPR float kSafetyCorrectionScale =  160 / 256.0f;
+EXPR float kCorrectionLeakScale =    307 / 256.0f;
 
 #undef EXPR
 
@@ -125,6 +127,12 @@ void accumulate_errors(const ErrorHistory &history, const HashType error_hash,
   loss_error += history[idx][1] * scale;
 }
 
+inline size_t get_safety_correction_offset(const Board &board, const Color color) {
+  BitBoard king_bitboard = board.get_piece_bitboard(color, kKing);
+  Square king_square = bitops::BitBoardToSquare(king_bitboard);
+  return color + 2 * (std::min(std::max(GetSquareX(king_square), 1), 6)-1);
+}
+
 Score Thread::adjust_static_eval(const Score static_eval) const {
   if (!static_eval.is_static_eval())
     return static_eval;
@@ -143,6 +151,12 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
       accumulate_errors(rng_error_history[e_idx][shift], rng_hash,
                         win_error, loss_error, kRNGCorrectionScale);
     }
+  }
+  for (Color color = kWhite; color <= kBlack; ++color) {
+    size_t idx = get_safety_correction_offset(board, color);
+    HashType safety_hash = (board.get_safety_hash(idx / 4) >> ((idx % 4) * 16)) & 0xFFFF;
+    accumulate_errors(safety_error_history[idx], safety_hash,
+                      win_error, loss_error, kSafetyCorrectionScale);
   }
   
   if (board.get_turn() == kBlack) {
@@ -206,6 +220,11 @@ void Thread::update_error_history(const Score eval, Depth depth) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
       update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, loss_val, leak);
     }
+  }
+  for (Color color = kWhite; color <= kBlack; ++color) {
+    size_t idx = get_safety_correction_offset(board, color);
+    HashType safety_hash = (board.get_safety_hash(idx / 4) >> ((idx % 4) * 16)) & 0xFFFF;
+    update_specific_history(safety_error_history[idx], safety_hash, win_val, loss_val, leak);
   }
 }
 

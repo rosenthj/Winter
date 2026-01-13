@@ -66,6 +66,9 @@ public:
   HashType get_rng_hash(size_t idx=0) const {
     return rng_hash[idx];
   }
+  HashType get_safety_hash(size_t idx=0) const {
+    return safety_hash[idx];
+  }
   //This needs to be public for the evaluation function.
   Piece get_piece(const Square square) const { return pieces[square]; }
   Color get_turn() const { return turn; }
@@ -159,6 +162,7 @@ private:
   HashType pawn_hash; // Standard pawn hash
   HashType major_hash;// Zobrist hash for queen and rook
   std::array<HashType, kNumRngHash> rng_hash;  // Randomly partitioned hash
+  std::array<HashType, 3> safety_hash;  // King safety hash
 
   int32_t fifty_move_count;
 };

@@ -112,10 +112,76 @@ const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> init_rng_hashes() {
   return hashes;
 }
 
+const Array3d<std::array<HashType, 3>, 2, 7, 64> init_safety_hashes() {
+  Array3d<std::array<HashType, 3>, 2, 7, 64> hashes{};
+  // Color represents the target king color
+  for (Color color = kWhite; color <= kBlack; ++color) {
+    Color not_color = color ^ 0x1;
+    for (Square king_square = bitops::SquareIdx::b1; king_square <= bitops::SquareIdx::g1; ++king_square) {
+      // Compute location of subhash
+      const size_t h_id = (king_square - bitops::SquareIdx::b1) / 2;
+      const size_t offset = (color == kBlack) + 2 * ((king_square - bitops::SquareIdx::b1) % 2);
+      
+      // Setup relevant zones of control for each piecetype.
+      // King Zone is initially setup as target zone, we can then adjust for the king itself.
+      BitBoard king_zone = GetSquareBitBoard(king_square);
+      if (color == kBlack) {
+        king_zone = king_zone << 48;
+      }
+      king_zone |= bitops::N(king_zone);
+      king_zone |= bitops::E(king_zone) | bitops::W(king_zone);
+      
+      BitBoard knight_zone = 0;
+      for (BitBoard knight_src = king_zone; knight_src; bitops::PopLSB(knight_src)) {
+        Square knight_square = bitops::BitBoardToSquare(knight_src);
+        knight_zone |= magic::GetAttackMap<kKnight>(knight_square, 0);
+      }
+      const BitBoard bishop_zone = bitops::FillNorthEast(king_zone, ~0) | bitops::FillNorthWest(king_zone, ~0)
+                                 | bitops::FillSouthEast(king_zone, ~0) | bitops::FillSouthWest(king_zone, ~0);
+      const BitBoard rook_zone   = bitops::FillNorth(king_zone, ~0)     | bitops::FillSouth(king_zone, ~0)
+                                 | bitops::FillEast(king_zone, ~0)      | bitops::FillWest(king_zone, ~0);
+      const BitBoard queen_zone  = bishop_zone | rook_zone;
+      // Adjust king zone as it is the target king zone.
+      king_zone |= bitops::FillNorth(king_zone, ~0) | bitops::FillSouth(king_zone, ~0);
+      
+      // For each possible square, create hashes for relevant pieces.
+      for (Square square = 0; square < 64; ++square) {
+        const BitBoard bb = GetSquareBitBoard(square);
+        if (bb & king_zone) {
+          HashType short_hash = rng() & 0xFFFF;
+          hashes[color][kKing][square][h_id] |= short_hash << (offset * 16);
+        }
+        if (bb & knight_zone) {
+          HashType short_hash = rng() & 0xFFFF;
+          hashes[not_color][kKnight][square][h_id] |= short_hash << (offset * 16);
+        }
+        if (bb & bishop_zone) {
+          HashType short_hash = rng() & 0xFFFF;
+          hashes[not_color][kBishop][square][h_id] |= short_hash << (offset * 16);
+        }
+        if (bb & rook_zone) {
+          HashType short_hash = rng() & 0xFFFF;
+          hashes[not_color][kRook][square][h_id] |= short_hash << (offset * 16);
+        }
+        if (bb & queen_zone) {
+          HashType short_hash = rng() & 0xFFFF;
+          hashes[not_color][kQueen][square][h_id] |= short_hash << (offset * 16);
+          short_hash = rng() & 0xFFFF;
+          hashes[not_color][kPawn][square][h_id] |= short_hash << (offset * 16);
+          short_hash = rng() & 0xFFFF;
+          hashes[color][kPawn][square][h_id] |= short_hash << (offset * 16);
+        }
+      }
+    }
+  }
+  return hashes;
+}
+
 const Array3d<HashType, 2, 7, 64> hashes = init_hashes();
 const Array3d<HashType, 2, 7, 64> pawn_hashes = init_pawn_hashes(hashes);
 const Array3d<HashType, 2, 7, 64> major_hashes = init_major_hashes(hashes);
 const Array3d<std::array<HashType, kNumRngHash>, 2, 7, 64> rng_hashes = init_rng_hashes();
+const Array3d<std::array<HashType, 3>, 2, 7, 64> safety_hashes = init_safety_hashes();
 const HashType color_hash = rng();
 
 inline HashType get_hash(const Color color, const PieceType piece_type, const Square square) {
@@ -144,6 +210,13 @@ inline HashType get_rng_hash(const Color color, const PieceType piece_type, cons
 }
 inline HashType get_rng_hash(const Piece piece, const Square square, const size_t block) {
   return rng_hashes[GetPieceColor(piece)][GetPieceType(piece)][square][block];
+}
+
+inline HashType get_safety_hash(const Color color, const PieceType piece_type, const Square square, const size_t block) {
+  return safety_hashes[color][piece_type][square][block];
+}
+inline HashType get_safety_hash(const Piece piece, const Square square, const size_t block) {
+  return safety_hashes[GetPieceColor(piece)][GetPieceType(piece)][square][block];
 }
 
 inline HashType get_color_hash() {
@@ -424,6 +497,9 @@ Board::Board() {
   for (size_t idx = 0; idx < kNumRngHash; ++idx) {
     rng_hash[idx] = 0;
   }
+  for (size_t idx = 0; idx < 3; ++idx) {
+    safety_hash[idx] = 0;
+  }
   previous_hashes.clear();
   en_passant = 0;
   fifty_move_count = 0;
@@ -539,6 +615,9 @@ void Board::SetBoard(std::vector<std::string> fen_tokens){
   major_hash = 0;
   for (size_t idx = 0; idx < kNumRngHash; ++idx) {
     rng_hash[idx] = 0;
+  }
+  for (size_t idx = 0; idx < 3; ++idx) {
+    safety_hash[idx] = 0;
   }
   en_passant = 0;
   fifty_move_count = 0;
@@ -722,7 +801,10 @@ void Board::SetToSamePosition(const Board &board) {
   pawn_hash = board.pawn_hash;
   major_hash = board.major_hash;
   for (size_t idx = 0; idx < kNumRngHash; ++idx) {
-    rng_hash[idx] = board.rng_hash[idx];;
+    rng_hash[idx] = board.rng_hash[idx];
+  }
+  for (size_t idx = 0; idx < 3; ++idx) {
+    safety_hash[idx] = board.safety_hash[idx];
   }
   en_passant = board.en_passant;
   fifty_move_count = board.fifty_move_count;
@@ -756,6 +838,9 @@ void Board::AddPiece(const Square square, const Piece piece) {
   major_hash ^= hash::get_major_hash(piece, square);
   for (size_t idx = 0; idx < kNumRngHash; ++idx) {
     rng_hash[idx] ^= hash::get_rng_hash(piece, square, idx);
+  }
+  for (size_t idx = 0; idx < 3; ++idx) {
+    safety_hash[idx] ^= hash::get_safety_hash(piece, square, idx);
   }
 }
 
