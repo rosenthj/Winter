@@ -155,7 +155,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   for (Color color = kWhite; color <= kBlack; ++color) {
     size_t idx = get_safety_correction_offset(board, color);
     HashType safety_hash = (board.get_safety_hash(idx / 4) >> ((idx % 4) * 16)) & 0xFFFF;
-    accumulate_errors(safety_error_history[idx], safety_hash,
+    accumulate_errors(safety_error_history[idx % 4], safety_hash,
                       win_error, loss_error, kSafetyCorrectionScale);
   }
   
@@ -224,7 +224,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   for (Color color = kWhite; color <= kBlack; ++color) {
     size_t idx = get_safety_correction_offset(board, color);
     HashType safety_hash = (board.get_safety_hash(idx / 4) >> ((idx % 4) * 16)) & 0xFFFF;
-    update_specific_history(safety_error_history[idx], safety_hash, win_val, loss_val, leak);
+    update_specific_history(safety_error_history[idx % 4], safety_hash, win_val, loss_val, leak);
   }
 }
 

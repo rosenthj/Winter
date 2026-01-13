@@ -129,7 +129,7 @@ struct Thread {
   ErrorHistory major_error_history;
   ErrorHistory minor_error_history;
   Array2d<ErrorHistory, kNumRngHash, 4> rng_error_history;
-  std::array<ErrorHistory, 12> safety_error_history;
+  std::array<ErrorHistory, 4> safety_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
