@@ -140,7 +140,7 @@ Score Thread::adjust_static_eval(const Score static_eval) const {
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
-      accumulate_errors(rng_error_history[e_idx][shift], rng_hash,
+      accumulate_errors(rng_error_history[e_idx / 2][shift], rng_hash,
                         win_error, loss_error, kRNGCorrectionScale);
     }
   }
@@ -204,7 +204,7 @@ void Thread::update_error_history(const Score eval, Depth depth) {
   for (int e_idx = 0; e_idx < kNumRngHash; ++e_idx) {
     for (int shift = 0; shift < 4; ++shift) {
       HashType rng_hash = (board.get_rng_hash(e_idx) >> (shift * 16)) & 0xFFFF;
-      update_specific_history(rng_error_history[e_idx][shift], rng_hash, win_val, loss_val, leak);
+      update_specific_history(rng_error_history[e_idx / 2][shift], rng_hash, win_val, loss_val, leak);
     }
   }
 }

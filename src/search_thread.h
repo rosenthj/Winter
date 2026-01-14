@@ -127,7 +127,7 @@ struct Thread {
   ErrorHistory pawn_error_history;
   ErrorHistory major_error_history;
   ErrorHistory minor_error_history;
-  Array2d<ErrorHistory, kNumRngHash, 4> rng_error_history;
+  Array2d<ErrorHistory, (kNumRngHash / 2), 4> rng_error_history;
   std::array<PieceTypeAndDestination, settings::kMaxDepth> passed_moves;
   std::array<PartialEvaluation, settings::kMaxDepth> evaluations;
   Depth root_height;
