@@ -48,7 +48,7 @@ EXPR float kPawnCorrectionScale =  180.5 / 256.0f;
 EXPR float kMinorCorrectionScale = 119.3 / 256.0f;
 EXPR float kMajorCorrectionScale = 119.3 / 256.0f;
 EXPR float kRNGCorrectionScale =      88 / 256.0f;
-EXPR float kSafetyCorrectionScale =   80 / 256.0f;
+EXPR float kSafetyCorrectionScale =  160 / 256.0f;
 EXPR float kCorrectionLeakScale =    307 / 256.0f;
 
 #undef EXPR
