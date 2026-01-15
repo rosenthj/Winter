@@ -565,7 +565,10 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
         && depth <= 5 && SNMPMarginSatisfied(eval_estimate, beta,
                                              improving, depth)) {
-      return (std::min(eval_estimate, WDLScore::get_max_static()) + beta) / 2;
+      if (eval_estimate.is_mate_score()) {
+        return kMaxStaticEval;
+      }
+      return (eval_estimate + beta) / 2;
     }
 
     //Null Move Pruning
@@ -576,11 +579,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       Score score = -AlphaBeta<NodeType::kNW>(t, -beta, -alpha,
                                               depth - R);
       t.board.UnMake();
-      if (score > kMaxStaticEval) {
-        score = kMaxStaticEval;
-      }
       if (score >= beta) {
-        return score;
+        return std::min(score, kMaxStaticEval);
       }
       nmp_failed_node = true;
     }
