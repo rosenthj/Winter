@@ -565,10 +565,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
         && depth <= 5 && SNMPMarginSatisfied(eval_estimate, beta,
                                              improving, depth)) {
-      if (eval_estimate.is_mate_score()) {
-        return eval_estimate = WDLScore::get_max_static();
-      }
-      return (eval_estimate + beta) / 2;
+      return (std::min(eval_estimate, WDLScore::get_max_static()) + beta) / 2;
     }
 
     //Null Move Pruning
