@@ -562,13 +562,12 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   //Speculative pruning methods
   if (node_type == NodeType::kNW && !exclude_move && beta.is_static_eval() && !in_check) {
     //Static Null Move Pruning
+    Score s_eval = eval_estimate > WDLScore::get_max_static() ? 
+                   WDLScore::get_max_static() : eval_estimate;
     if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-        && depth <= 5 && SNMPMarginSatisfied(eval_estimate, beta,
+        && depth <= 5 && SNMPMarginSatisfied(s_eval, beta,
                                              improving, depth)) {
-      if (eval_estimate.is_mate_score()) {
-        return beta;
-      }
-      return (eval_estimate + beta) / 2;
+      return (s_eval + beta) / 2;
     }
 
     //Null Move Pruning
