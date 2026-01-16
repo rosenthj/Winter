@@ -122,6 +122,10 @@ void SetTableSize(const int32_t MB_total_int) {
     
   // Fallback to 4096 if size is small
   if (new_byte_size < alignment) alignment = 4096;
+  
+  if (new_byte_size % alignment) {
+    new_byte_size += alignment - (new_byte_size % alignment);
+  }
 
   _table = static_cast<EntryBucket*>(AlignedAlloc(alignment, new_byte_size));
   

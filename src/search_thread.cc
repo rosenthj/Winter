@@ -308,7 +308,7 @@ size_t ThreadPool::get_thread_count() const {
 size_t ThreadPool::get_node_count() const {
   size_t sum = main_thread->nodes;
   for (Thread* helper : helpers) {
-    sum += helper->nodes;
+    sum += helper->nodes.load(std::memory_order_relaxed);
   }
   return sum;
 }
@@ -316,8 +316,9 @@ size_t ThreadPool::get_node_count() const {
 size_t ThreadPool::get_max_depth() const {
   size_t max_d = main_thread->max_depth;
   for (Thread* helper : helpers) {
-    if (helper->max_depth > max_d) {
-      max_d = helper->max_depth;
+    size_t d = helper->max_depth.load(std::memory_order_relaxed);
+    if (d > max_d) {
+      max_d = d;
     }
   }
   return max_d;
