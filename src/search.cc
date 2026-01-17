@@ -1000,20 +1000,24 @@ Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(
   Threads.main_thread->max_depth = board.get_num_made_moves();
   move_order::SortML(moves, *Threads.main_thread, tt_move);
   Threads.main_thread->best_root_move = tt_move;
+  
   Threads.end_search = false;
-  std::vector<std::thread> helpers;
+  
   for (Thread* t : Threads.helpers) {
     t->board.SetToSamePosition(board);
     t->root_height = board.get_num_made_moves();
     t->best_root_move = tt_move;
     t->max_depth = t->board.get_num_made_moves();
-    helpers.emplace_back(std::thread(&Thread::search, t));
+    t->start_searching();
   }
+  
   Threads.main_thread->search();
   Threads.end_search = true;
-  for (size_t helper_idx = 0; helper_idx < Threads.helpers.size(); ++helper_idx) {
-    helpers[helper_idx].join();
+  
+  for (Thread* t : Threads.helpers) {
+    t->wait_for_completion();
   }
+  
   return Threads.main_thread->best_root_move;
 }
 

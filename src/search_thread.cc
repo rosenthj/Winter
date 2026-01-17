@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2026 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -54,8 +54,60 @@ EXPR float kCorrectionLeakScale = 1.2;
 ThreadPool Threads;
 
 Thread::Thread() {
-  id = 1;//This should be immediately set to something else. It is set here only to guarantee non-zero for helpers.
+  id = 1; // This should be immediately set to something else. It is set here only to guarantee non-zero for helpers.
   initialized = false;
+  run = false;
+  exit = false;
+  searching = false;
+}
+
+Thread::~Thread() {
+  if (native_thread.joinable()) {
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      exit = true;
+      run = true; // Ensure we wake up to exit
+    }
+    cv.notify_one();
+    native_thread.join();
+  }
+}
+
+void Thread::launch() {
+  native_thread = std::thread(&Thread::idle_loop, this);
+}
+
+void Thread::idle_loop() {
+  while (true) {
+    std::unique_lock<std::mutex> lock(mutex);
+    cv.wait(lock, [this] { return run || exit; });
+
+    if (exit) return;
+
+    // We own the lock here, but search() is thread-safe/independent 
+    // mostly, yet we should unlock to allow main thread to wait on us.
+    searching = true;
+    run = false; // Consume the run signal
+    lock.unlock();
+
+    search();
+
+    lock.lock();
+    searching = false;
+    // Notify the main thread that we are done
+    cv.notify_one(); 
+  }
+}
+
+void Thread::start_searching() {
+  std::lock_guard<std::mutex> lock(mutex);
+  run = true;
+  cv.notify_one();
+}
+
+void Thread::wait_for_completion() {
+  std::unique_lock<std::mutex> lock(mutex);
+  cv.wait(lock, [this] { return !searching && !run; });
 }
 
 void Thread::set_move(Move move) {
@@ -89,24 +141,6 @@ bool Thread::improving() const {
          && static_scores[height] != kNoScore
          && static_scores[height] > static_scores[height-2];
 }
-
-//~ bool Thread::strict_improving() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && static_scores[height] > static_scores[height-2]
-                     //~ && static_scores[height-2] != kNoScore;
-//~ }
-
-//~ bool Thread::worsening() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && (static_scores[height] < static_scores[height-2]
-                      //~ || static_scores[height] == kNoScore);
-//~ }
 
 inline float sclamp(const float value, const float lower, const float upper) {
   assert(lower < upper);
@@ -219,14 +253,6 @@ void Thread::update_history_score(const Color color, const Square src, const Squ
   history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
 }
 
-//~ bool Thread::strict_worsening() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && static_scores[height] < static_scores[height-2];
-//~ }
-
 template<int moves_ago>
 int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
                       const PieceType piecetype, const Square des) const {
@@ -275,6 +301,7 @@ void ThreadPool::set_num_threads(size_t num_threads) {
   while(helpers.size() < num_helpers) {
     helpers.push_back(new Thread());
     helpers.back()->id = helpers.size();
+    helpers.back()->launch();
   }
 
   //Kill helper threads if we have too many
