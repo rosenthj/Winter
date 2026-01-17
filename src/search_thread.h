@@ -37,6 +37,9 @@
 #include <thread>
 #include <vector>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 
 namespace search {
 
@@ -47,6 +50,7 @@ struct PieceTypeAndDestination {
 
 struct Thread {
   Thread();
+  ~Thread();
 
   void clear_killers_and_counter_moves() {
     static_scores.fill(kNoScore);
@@ -114,6 +118,12 @@ struct Thread {
   void inc_nodes() {
     nodes.store(nodes.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
   }
+  
+  // Thread Pool Management Functions
+  void launch();
+  void idle_loop();
+  void start_searching();
+  void wait_for_completion();
 
   //Multithreading objects
   int id;
@@ -137,6 +147,13 @@ struct Thread {
   std::array<Score, settings::kMaxDepth> static_scores;
   std::atomic<size_t> nodes;
   std::atomic<size_t> max_depth;
+  
+  std::thread native_thread;
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool run = false;
+  bool exit = false;
+  bool searching = false;
 };
 
 struct ThreadPool {
