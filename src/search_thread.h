@@ -111,6 +111,9 @@ struct Thread {
   PieceTypeAndDestination get_previous_move(Depth moves_ago) const;
 
   Depth get_height() const;
+  void inc_nodes() {
+    nodes.store(nodes.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
+  }
 
   //Multithreading objects
   int id;

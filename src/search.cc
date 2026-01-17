@@ -192,7 +192,7 @@ inline bool finished(search::Thread &thread) {
   if (thread.id == 0) {
     if (skip_time_check <= 0) {
       size_t current_nodes = search::Threads.get_node_count();
-      skip_time_check = std::min((size_t)256, max_nodes-current_nodes);
+      skip_time_check = std::min((size_t)512, max_nodes-current_nodes);
       return end_time <= now() || max_nodes <= current_nodes
                                || search::Threads.end_search.load(std::memory_order_relaxed);
     }
@@ -274,7 +274,7 @@ size_t Perft(Board &board, Depth depth) {
 
 Score QuiescentSearch(Thread &t, Score alpha, const Score beta) {
   assert(beta > alpha);
-  t.nodes++;
+  t.inc_nodes();
   Score lower_bound_score = GetMatedOnMoveScore(t.board.get_num_made_moves());
   //Update max ply reached in search
   if (t.max_depth < t.board.get_num_made_moves()) {
@@ -503,7 +503,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   //Immediately return 0 if we detect a draw.
   if (!is_root && (t.board.IsDraw() || (settings::kRepsForDraw == 3 && t.board.CountRepetitions(min_ply) >= 2))) {
-    t.nodes++;
+    t.inc_nodes();
     if (t.board.IsFiftyMoveDraw() && t.board.InCheck() && t.board.GetMoves<kNonQuiescent>().empty()) {
       return GetMatedOnMoveScore(t.board.get_num_made_moves());
     }
@@ -513,7 +513,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   //We drop to QSearch if we run out of depth.
   if (depth <= 0) {
     if constexpr (!settings::kUseQS) {
-      t.nodes++;
+      t.inc_nodes();
       return t.adjust_static_eval(net_evaluation::ScoreThread(t));
     }
     return QuiescentSearch(t, alpha, beta);
@@ -521,7 +521,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
   // To avoid counting nodes twice if all we do is fall through to QSearch,
   // we wait until here to count this node.
-  t.nodes++;
+  t.inc_nodes();
 
   //Transposition Table Probe
   OptEntry entry = table::GetEntry(t.board.get_hash());
