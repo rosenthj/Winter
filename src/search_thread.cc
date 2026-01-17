@@ -2,7 +2,7 @@
  *  Winter is a UCI chess engine.
  *
  *  Copyright (C) 2016 Jonas Kuratli, Jonathan Maurer, Jonathan Rosenthal
- *  Copyright (C) 2017-2018 Jonathan Rosenthal
+ *  Copyright (C) 2017-2026 Jonathan Rosenthal
  *
  *  Winter is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -142,24 +142,6 @@ bool Thread::improving() const {
          && static_scores[height] > static_scores[height-2];
 }
 
-//~ bool Thread::strict_improving() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && static_scores[height] > static_scores[height-2]
-                     //~ && static_scores[height-2] != kNoScore;
-//~ }
-
-//~ bool Thread::worsening() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && (static_scores[height] < static_scores[height-2]
-                      //~ || static_scores[height] == kNoScore);
-//~ }
-
 inline float sclamp(const float value, const float lower, const float upper) {
   assert(lower < upper);
   return std::min(std::max(value, lower), upper);
@@ -270,14 +252,6 @@ void Thread::update_history_score(const Color color, const Square src, const Squ
                              const int32_t score) {
   history[color][src][des] += 32 * score - history[color][src][des] * std::abs(score) / 512;
 }
-
-//~ bool Thread::strict_worsening() const {
-  //~ Depth height = std::min((Depth)board.get_num_made_moves() - root_height, settings::kMaxDepth - 1);
-  //~ // kNoScore is defined as smaller than min score, so the second condition also implies
-  //~ // that we have a score at current height.
-  //~ assert(height >= 0);
-  //~ return height >= 2 && static_scores[height] < static_scores[height-2];
-//~ }
 
 template<int moves_ago>
 int32_t Thread::get_continuation_score(const PieceType opp_piecetype, const Square opp_des,
