@@ -857,7 +857,7 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
     }
     else {
       if (score.is_disadvantage()) {
-        NScore n_score = -(score.win - kMinScore.win - (int32_t)t.board.get_num_made_moves()) / 2;
+        NScore n_score = -(kMinScore.loss - score.loss - (int32_t)t.board.get_num_made_moves()) / 2;
         std::cout << " score mate " << n_score;
         if (uci_show_wdl) {
           std::cout << " wdl 0 0 1000";
