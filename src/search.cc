@@ -789,38 +789,41 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   }
   else {
     Score score = previous_scores.back();
-    Score delta = WDLScore{kInitialAspirationDelta, -kInitialAspirationDelta};
-    Score alpha = (score+(-delta)).get_valid_score();
-    Score beta = (score+delta).get_valid_score();
+    Score delta_high = WDLScore{kInitialAspirationDelta, -kInitialAspirationDelta};
+    Score delta_low = -delta_high;
+    Score alpha = (score + delta_low).get_valid_score();
+    Score beta = (score + delta_high).get_valid_score();
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     if (t.id == 0 && !finished(t)) {
       last_search_score = score;
     }
     while (!finished(t) && (score <= alpha || score >= beta)) {
-      assert(delta.win > 0 && delta.loss < 0);
+      assert(delta_high.win > 0 && delta_high.loss < 0);
+      assert(delta_low.win < 0 && delta_low.loss > 0);
       if (score <= alpha) {
         if (beta.is_static_eval()) {
           beta = (std::max(score, kMinStaticEval) + (beta * 3)) / 4;
           assert(beta.is_valid());
         }
-        alpha = (score+(-delta)).get_valid_score();
+        alpha = (score + delta_low).get_valid_score();
         if (alpha == score) {
           alpha = score.get_previous_score();
         }
+        delta_low *= 2;
       }
       else if (score >= beta) {
         if (alpha.is_static_eval()) {
           alpha = ((alpha * 3) + std::min(kMaxStaticEval, score)) / 4;
           assert(alpha.is_valid());
         }
-        beta = (score + delta).get_valid_score();
+        beta = (score + delta_high).get_valid_score();
         if (beta == score) {
           beta = score.get_next_score();
         }
+        delta_high *= 2;
       }
       assert(score > alpha && score < beta);
       score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
-      delta *= 2;
       if (t.id == 0 && !finished(t)) {
         last_search_score = score;
       }
