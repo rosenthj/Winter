@@ -73,7 +73,9 @@ struct WDLScore {
     return WDLScore{loss, win};
   }
   constexpr WDLScore operator+(const WDLScore other) const { return WDLScore{win + other.win, loss + other.loss}; }
-  // constexpr WDLScore operator-(const WDLScore other) const { return WDLScore{win - other.win, loss - other.loss}; }
+  
+  // We define x - y as x + (-y)
+  constexpr WDLScore operator-(const WDLScore other) const { return WDLScore{win + other.loss, loss + other.win}; }
   
   static constexpr WDLScore get_no_score() { return WDLScore{-1, -1}; }
   static constexpr WDLScore get_draw_score() { return from_pct_truncated(0.0, 0.0); }

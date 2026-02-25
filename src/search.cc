@@ -799,28 +799,36 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
     while (!finished(t) && (score <= alpha || score >= beta)) {
       assert(delta.win > 0 && delta.loss < 0);
       if (score <= alpha) {
-        if (beta.is_static_eval()) {
-          beta = (std::max(score, kMinStaticEval) + (beta * 3)) / 4;
-          assert(beta.is_valid());
-        }
-        alpha = (score+(-delta)).get_valid_score();
-        if (alpha == score) {
+        // We are not mating if we fail low.
+        // Optimistically look for at least a static score.
+        beta = (std::max(alpha, kMinStaticEval) + std::min(beta, kMaxStaticEval)) / 2;
+        
+        if (score <= kMinStaticEval) {
           alpha = score.get_previous_score();
+        }
+        else {
+          alpha = std::max(score - delta, kMinStaticEval);
         }
       }
       else if (score >= beta) {
-        if (alpha.is_static_eval()) {
-          alpha = ((alpha * 3) + std::min(kMaxStaticEval, score)) / 4;
-          assert(alpha.is_valid());
-        }
-        beta = (score + delta).get_valid_score();
-        if (beta == score) {
+        // If alpha is a mate score it is us getting mated.
+        // As score >= beta, we seem to have found a line we don't get mated.
+        alpha = std::max(std::max(alpha, std::min(beta, kMaxStaticEval) - delta), kMinStaticEval);
+        
+        if (score >= kMaxStaticEval) {
+          // If score is a mate score, we are only looking for a faster mate.
+          // If we failed high on max static score,
+          // true evaluation is either max static score or a mate.
           beta = score.get_next_score();
+        }
+        else {
+          // Otherwise we assume are hoping to find a better static score.
+          beta = std::min(score + delta, kMaxStaticEval);
         }
       }
       assert(score > alpha && score < beta);
       score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
-      delta *= 2;
+      delta = (delta * 3) / 2;
       if (t.id == 0 && !finished(t)) {
         last_search_score = score;
       }
