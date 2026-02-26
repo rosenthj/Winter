@@ -795,8 +795,18 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   else {
     Score score = previous_scores.back();
     Score delta = WDLScore{kInitialAspirationDelta, -kInitialAspirationDelta};
-    Score alpha = (score - delta).get_valid_score();
-    Score beta = (score + delta).get_valid_score();
+    // Initialize assuming score is strictly within min and max static
+    Score alpha = std::max(score - delta, kMinStaticEval);
+    Score beta  = std::min(score + delta, kMaxStaticEval);
+    // Handle edge cases
+    if (score <= kMinStaticEval) {
+      alpha = score.get_previous_score();
+      beta = kMinStaticEval + delta;
+    }
+    if (score >= kMaxStaticEval) {
+      alpha = kMaxStaticEval - delta;
+      beta = score.get_next_score();
+    }
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     if (t.id == 0 && !finished(t)) {
       last_search_score = score;
