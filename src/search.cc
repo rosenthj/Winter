@@ -660,13 +660,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
     if (i && !in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
-      //Late Move Pruning
-      assert(depth > 0);
-      if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
-          && GetMoveType(move) < kEnPassant) {
-        continue;
-      }
-
       //Late Move Reduction factor
       if (!is_root) {
         reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
@@ -675,17 +668,29 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
         reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
       }
       assert(reduction < depth);
-
-      //Futility Pruning
-      if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-          && depth - reduction <= 3
-          && eval_estimate.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          && GetMoveType(move) < kEnPassant) {
-        continue;
-      }
       
-      if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
-        continue;
+      if (alpha >= kMinStaticEval) {
+        //Late Move Pruning
+        assert(depth > 0);
+        if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
+            && GetMoveType(move) < kEnPassant) {
+          lower_bound_score = std::max(lower_bound_score, kMinStaticEval);
+          continue;
+        }
+
+        //Futility Pruning
+        if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
+            && depth - reduction <= 3
+            && eval_estimate.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
+            && GetMoveType(move) < kEnPassant) {
+          lower_bound_score = std::max(lower_bound_score, kMinStaticEval);
+          continue;
+        }
+        
+        if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
+          lower_bound_score = std::max(lower_bound_score, kMinStaticEval);
+          continue;
+        }
       }
     }
 
@@ -790,8 +795,8 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
   else {
     Score score = previous_scores.back();
     Score delta = WDLScore{kInitialAspirationDelta, -kInitialAspirationDelta};
-    Score alpha = (score+(-delta)).get_valid_score();
-    Score beta = (score+delta).get_valid_score();
+    Score alpha = (score - delta).get_valid_score();
+    Score beta = (score + delta).get_valid_score();
     score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
     if (t.id == 0 && !finished(t)) {
       last_search_score = score;
@@ -828,7 +833,7 @@ inline Score PVS(Thread &t, Depth current_depth, const std::vector<Score> &previ
       }
       assert(score > alpha && score < beta);
       score = AlphaBeta<NodeType::kPV>(t, alpha, beta, current_depth);
-      delta = (delta * 3) / 2;
+      delta *= 2;
       if (t.id == 0 && !finished(t)) {
         last_search_score = score;
       }
