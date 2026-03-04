@@ -660,12 +660,6 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
     if (i && !in_check && !(checking_squares[GetPieceType(t.board.get_piece(GetMoveSource(move)))]
                               & GetSquareBitBoard(GetMoveDestination(move)))) {
-      //Late Move Pruning
-      assert(depth > 0);
-      if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
-          && GetMoveType(move) < kEnPassant) {
-        continue;
-      }
 
       //Late Move Reduction factor
       if (!is_root) {
@@ -675,17 +669,26 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
         reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
       }
       assert(reduction < depth);
-
-      //Futility Pruning
-      if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
-          && depth - reduction <= 3
-          && eval_estimate.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
-          && GetMoveType(move) < kEnPassant) {
-        continue;
-      }
       
-      if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
-        continue;
+      if (lower_bound_score >= kMinStaticEval) {
+        //Late Move Pruning
+        assert(depth > 0);
+        if (!is_root && (size_t)depth < kLMP[0][0].size() && (i >= (size_t)kLMP[node_type == NodeType::kPV][improving][depth])
+            && GetMoveType(move) < kEnPassant) {
+          continue;
+        }
+
+        //Futility Pruning
+        if (node_type == NodeType::kNW && settings::kUseScoreBasedPruning
+            && depth - reduction <= 3
+            && eval_estimate.value() < (alpha.value() - get_futility_margin(depth - reduction, improving))
+            && GetMoveType(move) < kEnPassant) {
+          continue;
+        }
+        
+        if (depth == 1 && GetMoveType(move) != kEnPassant && !t.board.NonNegativeSEE(move)) {
+          continue;
+        }
       }
     }
 
