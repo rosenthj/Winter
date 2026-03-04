@@ -154,12 +154,17 @@ Score PerspectiveNetForward(const std::vector<NetPieceModule> &piece_modules,
       outcomes[i] = full_layer.dot(m_full_output_weights[i]);
     }
     outcomes[i] += output_helpers[i].sum() + output_bias[i];
-    outcomes[i] = std::exp(outcomes[i]);
+  }
+  
+  float_t max_logit = *std::max_element(outcomes.begin(), outcomes.end());
+  
+  for (size_t i = 0; i < 3; ++i) {
+    outcomes[i] = std::exp(outcomes[i] - max_logit);
     sum += outcomes[i];
   }
   
-  float win = outcomes[0] / sum;
-  float loss = outcomes[2] / sum;
+  float_t win = outcomes[0] / sum;
+  float_t loss = outcomes[2] / sum;
   return WDLScore::from_pct(win, loss);
 }
 
