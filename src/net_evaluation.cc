@@ -79,7 +79,7 @@ inline void AddPieceType(const Board &board, const PieceType pt,
   for (BitBoard pieces = board.get_piece_bitboard(color, pt); pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
     size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
-    NetPieceModule npm = {(pt + c_offset), piece_square, bias_layer_one[bias_idx]};
+    NetPieceModule npm = {bias_layer_one[bias_idx], (pt + c_offset), piece_square};
     piece_modules.push_back(npm);
     
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
@@ -104,7 +104,7 @@ inline void AddPieceType(const Board &board, const PieceType pt,
   for (BitBoard pieces = board.get_piece_bitboard(color, pt) & mask; pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
     size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
-    NetPieceModule npm = {(pt + c_offset), piece_square, bias_layer_one[bias_idx]};
+    NetPieceModule npm = {bias_layer_one[bias_idx], (pt + c_offset), piece_square};
     piece_modules.push_back(npm);
     
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
@@ -225,6 +225,7 @@ Score ScoreThread(search::Thread &t) {
   pieces.reserve(32);
   // Pieces which are no longer on the same squares
   std::vector<std::tuple<Piece, Square>> no_longer;
+  no_longer.reserve(4);
   BitBoard mask = 0;
   for (const NetPieceModule &piece : t.evaluations[h-1].pieces) {
     Piece b_piece = t.board.get_piece(piece.sq);

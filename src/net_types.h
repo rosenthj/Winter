@@ -38,9 +38,9 @@ constexpr size_t full_block_size = 128;
 using FullLayerType = Vec<float_t, full_block_size>;
 
 struct NetPieceModule {
+  NetLayerType features;
   PieceType pt;
   Square sq;
-  NetLayerType features;
 };
 
 struct PartialEvaluation {
