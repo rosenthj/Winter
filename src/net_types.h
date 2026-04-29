@@ -43,8 +43,28 @@ struct NetPieceModule {
   Square sq;
 };
 
+struct PieceList {
+  static constexpr size_t kMaxPieces = 32;
+
+  void push_back(const NetPieceModule &npm) { data[count++] = npm; }
+  void emplace_back(const NetPieceModule &npm) { data[count++] = npm; }
+  void clear() { count = 0; }
+  size_t size() const { return count; }
+
+  NetPieceModule& operator[](size_t i) { return data[i]; }
+  const NetPieceModule& operator[](size_t i) const { return data[i]; }
+
+  NetPieceModule* begin() { return data.data(); }
+  NetPieceModule* end() { return data.data() + count; }
+  const NetPieceModule* begin() const { return data.data(); }
+  const NetPieceModule* end() const { return data.data() + count; }
+
+  std::array<NetPieceModule, kMaxPieces> data;
+  size_t count = 0;
+};
+
 struct PartialEvaluation {
-  std::vector<NetPieceModule> pieces;
+  PieceList pieces;
   FullLayerType global_features;
 };
 

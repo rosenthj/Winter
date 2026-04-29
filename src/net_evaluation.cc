@@ -57,7 +57,7 @@ void RemoveRelative(const std::tuple<Piece, Square> &p_src, const NetPieceModule
   features -= net_input_weights[idx];
 }
 
-void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
+void EvalPieceRelations(PieceList &piece_modules) {
   for (size_t i = 0; i < piece_modules.size(); ++i) {
     NetLayerType features = piece_modules[i].features;
     for (size_t j = 0; j < i; ++j) {
@@ -72,22 +72,22 @@ void EvalPieceRelations(std::vector<NetPieceModule> &piece_modules) {
 
 template<Color color>
 inline void AddPieceType(const Board &board, const PieceType pt,
-                         std::vector<NetPieceModule> &piece_modules,
+                         PieceList &piece_modules,
                          FullLayerType &full_layer) {
   constexpr int32_t c_offset = color == kWhite ? 0 : 6;
-  
+
   for (BitBoard pieces = board.get_piece_bitboard(color, pt); pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
     size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
     NetPieceModule npm = {bias_layer_one[bias_idx], (pt + c_offset), piece_square};
     piece_modules.push_back(npm);
-    
+
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
   }
 }
 
 inline void AddAllPieceTypes(const Board &board,
-                         std::vector<NetPieceModule> &piece_modules,
+                         PieceList &piece_modules,
                          FullLayerType &full_layer) {
   for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
       AddPieceType<kWhite>(board, piece_type, piece_modules, full_layer);
@@ -97,22 +97,22 @@ inline void AddAllPieceTypes(const Board &board,
 
 template<Color color>
 inline void AddPieceType(const Board &board, const PieceType pt,
-                         std::vector<NetPieceModule> &piece_modules,
+                         PieceList &piece_modules,
                          FullLayerType &full_layer, const BitBoard mask) {
   constexpr int32_t c_offset = color == kWhite ? 0 : 6;
-  
+
   for (BitBoard pieces = board.get_piece_bitboard(color, pt) & mask; pieces; bitops::PopLSB(pieces)) {
     Square piece_square = bitops::NumberOfTrailingZeros(pieces);
     size_t bias_idx = (pt + c_offset) * 8 * 8 + piece_square;
     NetPieceModule npm = {bias_layer_one[bias_idx], (pt + c_offset), piece_square};
     piece_modules.push_back(npm);
-    
+
     full_layer += full_layer_weights[(pt + c_offset) * 64 + piece_square];
   }
 }
 
 inline void AddAllPieceTypes(const Board &board,
-                         std::vector<NetPieceModule> &piece_modules,
+                         PieceList &piece_modules,
                          FullLayerType &full_layer, const BitBoard mask) {
   for (PieceType piece_type = kPawn; piece_type <= kKing; ++piece_type) {
       AddPieceType<kWhite>(board, piece_type, piece_modules, full_layer, mask);
@@ -125,7 +125,7 @@ inline void AddAllPieceTypes(const Board &board,
 namespace net_evaluation {
 
 template<Color color>
-Score PerspectiveNetForward(const std::vector<NetPieceModule> &piece_modules,
+Score PerspectiveNetForward(const PieceList &piece_modules,
                  const FullLayerType &_full_layer) {
   std::array<NetLayerType, 3> output_helpers{0, 0, 0};
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
@@ -168,7 +168,7 @@ Score PerspectiveNetForward(const std::vector<NetPieceModule> &piece_modules,
   return WDLScore::from_pct(win, loss);
 }
 
-Score NetForward(const std::vector<NetPieceModule> &piece_modules,
+Score NetForward(const PieceList &piece_modules,
                  const FullLayerType &_full_layer, const Color color) {
     if (color == kWhite)
       return PerspectiveNetForward<kWhite>(piece_modules, _full_layer);
@@ -176,8 +176,7 @@ Score NetForward(const std::vector<NetPieceModule> &piece_modules,
 }
 
 Score ScoreBoard(const Board &board) {
-  std::vector<NetPieceModule> piece_modules;
-  piece_modules.reserve(32);
+  PieceList piece_modules;
   FullLayerType full_layer = full_layer_bias;
   AddAllPieceTypes(board, piece_modules, full_layer);
   EvalPieceRelations(piece_modules);
@@ -195,20 +194,17 @@ Score ScoreBoard(const Board &board) {
 //}
 
 Score FromScratch(search::Thread &t) {
-  //~ std::cout << "------------------------"<< "From scratch!" << "------------------------" << std::endl;
   const Depth h = t.get_height();
-  std::vector<NetPieceModule> piece_modules;
-  piece_modules.reserve(32);
-  FullLayerType full_layer = full_layer_bias;
-  AddAllPieceTypes(t.board, piece_modules, full_layer);
-  EvalPieceRelations(piece_modules);
-  t.evaluations[h].pieces = piece_modules;
-  t.evaluations[h].global_features = full_layer;
+  PartialEvaluation &eval = t.evaluations[h];
+  eval.pieces.clear();
+  eval.global_features = full_layer_bias;
+  AddAllPieceTypes(t.board, eval.pieces, eval.global_features);
+  EvalPieceRelations(eval.pieces);
   if (contempt[t.board.get_turn()] != 0) {
-    return AddContempt(NetForward(piece_modules, full_layer, t.board.get_turn()),
+    return AddContempt(NetForward(eval.pieces, eval.global_features, t.board.get_turn()),
                        t.board.get_turn());
   }
-  return NetForward(piece_modules, full_layer, t.board.get_turn());
+  return NetForward(eval.pieces, eval.global_features, t.board.get_turn());
 }
 
 Score ScoreThread(search::Thread &t) {
@@ -221,8 +217,7 @@ Score ScoreThread(search::Thread &t) {
   }
 
   // Pieces from previous iteration which have not moved
-  std::vector<NetPieceModule> pieces;
-  pieces.reserve(32);
+  PieceList pieces;
   // Pieces which are no longer on the same squares
   std::vector<std::tuple<Piece, Square>> no_longer;
   no_longer.reserve(4);
