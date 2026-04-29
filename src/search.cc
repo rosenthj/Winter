@@ -468,10 +468,10 @@ inline bool singular_conditions_met(NodeType node_type, const Thread &t,
 
 inline void update_killers(Thread &t, const Move move) {
   assert(GetMoveType(move) < kCapture);
-  int num_made_moves = t.board.get_num_made_moves();
-  if (t.killers[num_made_moves][0] != move) {
-    t.killers[num_made_moves][1] = t.killers[num_made_moves][0];
-    t.killers[num_made_moves][0] = move;
+  int height = t.get_height();
+  if (t.killers[height][0] != move) {
+    t.killers[height][1] = t.killers[height][0];
+    t.killers[height][0] = move;
   }
 }
 

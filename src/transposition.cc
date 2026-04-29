@@ -230,7 +230,7 @@ void SavePVEntry(const Board &board, const Move best_move, const Score score, co
   size_t index = GetIdxToReplace(hash, idx); // HashFunction(hash);
   size_t index_pv = 3;
 
-  assert(index < _table_size);
+  assert(index < 3);
 
   HashType best_move_cast = best_move;
   Entry entry;

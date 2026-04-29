@@ -178,7 +178,7 @@ struct WDLScore {
         }
 
         if (l >= get_max_mated().loss) {
-          assert(w == 0);
+          if (w != 0) return get_min_static();
           return WDLScore{0, l}; // Valid mate score
         }
         return get_min_static();
@@ -189,7 +189,7 @@ struct WDLScore {
         }
 
         if (w >= get_min_mating().win) {
-          assert(l == 0);
+          if (l != 0) return get_max_static();
           return WDLScore{w, 0}; // Valid mate score
         }
         return get_max_static();
