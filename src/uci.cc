@@ -280,6 +280,7 @@ void UCINewGame(Board &board, const StrArgs) {
 
 void UCISetOption(Board &board, const StrArgs tokens) {
   int index = 2;
+  if ((int)tokens.size() <= index) return;
   std::string command = tokens[index++];
 #ifdef TUNE_ORDER
   auto components = split(command, '_');
@@ -294,6 +295,7 @@ void UCISetOption(Board &board, const StrArgs tokens) {
   for (const UCIOption &option : uci_options) {
     if (Equals(command, option.name)) {
       index++;
+      if ((int)tokens.size() <= index) return;
       int value = atoi(tokens[index++].c_str());
       option.func(value);
       return;
@@ -302,6 +304,7 @@ void UCISetOption(Board &board, const StrArgs tokens) {
   for (const UCICheck &option : uci_check_options) {
     if (Equals(command, option.name)) {
       index++;
+      if ((int)tokens.size() <= index) return;
       bool value = IsTrue(tokens[index++].c_str());
       option.func(value);
       return;

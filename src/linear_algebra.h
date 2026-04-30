@@ -66,8 +66,11 @@ inline SIMDFloat min(SIMDFloat a, SIMDFloat b) { return _mm256_min_ps(a,  b); }
 inline SIMDFloat set(float a) { return _mm256_set1_ps(a); }
 
 inline SIMDFloat fmadd(SIMDFloat a, SIMDFloat b, SIMDFloat c) {
+#ifdef __FMA__
   return _mm256_fmadd_ps(a, b, c);
-  //return add(multiply(a, b), c);
+#else
+  return add(multiply(a, b), c);
+#endif
 }
 
 }
