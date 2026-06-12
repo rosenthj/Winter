@@ -289,7 +289,7 @@ void RunBenchCommand(int argc, char **argv) {
   std::array<int64_t, 256> nodes;
   std::array<Move, 256> bestMoves;
 
-  int depth     = argc > 2 ? atoi(argv[2]) : 9;
+  int depth     = argc > 2 ? atoi(argv[2]) : 11;
   int num_threads  = argc > 3 ? atoi(argv[3]) :  1;
   int megabytes = argc > 4 ? atoi(argv[4]) : 16;
 
