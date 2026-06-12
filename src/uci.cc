@@ -215,11 +215,15 @@ using StrArgs = std::vector<std::string>;
 
 bool quit_flag = false;
 
-void UCIQuit(Board &board, const StrArgs args) {
+void EndSearchAndWait() {
   search::end_search();
   while (search::Threads.is_searching) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
+}
+
+void UCIQuit(Board &board, const StrArgs args) {
+  EndSearchAndWait();
   quit_flag = true;
 }
 
@@ -229,7 +233,7 @@ void UCIIsReady(Board &board, const StrArgs) {
 
 void UCIGo(Board &board, const StrArgs tokens) {
   int index = 1;
-  search::end_search();
+  EndSearchAndWait();
   Timer timer {};
   if (tokens.size() >= index+2) {
     while (tokens.size() >= index+2) {
@@ -267,6 +271,9 @@ void UCIGo(Board &board, const StrArgs tokens) {
   else{
     timer.search_depth = 6;
   }
+  // Set here rather than in the search thread so a back to back go command
+  // cannot pass EndSearchAndWait before this search flags itself.
+  search::Threads.is_searching = true;
   std::thread t(Go, &board, timer);
   t.detach();
 }

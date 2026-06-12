@@ -202,8 +202,13 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
     AddFeature<in_check>(move_weight, kPWIKiller + 1);
   }
   if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
-    const Square last_destination = GetMoveDestination(t.board.get_last_move());
-    PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+    const Move last_move = t.board.get_last_move();
+    const Square last_destination = GetMoveDestination(last_move);
+    // Castling moves are encoded king square -> rook origin square, which in
+    // Chess960 may be empty after the move, so the piece type cannot be read
+    // off the destination square in that case.
+    const PieceType last_moved_piece = GetMoveType(last_move) == kCastle ?
+        kKing : GetPieceType(t.board.get_piece(last_destination));
     if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
       AddFeature<in_check>(move_weight, kPWICounterMove);
     }

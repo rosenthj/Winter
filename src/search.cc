@@ -29,6 +29,7 @@
 #include "net_evaluation.h"
 #include "transposition.h"
 #include "search_thread.h"
+#include <atomic>
 #include <cassert>
 #include <iostream>
 #include <fstream>
@@ -186,14 +187,17 @@ constexpr size_t kInfiniteNodes = 1000000000000;
 size_t max_nodes = kInfiniteNodes;
 bool fixed_search_time;
 
-Time end_time = now();
+// Written by the UCI thread (end_search) while search threads read it,
+// so it has to be atomic.
+std::atomic<Time> end_time{now()};
 
 inline bool finished(search::Thread &thread) {
   if (thread.id == 0) {
     if (skip_time_check <= 0) {
       size_t current_nodes = search::Threads.get_node_count();
       skip_time_check = std::min((size_t)512, max_nodes-current_nodes);
-      return end_time <= now() || max_nodes <= current_nodes
+      return end_time.load(std::memory_order_relaxed) <= now()
+                               || max_nodes <= current_nodes
                                || search::Threads.end_search.load(std::memory_order_relaxed);
     }
     skip_time_check--;
@@ -387,7 +391,11 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   const Color color = t.board.get_turn();
   const Move move = t.board.get_last_move();
   Square opp_des = GetMoveDestination(move);
-  PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
+  // Castling moves are encoded king square -> rook origin square, which in
+  // Chess960 may be empty after the move, so the piece type cannot be read
+  // off the destination square in that case.
+  PieceType opp_piecetype = GetMoveType(move) == kCastle ?
+      kKing : GetPieceType(t.board.get_piece(opp_des));
   // TODO deal with promotion situations
   const int32_t score = std::min(depth * depth, 512);
 
@@ -884,7 +892,7 @@ void PrintUCIInfoString(Thread &t, const Depth depth, const Time &begin,
 }
 
 void Thread::search() {
-  const Time begin = end_time-rsearch_duration;
+  const Time begin = end_time.load(std::memory_order_relaxed)-rsearch_duration;
   // Thread data is initialized here to improve NUMA performance
   if (!initialized) {
     clear_killers_and_counter_moves();
@@ -941,7 +949,7 @@ void Thread::search() {
         if (last_best == best_root_move) {
           time_factor = std::max(time_factor * 0.9, 0.5);
           if (time_used.count() > (rsearch_duration.count() * time_factor)) {
-            end_time = now();
+            end_time.store(now(), std::memory_order_relaxed);
             return;
           }
         }
@@ -955,10 +963,12 @@ void Thread::search() {
 }
 
 Move RootSearch(Board &board, Depth depth, Milliseconds duration = Milliseconds(24 * 60 * 60 * 1000)) {
-  Threads.is_searching = true;
+  // is_searching is owned by the UCI layer: set before the Go thread starts
+  // and cleared when it finishes. Setting it here would leave it stuck on
+  // true for synchronous callers such as bench, hanging the UCI wait loops.
   rsearch_depth = std::min(depth, settings::kMaxDepth);
   rsearch_duration = duration;
-  end_time = now()+rsearch_duration;
+  end_time.store(now()+rsearch_duration, std::memory_order_relaxed);
   table::UpdateGeneration();
   if (armageddon) {
     net_evaluation::SetContempt(kWhite, 60);
@@ -1061,7 +1071,7 @@ Move NodeSearch(Board board, size_t num_nodes) {
 }
 
 void end_search() {
-  end_time = now();
+  end_time.store(now(), std::memory_order_relaxed);
 }
 
 void clear_killers_and_counter_moves() {
