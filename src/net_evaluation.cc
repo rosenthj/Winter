@@ -10,10 +10,8 @@
 #include <cmath>
 #include <list>
 
-//INCBIN(float_t, NetWeights, "rnet16H64h.bin");
-//INCBIN(float_t, NetWeights, "rnet8H96e.bin");
-//INCBIN(float_t, NetWeights, "rnet16H64o.bin");
-INCBIN(float_t, NetWeights, "rn16HD64_rew501i_ep36.bin");
+INCBIN(float_t, NetWeights, "rn16HD96_rew502_ep42.bin");
+// INCBIN(float_t, NetWeights, "rn16HD64_rew501i_ep36.bin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
