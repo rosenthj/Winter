@@ -10,7 +10,8 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "rn24HD64_rew502_ep36b.bin");
+// INCBIN(float_t, NetWeights, "rn24HD64_rew502_ep36b.bin");
+INCBIN(float_t, NetWeights, "rn24HD64_rew502w_ep42.bin");
 // INCBIN(float_t, NetWeights, "rn16HD96_rew502_ep18.bin");
 // INCBIN(float_t, NetWeights, "rn16HD64_rew501i_ep36.bin");
 
