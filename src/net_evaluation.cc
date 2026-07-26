@@ -14,7 +14,7 @@
 //INCBIN(float_t, NetWeights, "rnet8H96e.bin");
 //INCBIN(float_t, NetWeights, "rnet16H64o.bin");
 //INCBIN(float_t, NetWeights, "rn16HD64b_advF.bin");
-INCBIN(float_t, NetWeights, "rew50advG1p25_tmp.bin");
+INCBIN(float_t, NetWeights, "rew50advG4p100_tmp.bin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
