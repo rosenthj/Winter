@@ -1,7 +1,3 @@
-#include "net_evaluation.h"
-#include "general/types.h"
-#include "linear_algebra.h"
-#include "incbin/incbin.h"
 /*
  *  Winter is a UCI chess engine.
  *
@@ -21,6 +17,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "net_evaluation.h"
+#include "general/types.h"
+#include "linear_algebra.h"
+#include "incbin/incbin.h"
 #include "search_thread.h"
 #include "net_types.h"
 
