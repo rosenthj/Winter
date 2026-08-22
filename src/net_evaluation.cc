@@ -29,7 +29,7 @@
 #include <cmath>
 #include <list>
 
-INCBIN(float_t, NetWeights, "rn16HD64_rew503_W50_ep40.bin");
+INCBIN(float_t, NetWeights, "rn24HD64_rew503_d24f64_ep40.bin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
