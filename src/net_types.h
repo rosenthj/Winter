@@ -31,10 +31,10 @@
 #include "linear_algebra.h"
 
 // NN types
-constexpr size_t block_size = 32;
+constexpr size_t block_size = 2*24;
 using NetLayerType = Vec<float_t, block_size>;
 
-constexpr size_t full_block_size = 128;
+constexpr size_t full_block_size = 2*64 ;
 using FullLayerType = Vec<float_t, full_block_size>;
 
 struct NetPieceModule {
