@@ -31,7 +31,7 @@
 #include "linear_algebra.h"
 
 // NN types
-constexpr size_t block_size = 2 * 16;                   // Piece relation feature size
+constexpr size_t block_size = 2 * 32;                   // Piece relation feature size
 using NetLayerType = Vec<int16_t, block_size>;          // Piece relation accumulator type
 using NetOutputType = Vec<int32_t, block_size / 2>;     // Output accumulator type
 
