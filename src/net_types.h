@@ -31,11 +31,12 @@
 #include "linear_algebra.h"
 
 // NN types
-constexpr size_t block_size = 32;
-using NetLayerType = Vec<float_t, block_size>;
+constexpr size_t block_size = 2 * 16;                   // Piece relation feature size
+using NetLayerType = Vec<int16_t, block_size>;          // Piece relation accumulator type
+using NetOutputType = Vec<int32_t, block_size / 2>;     // Output accumulator type
 
-constexpr size_t full_block_size = 128;
-using FullLayerType = Vec<float_t, full_block_size>;
+constexpr size_t full_block_size = 2 * 64;              // Full layer feature size
+using FullLayerType = Vec<int16_t, full_block_size>;    // Full layer type
 
 struct NetPieceModule {
   NetLayerType features;
