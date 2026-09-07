@@ -41,11 +41,11 @@ namespace {
 
 // NN weights
 
-std::vector<NetLayerType> net_input_weights(12 * 12 * 15 * 15, 0);
-std::vector<NetLayerType> bias_layer_one(12 * 8 * 8, 0);
+std::vector<NetLayerType> net_input_weights(12 * 12 * (15 * 15), 0);
+std::vector<NetLayerType> bias_layer_one(12 * (8 * 8), 0);
 
-std::vector<NetLayerType> output_weights(3 * 12 * 8 * 8, 0);
-std::vector<NetLayerType> m_output_weights(3 * 12 * 8 * 8, 0);
+std::vector<NetLayerType> output_weights(3 * 12 * (8 * 8), 0);
+std::vector<NetLayerType> m_output_weights(3 * 12 * (8 * 8), 0);
 std::array<float_t, 3> output_bias;
 
 std::vector<FullLayerType> full_layer_weights(12 * 64, 0);
@@ -99,13 +99,13 @@ void init_square_offset() {
 }
 
 void AddRelative(const NetPieceModule &p_src, const NetPieceModule &p_des, NetLayerType &features) {
-  size_t idx = (p_src.pt * 12 + p_des.pt) * 225 + square_offset[p_src.sq][p_des.sq];
+  size_t idx = (p_src.pt * 12 + p_des.pt) * (15 * 15) + square_offset[p_src.sq][p_des.sq];
   features += net_input_weights[idx];
 }
 
 void RemoveRelative(const std::tuple<Piece, Square> &p_src, const NetPieceModule &p_des, NetLayerType &features) {
   const auto [src_pt, src_sq] = p_src;
-  size_t idx = (src_pt * 12 + p_des.pt) * 225 + square_offset[src_sq][p_des.sq];
+  size_t idx = (src_pt * 12 + p_des.pt) * (15 * 15) + square_offset[src_sq][p_des.sq];
   features -= net_input_weights[idx];
 }
 
@@ -381,6 +381,7 @@ NetHeader read_header() {
   if (std::memcmp(gNetWeightsData, "WNET", 4) != 0) {
     net_load_error("bad magic, this is not a quantized net");
   }
+  
   NetHeader header;
   std::memcpy(&header, gNetWeightsData + 4, sizeof(header));
 
@@ -403,6 +404,7 @@ NetHeader read_header() {
   size_mismatch("piece type count", header.num_piece_types, 12);
   size_mismatch("relation grid size", header.grid, 15);
   size_mismatch("output count", header.num_outputs, 3);
+  
   if (header.relu_bound != kClippedReluBound) {
     net_load_error("clipped relu bound is " + std::to_string(header.relu_bound) + ", this build expects "
               + std::to_string(kClippedReluBound));
@@ -550,7 +552,8 @@ void init_mirrored_outputs() {
 }
 
 #ifndef NDEBUG
-// Sanity check for network quantization. Written by Claude Opus 5.
+// This NDEBUG section is a sanity check for network quantization.
+// It is written by Claude Opus 5.
 constexpr std::array<size_t, 6> kMaxPieceCount = { 8, 10, 10, 10, 10, 1 };
 constexpr size_t kMaxNonKing = 15;
 constexpr size_t kMaxCandidates = 10;
@@ -645,27 +648,29 @@ void verify_accumulator_bounds() {
 void init_weights() {
   init_square_offset();
   const NetHeader header = read_header();
-
   size_t offset = 0;
+  
   init_conv_weights(offset);
   init_conv_bias_weights(offset);
+  
   init_out_weights(offset);
+  
   init_full_layer_weights(offset);
   init_full_output_weights(offset);
-  init_mirrored_outputs();
   assert(offset == expected_weight_count());
+  
+  init_mirrored_outputs();
 
-  // A scale applies to both halves of its dimension, which is what keeps the
-  // evaluation exactly symmetric under a colour swap.
   for (size_t i = 0; i < block_size / 2; ++i) {
     piece_relu_bound[i] = kClippedReluBound * piece_scales[i];
     piece_relu_bound[i + block_size / 2] = piece_relu_bound[i];
   }
+  
   for (size_t i = 0; i < full_block_size / 2; ++i) {
     full_relu_bound[i] = kClippedReluBound * full_scales[i];
     full_relu_bound[i + full_block_size / 2] = full_relu_bound[i];
   }
-  inverse_output_scale = 1 / header.output_scale;
+  inverse_output_scale = 1.0 / header.output_scale;
 
 #ifndef NDEBUG
   verify_accumulator_bounds();

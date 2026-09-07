@@ -313,13 +313,13 @@ struct Vec<float, length> {
   
   template<typename t>
   float dot(const Vec<t, length> &other) const {
-    SIMDFloat c = simd::set(0);
+    SIMDFloat acc = simd::set(0);
     for (size_t i = 0; i <= length-kSIMDWidth; i+=kSIMDWidth) {
       SIMDFloat va = simd::load(&values[i]);
       SIMDFloat vb = simd::load(&other.values[i]);
-      c = simd::fmadd(va, vb, c);
+      acc = simd::fmadd(va, vb, acc);
     }
-    return simd::sum(c);
+    return simd::sum(acc);
   }
   
   template<size_t new_length>
