@@ -29,6 +29,8 @@
 #include "net_evaluation.h"
 #include "transposition.h"
 #include "search_thread.h"
+#include "general/feature_indexes.h"
+#include "general/hardcoded_params.h"
 #include <cassert>
 #include <iostream>
 #include <fstream>
@@ -67,6 +69,8 @@ EXPR int32_t kLMRMultCap = 51;
 EXPR Depth kLMROffsetPV = 21;
 EXPR int32_t kLMRMultPV = 86;
 EXPR Depth kLMROffsetPVCap = 23;
+EXPR int32_t kLMRHistDiv = 1024 * 1024;
+EXPR int32_t kLMRHistMax = 1024;
 
 EXPR NScore kInitialAspirationDelta = 72;
 EXPR NScore kSNMPScaling = 709;
@@ -114,12 +118,12 @@ EXPR Array3d<Depth, 2, 2, 6> init_lmp_breakpoints() {
 
 EXPR Array3d<Depth, 2, 2, 6> kLMP = init_lmp_breakpoints();
 
-constexpr Depth lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
-  Depth res = std::floor(offset + (std::log(i+1) * std::log(j+1) * multiplier));
-  return std::max(std::min(res, i), 0);
+constexpr float lmr_calculator(Depth i, size_t j, double offset, double multiplier) {
+  float res = offset + (std::log(i+1) * std::log(j+1) * multiplier);
+  return std::clamp<float>(res, 0, i);
 }
 
-Array3d<Depth, 64, 64, 4> init_lmr_reductions() {
+Array3d<float, 64, 64, 4> init_lmr_reductions() {
   constexpr double scale = 0.01;
   const double x = kLMROffset * scale, y = kLMRMult * scale;
   const double x_cap = kLMROffsetCap * scale, y_cap = y * kLMRMultCap * scale;
@@ -127,7 +131,7 @@ Array3d<Depth, 64, 64, 4> init_lmr_reductions() {
   const double x_pv_cap = kLMROffsetPVCap * scale;
   const double y_pv_cap = y * kLMRMultPV * scale * kLMRMultCap * scale;
 
-  Array3d<Depth, 64, 64, 4> lmr_reductions{};
+  Array3d<float, 64, 64, 4> lmr_reductions{};
   for (Depth i = 0; i < 64; ++i) {
     for (size_t j = 0; j < 64; ++j) {
       lmr_reductions[i][j][0] = lmr_calculator(i, j, x, y);
@@ -144,12 +148,12 @@ Array3d<Depth, 64, 64, 4> init_lmr_reductions() {
 #define EXPR const
 #endif
 
-EXPR Array3d<Depth, 64, 64, 4> lmr_reductions = init_lmr_reductions();
+EXPR Array3d<float, 64, 64, 4> lmr_reductions = init_lmr_reductions();
 
 #undef EXPR
 
 template<NodeType node_type>
-Depth get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
+float get_lmr_reduction(const Depth depth, const size_t move_number, bool cap) {
   assert(depth > 0);
   size_t is_pv = node_type == NodeType::kPV ? 2 : 0;
   return lmr_reductions[std::min(depth - 1, 63)][std::min(move_number, (size_t)63)][is_pv + cap];
@@ -491,6 +495,28 @@ inline void update_counter_moves(Thread &t, const Move move) {
   }
 }
 
+inline float get_history_reduction(Thread &t, const Move move) {
+  // Taken from move ordering, we may want to relax this.
+  if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove || IsMoveForcing(move)) {
+    return 0;
+  }
+  MoveScore score = 0;
+  const Square last_destination = GetMoveDestination(t.board.get_last_move());
+  PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
+  const Color color = t.board.get_turn();
+  const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
+  const Square source = GetMoveSource(move);
+  const Square destination = GetMoveDestination(move);
+  const int32_t cont1_score = t.get_continuation_score<1>(last_moved_piece, last_destination,
+                                     moving_piece, destination);
+  score -= hardcode::search_params[move_features::kPWICMH] * cont1_score;
+  score -= hardcode::search_params[move_features::kPWICMH + 1] * t.get_continuation_score<2>(move);
+  score -= hardcode::search_params[move_features::kPWIHistory] * t.get_history_score(color, source, destination);
+
+  float res = 1.0 * score / kLMRHistDiv;
+  return std::clamp<float>(res, -kLMRHistMax / 1024.0, kLMRHistMax / 512.0);
+}
+
 template<NodeType node_type>
 Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move exclude_move = kNullMove) {
   assert(alpha.is_valid());
@@ -663,11 +689,15 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
 
       //Late Move Reduction factor
       if (!is_root) {
-        reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+        float lmr_reduction = get_lmr_reduction<node_type>(depth, i, GetMoveType(move) > kDoublePawnMove);
+        reduction = std::floor(lmr_reduction + get_history_reduction(t, move));
       }
       else if (i > 2) {
-        reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
+        float lmr_reduction = get_lmr_reduction<node_type>(depth, i-2, GetMoveType(move) > kDoublePawnMove);
+        reduction = std::floor(lmr_reduction + get_history_reduction(t, move));
+        // reduction = std::floor(lmr_reduction);
       }
+      reduction = std::clamp(reduction, 0, depth-1);
       assert(reduction < depth);
       
       if (lower_bound_score >= kMinStaticEval) {
