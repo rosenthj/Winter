@@ -201,26 +201,27 @@ MoveScore GetMoveWeight(const Move move, search::Thread &t, const MoveOrderInfo 
   else if (move == t.killers[height][1]) {
     AddFeature<in_check>(move_weight, kPWIKiller + 1);
   }
+  const Color color = t.board.get_turn();
+  const Square source = GetMoveSource(move);
+  const Square destination = GetMoveDestination(move);
+  if (GetMoveType(move) < kCapture) {
+    AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination));
+  }
+  const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
   if (t.board.get_num_made_moves() > 0 && t.board.get_last_move() != kNullMove) {
     const Square last_destination = GetMoveDestination(t.board.get_last_move());
     PieceType last_moved_piece = GetPieceType(t.board.get_piece(last_destination));
-    if (move == t.counter_moves[t.board.get_turn()][last_moved_piece][last_destination]) {
+    if (move == t.counter_moves[color][last_moved_piece][last_destination]) {
       AddFeature<in_check>(move_weight, kPWICounterMove);
     }
     if (GetMoveType(move) < kCapture) {
-      const Color color = t.board.get_turn();
-      const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
-      const Square source = GetMoveSource(move);
-      const Square destination = GetMoveDestination(move);
       const int32_t score = t.get_continuation_score<1>(last_moved_piece, last_destination,
                                          moving_piece, destination);
       AddFeature<in_check>(move_weight, kPWICMH, score);
       AddFeature<in_check>(move_weight, kPWICMH + 1, t.get_continuation_score<2>(move));
-      AddFeature<in_check>(move_weight, kPWIHistory, t.get_history_score(color, source, destination));
     }
   }
-  const PieceType moving_piece = GetPieceType(t.board.get_piece(GetMoveSource(move)));
-  PieceType target = GetPieceType(t.board.get_piece(GetMoveDestination(move)));
+  PieceType target = GetPieceType(t.board.get_piece(destination));
   const MoveType move_type = GetMoveType(move);
   if (move_type >= kCapture && (target < moving_piece || target == kNoPiece)) {
     if (!t.board.NonNegativeSEE(move)) {

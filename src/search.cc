@@ -380,11 +380,25 @@ inline NScore get_futility_margin(Depth depth, bool improving) {
   return kFutileMargin[depth] + kFutilityImproving * depth * improving;
 }
 
+void update_history_heuristics(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
+  const Color color = t.board.get_turn();
+  const int32_t score = std::min(depth * depth, 512);
+
+  for (size_t i = 0; i < quiets.size() - 1; ++i) {
+    Square src = GetMoveSource(quiets[i]);
+    Square des = GetMoveDestination(quiets[i]);
+    t.update_history_score(color, src, des, -score);
+  }
+  size_t i = quiets.size() - 1;
+  Square src = GetMoveSource(quiets[i]);
+  Square des = GetMoveDestination(quiets[i]);
+  t.update_history_score(color, src, des, score);
+}
+
 void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, const Depth depth) {
   if (t.board.get_num_made_moves() == 0 || t.board.get_last_move() == kNullMove) {
     return;
   }
-  const Color color = t.board.get_turn();
   const Move move = t.board.get_last_move();
   Square opp_des = GetMoveDestination(move);
   PieceType opp_piecetype = GetPieceType(t.board.get_piece(opp_des));
@@ -392,18 +406,14 @@ void update_counter_move_history(Thread &t, const std::vector<Move> &quiets, con
   const int32_t score = std::min(depth * depth, 512);
 
   for (size_t i = 0; i < quiets.size() - 1; ++i) {
-    Square src = GetMoveSource(quiets[i]);
     Square des = GetMoveDestination(quiets[i]);
     PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
     t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, -score);
-    t.update_history_score(color, src, des, -score);
   }
   size_t i = quiets.size() - 1;
-  Square src = GetMoveSource(quiets[i]);
   Square des = GetMoveDestination(quiets[i]);
   PieceType piecetype = GetPieceType(t.board.get_piece(GetMoveSource(quiets[i])));
   t.update_continuation_score<1>(opp_piecetype, opp_des, piecetype, des, score);
-  t.update_history_score(color, src, des, score);
 
   if (t.get_height() < 2) {
     return;
@@ -731,6 +741,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
       table::SaveEntry(t.board, move, score, depth);
       update_counter_moves(t, move);
       if (GetMoveType(move) < kCapture) {
+        update_history_heuristics(t, quiets, depth);
         update_counter_move_history(t, quiets, depth);
         update_killers(t, move);
         if (!in_check && raw_static_eval < score) {
@@ -747,6 +758,7 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
     //In PV nodes we might be improving Alpha without breaking Beta
     if (score > alpha) {
       if (GetMoveType(move) < kCapture) {
+        update_history_heuristics(t, quiets, depth);
         update_counter_move_history(t, quiets, depth);
       }
       //Update score and expected best move
