@@ -241,7 +241,8 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
 
 inline bool is_null_move_allowed(const Score &eval, const Score &beta,
                                  const Board &board, const Depth depth) {
-  return  eval >= beta && depth > 1 && board.has_non_pawn_material(board.get_turn());
+  return  eval >= beta && depth > 1 && board.has_non_pawn_material(board.get_turn())
+      && (board.get_num_made_moves() == 0 || board.get_last_move() != kNullMove);
 }
 
 }
