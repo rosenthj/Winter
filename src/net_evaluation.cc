@@ -33,7 +33,7 @@
 #include <limits>
 #include <list>
 
-INCBIN(uint8_t, NetWeights, "rn32HD64_rew505_d32f64_ep20.qbin");
+INCBIN(uint8_t, NetWeights, "rn32HD64_rew507_d32f64_ep20.qbin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
