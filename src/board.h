@@ -93,6 +93,7 @@ public:
   int32_t get_piecetype_count(const PieceType piece_type) const {
     return piece_counts[kWhite][piece_type] + piece_counts[kBlack][piece_type];
   }
+  int32_t get_fifty_move_count() const { return fifty_move_count; }
   CastlingRights get_castling_rights() const { return castling_rights; }
   //Print unicode chess board.
   bool IsMoveLegal(const Move move) const;

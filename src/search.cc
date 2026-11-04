@@ -234,6 +234,7 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
                               const Depth depth) {
   Score score = entry->get_score(board);
   return entry->depth >= depth
+      && board.get_fifty_move_count() < 92
       && ((entry->get_bound() == kExactBound)
           || (entry->get_bound() == kLowerBound && score >= beta)
           || (entry->get_bound() == kUpperBound && score <= alpha));
