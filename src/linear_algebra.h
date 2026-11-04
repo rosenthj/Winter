@@ -488,9 +488,7 @@ struct Vec<int16_t, length> {
     return simd::i32::sum(acc);
   }
 
-  // Writes the indices of the pairs of values where either 2 * index or 2 * index + 1 are
-  // non-zero, and returns how many such pairs there are.
-  // Indices needs room for 8 entries more than there are pairs.
+  // Returns the total count adjacent value pairs containing at least one non-zero element
   inline size_t nonzero_pairs(uint16_t *indices) const {
     size_t count = 0;
     for (size_t i = 0; i < length; i += kSIMDWidth16) {
@@ -557,10 +555,7 @@ struct Vec<int32_t, length> {
     return *this;
   }
 
-  // Adds pair k of the 16 bit inputs, inputs[2 * k] and inputs[2 * k + 1], times its
-  // column of weights for every k < count. Lane i gains
-  //   columns[k][2 * i] * inputs[2 * k] + columns[k][2 * i + 1] * inputs[2 * k + 1].
-  // Every pair adds to every lane, so the lanes stay in registers throughout.
+  // Accumulates the pairwise dot products of 16-bit input pairs and their corresponding weights into 32-bit vectors
   inline Vec<int32_t, length>& madd_pairs(const Vec<int16_t, 2 * length> *columns,
                                           const int16_t *inputs, const size_t count) {
     SIMDInt acc[length / kSIMDWidth32];
@@ -586,8 +581,7 @@ struct Vec<int32_t, length> {
     return *this;
   }
 
-  // Writes every lane shifted right by shift and saturated to 16 bits to out,
-  // which must be aligned like a SIMD register.
+  // Right shifts by shift and saturates to 16 bits to out
   inline void shift_saturate(const int shift, int16_t *out) const {
     static_assert(length % (2 * kSIMDWidth32) == 0, "Lanes are packed two registers at a time");
     for (size_t i = 0; i < length; i += 2 * kSIMDWidth32) {
@@ -612,8 +606,7 @@ struct Vec<int32_t, length> {
     }
   }
 
-  // Adds weights times the two 16 bit values at pair to acc. madd needs the pair in
-  // every 32 bit slot of a register, hence reading both values as one int32_t.
+  // Accumulates the pairwise dot products of 16-bit input pairs and their corresponding weights into 32-bit vectors
   static inline void madd_pair(SIMDInt *acc, const Vec<int16_t, 2 * length> &weights,
                                const int16_t *pair) {
     int32_t both;

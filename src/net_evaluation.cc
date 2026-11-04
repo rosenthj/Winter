@@ -486,20 +486,25 @@ NetHeader read_header() {
   offset += sizeof(output_bias);
 
   if (has_combined_head) {
-    // pd, the lane shift, per hidden unit exponents and biases, then the float
-    // output layer. The hidden layer's weights follow the other weights.
+    // Verify hidden layer size (pd).
     uint32_t pd;
     std::memcpy(&pd, gNetWeightsData + offset, sizeof(pd));
     offset += sizeof(pd);
     size_mismatch("hidden size pd", pd, hidden_size);
+    
+    // Bit-shift amount for hidden layer activations
     std::memcpy(&hidden_shift, gNetWeightsData + offset, sizeof(hidden_shift));
     offset += sizeof(hidden_shift);
     std::array<int32_t, hidden_size> exponents;
+    
+    // Per-unit scale exponents (converted to float multipliers: 2^-exp)
     std::memcpy(exponents.data(), gNetWeightsData + offset, sizeof(exponents));
     offset += sizeof(exponents);
     for (size_t i = 0; i < hidden_size; ++i) {
       hidden_unscale[i] = std::ldexp(1.0f, -exponents[i]);
     }
+    
+    // Hidden layer biases and final float output layer weights
     std::memcpy(hidden_bias.values, gNetWeightsData + offset, sizeof(hidden_bias.values));
     offset += sizeof(hidden_bias.values);
     for (Vec<float, hidden_size> &weights : hidden_output_weights) {
@@ -644,7 +649,7 @@ void init_mirrored_outputs() {
 void init_hidden_weights(size_t &offset) {
   constexpr size_t d = block_size / 2, fd = full_block_size / 2;
   constexpr size_t inputs = 2 * hidden_input_pairs;
-  static_assert(d % 4 == 0, "Lane pairs must not straddle the halves of an accumulator");
+  static_assert(d % 4 == 0, "Pairs must remain on the same accumulator half");
   const auto mirrored = [](size_t input) -> size_t {
     if (input < 3 * d) {
       return input / d * d + (input % d + d / 2) % d;
@@ -754,8 +759,7 @@ void verify_accumulator_bounds() {
   }
 }
 
-// The combined head's hidden units sum 32 bit products, which must not overflow for
-// any inputs: a saturated lane can reach -32768, the full layer its relu bound.
+// The verify the combined head does not overflow.
 void verify_hidden_head_bounds() {
   constexpr size_t d = block_size / 2;
   for (size_t unit = 0; unit < hidden_size; ++unit) {
