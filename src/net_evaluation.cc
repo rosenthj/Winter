@@ -33,7 +33,7 @@
 #include <limits>
 #include <list>
 
-INCBIN(uint8_t, NetWeights, "rn32HD64_rew507_d32f64_ep20.qbin");
+INCBIN(uint8_t, NetWeights, "rew507s_d32f64p16_ep40.qbin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -54,6 +54,17 @@ FullLayerType full_layer_bias(0);
 std::vector<FullLayerType> full_output_weights(3, 0);
 std::vector<FullLayerType> m_full_output_weights(3, 0);
 
+// Combined head, present in version 2 nets.
+// The weights are stored per input pairs for SIMD madd operation purposes.
+// read_header() sets has_combined_head from the net's format version at load time.
+bool has_combined_head = false;
+int32_t hidden_shift = 0;
+std::vector<HiddenColumnType> hidden_column_weights(hidden_input_pairs, 0);
+std::vector<HiddenColumnType> m_hidden_column_weights(hidden_input_pairs, 0);
+HiddenLayerType hidden_bias(0);
+std::array<float, hidden_size> hidden_unscale;
+std::array<Vec<float, hidden_size>, 3> hidden_output_weights;
+
 // Upper bounds of the clipped relus
 NetLayerType piece_relu_bound(0);
 FullLayerType full_relu_bound(0);
@@ -63,6 +74,7 @@ float_t inverse_output_scale = 0;
 
 // Winter net format
 constexpr uint32_t kNetFormatVersion = 1;
+constexpr uint32_t kCombinedNetFormatVersion = 2;
 constexpr uint32_t kNetFlagQuantized = 1;
 constexpr float_t kClippedReluBound = 8;
 
@@ -172,6 +184,43 @@ inline void AddAllPieceTypes(const Board &board,
   }
 }
 
+template<Color color>
+std::array<float_t, 3> CombinedHead(const std::array<NetOutputType, 3> &lanes,
+                                  const FullLayerType &full_layer) {
+  constexpr size_t d = block_size / 2;
+  // Keeps each outcome's lanes aligned like a SIMD register in inputs.
+  static_assert(d % 16 == 0, "The combined head needs d to be a multiple of 16");
+  const HiddenColumnType *weights = color == kWhite ? hidden_column_weights.data()
+                                                    : m_hidden_column_weights.data();
+
+  alignas(sizeof(SIMDInt)) std::array<int16_t, 3 * d> inputs;
+  for (size_t i = 0; i < 3; ++i) {
+    lanes[i].shift_saturate(hidden_shift, &inputs[i * d]);
+  }
+
+  // Hidden initialization and bias
+  HiddenLayerType hidden = hidden_bias;
+
+  // Piece inputs
+  hidden.madd_pairs(weights, inputs.data(), 3 * d / 2);
+
+  // Full layer inputs, which are mostly zero, so only their nonzero pairs are added
+  std::array<uint16_t, full_block_size / 2 + 8> nonzero;
+  const size_t count = full_layer.nonzero_pairs(nonzero.data());
+  hidden.madd_pairs(weights + 3 * d / 2, full_layer.values, nonzero.data(), count);
+  
+  // Activate and rescale
+  Vec<float, hidden_size> activations;
+  for (size_t i = 0; i < hidden_size; ++i) {
+    activations[i] = std::clamp(hidden[i] * hidden_unscale[i], 0.0f, kClippedReluBound);
+  }
+  std::array<float_t, 3> logits;
+  for (size_t j = 0; j < 3; ++j) {
+    logits[j] = hidden_output_weights[j].dot(activations);
+  }
+  return logits;
+}
+
 }
 
 namespace net_evaluation {
@@ -195,7 +244,12 @@ Score PerspectiveNetForward(const PieceList &piece_modules,
   }
   
   auto full_layer = _full_layer.clipped_relu(full_relu_bound);
-  
+
+  std::array<float_t, 3> head_logits{0, 0, 0};
+  if (has_combined_head) {
+    head_logits = CombinedHead<color>(output_helpers, full_layer);
+  }
+
   float_t sum = 0;
   std::array<float_t, 3> outcomes;
   for (size_t i = 0; i < 3; ++i) {
@@ -207,7 +261,7 @@ Score PerspectiveNetForward(const PieceList &piece_modules,
       logit = full_layer.dot(m_full_output_weights[i]);
     }
     logit += output_helpers[i].sum();
-    outcomes[i] = logit * inverse_output_scale + output_bias[i];
+    outcomes[i] = logit * inverse_output_scale + output_bias[i] + head_logits[i];
   }
   
   float_t max_logit = *std::max_element(outcomes.begin(), outcomes.end());
@@ -356,6 +410,10 @@ size_t wrapped_idx(const std::list<IP> &values) {
   return idx;
 }
 
+constexpr size_t hidden_weight_count() {
+  return hidden_size * 2 * hidden_input_pairs;
+}
+
 // Expected network size
 constexpr size_t expected_weight_count() {
   constexpr size_t d = block_size / 2;
@@ -385,10 +443,12 @@ NetHeader read_header() {
   NetHeader header;
   std::memcpy(&header, gNetWeightsData + 4, sizeof(header));
 
-  if (header.version != kNetFormatVersion) {
+  if (header.version != kNetFormatVersion && header.version != kCombinedNetFormatVersion) {
     net_load_error("format version " + std::to_string(header.version) + ", expected "
-              + std::to_string(kNetFormatVersion));
+              + std::to_string(kNetFormatVersion) + " or "
+              + std::to_string(kCombinedNetFormatVersion));
   }
+  has_combined_head = header.version == kCombinedNetFormatVersion;
   if ((header.flags & kNetFlagQuantized) == 0) {
     net_load_error("weights are not quantized");
   }
@@ -409,7 +469,9 @@ NetHeader read_header() {
     net_load_error("clipped relu bound is " + std::to_string(header.relu_bound) + ", this build expects "
               + std::to_string(kClippedReluBound));
   }
-  const size_t expected = header.header_bytes + 2 * expected_weight_count();
+  const size_t weight_count = expected_weight_count()
+      + (has_combined_head ? hidden_weight_count() : 0);
+  const size_t expected = header.header_bytes + 2 * weight_count;
   if (gNetWeightsSize != expected) {
     net_load_error("file is " + std::to_string(gNetWeightsSize) + " bytes, expected "
               + std::to_string(expected));
@@ -421,6 +483,38 @@ NetHeader read_header() {
   std::memcpy(full_scales.data(), gNetWeightsData + offset, sizeof(full_scales));
   offset += sizeof(full_scales);
   std::memcpy(output_bias.data(), gNetWeightsData + offset, sizeof(output_bias));
+  offset += sizeof(output_bias);
+
+  if (has_combined_head) {
+    // Verify hidden layer size (pd).
+    uint32_t pd;
+    std::memcpy(&pd, gNetWeightsData + offset, sizeof(pd));
+    offset += sizeof(pd);
+    size_mismatch("hidden size pd", pd, hidden_size);
+    
+    // Bit-shift amount for hidden layer activations
+    std::memcpy(&hidden_shift, gNetWeightsData + offset, sizeof(hidden_shift));
+    offset += sizeof(hidden_shift);
+    std::array<int32_t, hidden_size> exponents;
+    
+    // Per-unit scale exponents (converted to float multipliers: 2^-exp)
+    std::memcpy(exponents.data(), gNetWeightsData + offset, sizeof(exponents));
+    offset += sizeof(exponents);
+    for (size_t i = 0; i < hidden_size; ++i) {
+      hidden_unscale[i] = std::ldexp(1.0f, -exponents[i]);
+    }
+    
+    // Hidden layer biases and final float output layer weights
+    std::memcpy(hidden_bias.values, gNetWeightsData + offset, sizeof(hidden_bias.values));
+    offset += sizeof(hidden_bias.values);
+    for (Vec<float, hidden_size> &weights : hidden_output_weights) {
+      std::memcpy(weights.values, gNetWeightsData + offset, sizeof(weights.values));
+      offset += sizeof(weights.values);
+    }
+  }
+  if (offset > header.header_bytes) {
+    net_load_error("header fields run past the header size");
+  }
 
   net_data = reinterpret_cast<const int16_t*>(gNetWeightsData + header.header_bytes);
   return header;
@@ -551,6 +645,27 @@ void init_mirrored_outputs() {
   }
 }
 
+// The combined head's hidden layer
+void init_hidden_weights(size_t &offset) {
+  constexpr size_t d = block_size / 2, fd = full_block_size / 2;
+  constexpr size_t inputs = 2 * hidden_input_pairs;
+  static_assert(d % 4 == 0, "Pairs must remain on the same accumulator half");
+  const auto mirrored = [](size_t input) -> size_t {
+    if (input < 3 * d) {
+      return input / d * d + (input % d + d / 2) % d;
+    }
+    return 3 * d + (input - 3 * d + fd) % full_block_size;
+  };
+  for (size_t unit = 0; unit < hidden_size; ++unit) {
+    for (size_t input = 0; input < inputs; ++input) {
+      const size_t idx = 2 * unit + input % 2;
+      hidden_column_weights[input / 2][idx] = net_data[offset + unit * inputs + input];
+      m_hidden_column_weights[input / 2][idx] = net_data[offset + unit * inputs + mirrored(input)];
+    }
+  }
+  offset += hidden_weight_count();
+}
+
 #ifndef NDEBUG
 // This NDEBUG section is a sanity check for network quantization.
 // It is written by Claude Opus 5.
@@ -643,6 +758,19 @@ void verify_accumulator_bounds() {
     assert(std::max(hi, -lo) <= kMaxInt16);
   }
 }
+
+// The verify the combined head does not overflow.
+void verify_hidden_head_bounds() {
+  constexpr size_t d = block_size / 2;
+  for (size_t unit = 0; unit < hidden_size; ++unit) {
+    int64_t total = std::abs(int64_t(hidden_bias[unit]));
+    for (size_t input = 0; input < 2 * hidden_input_pairs; ++input) {
+      const int64_t largest = input < 3 * d ? kMaxInt16 + 1 : full_relu_bound[input - 3 * d];
+      total += largest * std::abs(int64_t(hidden_column_weights[input / 2][2 * unit + input % 2]));
+    }
+    assert(total <= std::numeric_limits<int32_t>::max());
+  }
+}
 #endif
 
 void init_weights() {
@@ -658,6 +786,10 @@ void init_weights() {
   init_full_layer_weights(offset);
   init_full_output_weights(offset);
   assert(offset == expected_weight_count());
+  if (has_combined_head) {
+    init_hidden_weights(offset);
+    assert(offset == expected_weight_count() + hidden_weight_count());
+  }
   
   init_mirrored_outputs();
 
@@ -674,6 +806,9 @@ void init_weights() {
 
 #ifndef NDEBUG
   verify_accumulator_bounds();
+  if (has_combined_head) {
+    verify_hidden_head_bounds();
+  }
 #endif
 }
 

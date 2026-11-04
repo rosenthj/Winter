@@ -38,6 +38,12 @@ using NetOutputType = Vec<int32_t, block_size / 2>;     // Output accumulator ty
 constexpr size_t full_block_size = 2 * 64;              // Full layer feature size
 using FullLayerType = Vec<int16_t, full_block_size>;    // Full layer type
 
+// In Net v2 we add a hidden layer that merges pooled piece features and the fully connected layer.
+constexpr size_t hidden_size = 16;                      // Number of hidden units
+constexpr size_t hidden_input_pairs = (3 * block_size / 2 + full_block_size) / 2;
+using HiddenColumnType = Vec<int16_t, 2 * hidden_size>;
+using HiddenLayerType = Vec<int32_t, hidden_size>;
+
 struct NetPieceModule {
   NetLayerType features;
   PieceType pt;

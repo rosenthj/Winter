@@ -29,7 +29,9 @@
 
 #include "../general/types.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 
 template <typename type, size_t length>
@@ -160,6 +162,23 @@ inline void store(int32_t* mem_addr, SIMDInt a) {
 }
 inline SIMDInt set(int32_t a) { return _mm256_set1_epi32(a); }
 
+// Elementwise right shift
+inline SIMDInt shift_right(const SIMDInt a, const int count) {
+  return _mm256_sra_epi32(a, _mm_cvtsi32_si128(count));
+}
+
+// Combine 32 bit values in a and b to a single vector of 16 bit values (clamping edge values)
+inline SIMDInt pack_saturate(const SIMDInt a, const SIMDInt b) {
+  // Permute is to undo side effect from packs_epi function.
+  return _mm256_permute4x64_epi64(_mm256_packs_epi32(a, b), _MM_SHUFFLE(3, 1, 2, 0));
+}
+
+// Returns which elements are nonzero.
+inline uint32_t nonzero_mask(const SIMDInt a) {
+  const SIMDInt zero_lanes = _mm256_cmpeq_epi32(a, _mm256_setzero_si256());
+  return ~static_cast<uint32_t>(_mm256_movemask_ps(_mm256_castsi256_ps(zero_lanes))) & 0xFF;
+}
+
 }
 }
 
@@ -209,6 +228,22 @@ inline void store(int32_t* mem_addr, SIMDInt a) {
   _mm_store_si128(reinterpret_cast<SIMDInt*>(mem_addr), a);
 }
 inline SIMDInt set(int32_t a) { return _mm_set1_epi32(a); }
+
+// Elementwise right shift
+inline SIMDInt shift_right(const SIMDInt a, const int count) {
+  return _mm_sra_epi32(a, _mm_cvtsi32_si128(count));
+}
+
+// Combine 32 bit values in a and b to a single vector of 16 bit values (clamping edge values)
+inline SIMDInt pack_saturate(const SIMDInt a, const SIMDInt b) {
+  return _mm_packs_epi32(a, b);
+}
+
+// Returns which elements are nonzero.
+inline uint32_t nonzero_mask(const SIMDInt a) {
+  const SIMDInt zero_lanes = _mm_cmpeq_epi32(a, _mm_setzero_si128());
+  return ~static_cast<uint32_t>(_mm_movemask_ps(_mm_castsi128_ps(zero_lanes))) & 0xF;
+}
 
 }
 }
@@ -364,6 +399,23 @@ struct Vec<float, length> {
   alignas(sizeof(SIMDFloat)) float values[length];
 };
 
+namespace simd {
+  
+// Precomputed table of set bit positions for 8 bit masks.
+inline constexpr auto kSetBitPositions = [] {
+  std::array<std::array<uint16_t, 8>, 256> table{};
+  for (size_t mask = 0; mask < 256; ++mask) {
+    size_t count = 0;
+    for (size_t bit = 0; bit < 8; ++bit) {
+      if ((mask >> bit) & 1) {
+        table[mask][count++] = bit;
+      }
+    }
+  }
+  return table;
+}();
+
+}
 
 template<size_t length>
 struct Vec<int16_t, length> {
@@ -436,6 +488,20 @@ struct Vec<int16_t, length> {
     return simd::i32::sum(acc);
   }
 
+  // Returns the total count adjacent value pairs containing at least one non-zero element
+  inline size_t nonzero_pairs(uint16_t *indices) const {
+    size_t count = 0;
+    for (size_t i = 0; i < length; i += kSIMDWidth16) {
+      const uint32_t mask = simd::i32::nonzero_mask(simd::i16::load(&values[i]));
+      const std::array<uint16_t, 8> &positions = simd::kSetBitPositions[mask];
+      for (size_t j = 0; j < 8; ++j) {
+        indices[count + j] = i / 2 + positions[j];
+      }
+      count += __builtin_popcount(mask);
+    }
+    return count;
+  }
+
   inline int16_t& operator[](std::size_t idx) { return values[idx]; }
   inline const int16_t operator[](std::size_t idx) const { return values[idx]; }
 
@@ -487,6 +553,70 @@ struct Vec<int32_t, length> {
       simd::i32::store(&values[i], simd::i32::add(c, simd::i16::madd(va, vb)));
     }
     return *this;
+  }
+
+  // Accumulates the pairwise dot products of 16-bit input pairs and their corresponding weights into 32-bit vectors
+  inline Vec<int32_t, length>& madd_pairs(const Vec<int16_t, 2 * length> *columns,
+                                          const int16_t *inputs, const size_t count) {
+    SIMDInt acc[length / kSIMDWidth32];
+    load_registers(acc);
+    for (size_t k = 0; k < count; ++k) {
+      madd_pair(acc, columns[k], &inputs[2 * k]);
+    }
+    store_registers(acc);
+    return *this;
+  }
+
+  // As above, but only for the pairs listed in indices.
+  inline Vec<int32_t, length>& madd_pairs(const Vec<int16_t, 2 * length> *columns,
+                                          const int16_t *inputs, const uint16_t *indices,
+                                          const size_t count) {
+    SIMDInt acc[length / kSIMDWidth32];
+    load_registers(acc);
+    for (size_t k = 0; k < count; ++k) {
+      const size_t pair = indices[k];
+      madd_pair(acc, columns[pair], &inputs[2 * pair]);
+    }
+    store_registers(acc);
+    return *this;
+  }
+
+  // Right shifts by shift and saturates to 16 bits to out
+  inline void shift_saturate(const int shift, int16_t *out) const {
+    static_assert(length % (2 * kSIMDWidth32) == 0, "Lanes are packed two registers at a time");
+    for (size_t i = 0; i < length; i += 2 * kSIMDWidth32) {
+      SIMDInt a = simd::i32::shift_right(simd::i32::load(&values[i]), shift);
+      SIMDInt b = simd::i32::shift_right(simd::i32::load(&values[i + kSIMDWidth32]), shift);
+      simd::i16::store(&out[i], simd::i32::pack_saturate(a, b));
+    }
+  }
+
+  // Helpers for madd_pairs, which keeps the lanes in the registers acc.
+  inline void load_registers(SIMDInt *acc) const {
+    #pragma GCC unroll 32
+    for (size_t r = 0; r < length / kSIMDWidth32; ++r) {
+      acc[r] = simd::i32::load(&values[r * kSIMDWidth32]);
+    }
+  }
+
+  inline void store_registers(const SIMDInt *acc) {
+    #pragma GCC unroll 32
+    for (size_t r = 0; r < length / kSIMDWidth32; ++r) {
+      simd::i32::store(&values[r * kSIMDWidth32], acc[r]);
+    }
+  }
+
+  // Accumulates the pairwise dot products of 16-bit input pairs and their corresponding weights into 32-bit vectors
+  static inline void madd_pair(SIMDInt *acc, const Vec<int16_t, 2 * length> &weights,
+                               const int16_t *pair) {
+    int32_t both;
+    std::memcpy(&both, pair, sizeof(both));
+    const SIMDInt vb = simd::i32::set(both);
+    #pragma GCC unroll 32
+    for (size_t r = 0; r < length / kSIMDWidth32; ++r) {
+      SIMDInt va = simd::i16::load(&weights.values[2 * r * kSIMDWidth32]);
+      acc[r] = simd::i32::add(acc[r], simd::i16::madd(va, vb));
+    }
   }
 
   inline int32_t& operator[](std::size_t idx) { return values[idx]; }
