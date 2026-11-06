@@ -234,7 +234,6 @@ inline bool sufficient_bounds(const Board &board, const OptEntry &entry,
                               const Depth depth) {
   Score score = entry->get_score(board);
   return entry->depth >= depth
-      && board.get_fifty_move_count() < 92
       && ((entry->get_bound() == kExactBound)
           || (entry->get_bound() == kLowerBound && score >= beta)
           || (entry->get_bound() == kUpperBound && score <= alpha));
@@ -538,7 +537,8 @@ Score AlphaBeta(Thread &t, Score alpha, const Score beta, Depth depth, Move excl
   OptEntry entry = table::GetEntry(t.board.get_hash());
   
   if (node_type != NodeType::kPV && !exclude_move && entry.has_value()
-      && sufficient_bounds(t.board, entry, alpha, beta, depth) ) {
+      && sufficient_bounds(t.board, entry, alpha, beta, depth)
+      && t.board.get_fifty_move_count() < 92) {
     Score score = entry->get_score(t.board);
     if (score > beta && !score.is_mate_score() && !beta.is_mate_score()) {
       return (score * 3 + beta) / 4;
