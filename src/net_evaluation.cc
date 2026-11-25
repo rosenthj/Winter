@@ -33,7 +33,7 @@
 #include <limits>
 #include <list>
 
-INCBIN(uint8_t, NetWeights, "rew507s_d32f64p16_ep40.qbin");
+INCBIN(uint8_t, NetWeights, "rew507sc_d32f64p16_ep40.qbin");
 
 std::array<int32_t, 2> contempt = { 0, 0 };
 
@@ -50,6 +50,9 @@ std::array<float_t, 3> output_bias;
 
 std::vector<FullLayerType> full_layer_weights(12 * 64, 0);
 FullLayerType full_layer_bias(0);
+
+bool has_castling_inputs = false; // Detected at load time based on net input size
+std::vector<FullLayerType> castling_weights(16, 0);
 
 std::vector<FullLayerType> full_output_weights(3, 0);
 std::vector<FullLayerType> m_full_output_weights(3, 0);
@@ -227,7 +230,7 @@ namespace net_evaluation {
 
 template<Color color>
 Score PerspectiveNetForward(const PieceList &piece_modules,
-                 const FullLayerType &_full_layer) {
+                 const FullLayerType &_full_layer, const CastlingRights castling_rights) {
   std::array<NetOutputType, 3> output_helpers{0, 0, 0};
   for (size_t piece_idx = 0; piece_idx < piece_modules.size(); piece_idx++) {
     auto features = piece_modules[piece_idx].features.clipped_relu(piece_relu_bound);
@@ -243,7 +246,11 @@ Score PerspectiveNetForward(const PieceList &piece_modules,
     }
   }
   
-  auto full_layer = _full_layer.clipped_relu(full_relu_bound);
+  FullLayerType full_layer = _full_layer;
+  if (has_castling_inputs) {
+    full_layer += castling_weights[castling_rights];
+  }
+  full_layer = full_layer.clipped_relu(full_relu_bound);
 
   std::array<float_t, 3> head_logits{0, 0, 0};
   if (has_combined_head) {
@@ -276,11 +283,11 @@ Score PerspectiveNetForward(const PieceList &piece_modules,
   return WDLScore::from_pct(win, loss);
 }
 
-Score NetForward(const PieceList &piece_modules,
-                 const FullLayerType &_full_layer, const Color color) {
+Score NetForward(const PieceList &piece_modules, const FullLayerType &_full_layer,
+                 const Color color, const CastlingRights castling_rights) {
     if (color == kWhite)
-      return PerspectiveNetForward<kWhite>(piece_modules, _full_layer);
-    return PerspectiveNetForward<kBlack>(piece_modules, _full_layer);
+      return PerspectiveNetForward<kWhite>(piece_modules, _full_layer, castling_rights);
+    return PerspectiveNetForward<kBlack>(piece_modules, _full_layer, castling_rights);
 }
 
 Score ScoreBoard(const Board &board) {
@@ -289,10 +296,10 @@ Score ScoreBoard(const Board &board) {
   AddAllPieceTypes(board, piece_modules, full_layer);
   EvalPieceRelations(piece_modules);
   if (contempt[board.get_turn()] != 0) {
-    return AddContempt(NetForward(piece_modules, full_layer, board.get_turn()),
+    return AddContempt(NetForward(piece_modules, full_layer, board.get_turn(), board.get_castling_rights()),
                        board.get_turn());
   }
-  return NetForward(piece_modules, full_layer, board.get_turn());
+  return NetForward(piece_modules, full_layer, board.get_turn(), board.get_castling_rights());
 }
 
 //inline std::tuple<NetPieceModule, NetPieceModule> get_partial()
@@ -309,10 +316,10 @@ Score FromScratch(search::Thread &t) {
   AddAllPieceTypes(t.board, eval.pieces, eval.global_features);
   EvalPieceRelations(eval.pieces);
   if (contempt[t.board.get_turn()] != 0) {
-    return AddContempt(NetForward(eval.pieces, eval.global_features, t.board.get_turn()),
+    return AddContempt(NetForward(eval.pieces, eval.global_features, t.board.get_turn(), t.board.get_castling_rights()),
                        t.board.get_turn());
   }
-  return NetForward(eval.pieces, eval.global_features, t.board.get_turn());
+  return NetForward(eval.pieces, eval.global_features, t.board.get_turn(), t.board.get_castling_rights());
 }
 
 Score ScoreThread(search::Thread &t) {
@@ -394,10 +401,10 @@ Score ScoreThread(search::Thread &t) {
   t.evaluations[h].global_features = full_layer;
   // Return full evaluation
   if (contempt[t.board.get_turn()] != 0) {
-    return AddContempt(NetForward(pieces, full_layer, t.board.get_turn()),
-                       t.board.get_turn());
+    return AddContempt(NetForward(pieces, full_layer, t.board.get_turn(),
+                                  t.board.get_castling_rights()), t.board.get_turn());
   }
-  return NetForward(pieces, full_layer, t.board.get_turn());
+  return NetForward(pieces, full_layer, t.board.get_turn(), t.board.get_castling_rights());
 }
 
 using IP = std::pair<size_t, size_t>;
@@ -414,15 +421,26 @@ constexpr size_t hidden_weight_count() {
   return hidden_size * 2 * hidden_input_pairs;
 }
 
+size_t full_layer_input_count() {
+  return 12 * (8 * 8) + (has_castling_inputs ? 4 : 0);
+}
+
+size_t castling_right_weight_count() {
+  if (has_castling_inputs)
+    return 4;
+  return 0;
+}
+
 // Expected network size
-constexpr size_t expected_weight_count() {
+size_t expected_weight_count() {
   constexpr size_t d = block_size / 2;
   constexpr size_t fd = full_block_size / 2;
-  return 12 * 12 * (15 * 15) * d    // relation weights
-       + 12 * (8 * 8) * d           // relation bias
-       + 3 * 12 * (8 * 8) * (2 * d) // piece output head (full width)
-       + 12 * (8 * 8) * fd + fd     // global accumulator and its bias
-       + 3 * (2 * fd);              // global output head (full width)
+  return 12 * 12 * (15 * 15) * d            // relation weights
+       + 12 * (8 * 8) * d                   // relation bias
+       + 3 * 12 * (8 * 8) * (2 * d)         // piece output head (full width)
+       + 12 * (8 * 8) * fd + fd             // global accumulator and its bias
+       + castling_right_weight_count() * fd // castling rights
+       + 3 * (2 * fd);                      // global output head (full width)
 }
 
 
@@ -460,7 +478,11 @@ NetHeader read_header() {
   };
   size_mismatch("block width d", header.d, block_size / 2);
   size_mismatch("full block width fd", header.fd, full_block_size / 2);
-  size_mismatch("input count", header.num_inputs, 12 * 64);
+  if (header.num_inputs != 12 * 64 && header.num_inputs != 12 * 64 + 4) {
+    net_load_error("input count is " + std::to_string(header.num_inputs) + ", this build expects "
+              + std::to_string(12 * 64) + " or " + std::to_string(12 * 64 + 4));
+  }
+  has_castling_inputs = header.num_inputs == 12 * 64 + 4;
   size_mismatch("piece type count", header.num_piece_types, 12);
   size_mismatch("relation grid size", header.grid, 15);
   size_mismatch("output count", header.num_outputs, 3);
@@ -589,20 +611,46 @@ void init_out_weights(size_t &offset) {
 
 void init_full_layer_weights(size_t &offset) {
   constexpr size_t fd = full_block_size / 2;
+  const size_t num_inputs = full_layer_input_count();
   for (size_t pt = 0; pt < 12; ++pt) {
     size_t m_pt = (pt + 6) % 12;
     for (size_t sq = 0; sq < 64; ++sq) {
       size_t m_sq = GetMirroredSquare(sq);
       size_t idx = wrapped_idx({IP(pt,12), IP(sq,64)});
+      size_t m_input = wrapped_idx({IP(m_pt,12), IP(m_sq,64)});
       for (size_t i = 0; i < fd; ++i) {
-        size_t idx2 = wrapped_idx({IP(i,fd), IP(pt,12), IP(sq,64)});
-        size_t m_idx = wrapped_idx({IP(i,fd), IP(m_pt,12), IP(m_sq,64)});
+        size_t idx2 = wrapped_idx({IP(i,fd), IP(idx,num_inputs)});
+        size_t m_idx = wrapped_idx({IP(i,fd), IP(m_input,num_inputs)});
         full_layer_weights[idx][i] = net_data[idx2 + offset];
         full_layer_weights[idx][i + fd] = net_data[m_idx + offset];
       }
     }
   }
-  offset += fd * 12 * 64;
+  if (has_castling_inputs) {
+    constexpr std::array<CastlingRights, 4> rights = { kWLCastle, kWSCastle, kBLCastle, kBSCastle };
+    for (size_t r = 0; r < 4; ++r) {
+      size_t m_r = (r + 2) % 4;
+      for (size_t i = 0; i < fd; ++i) {
+        size_t idx2 = wrapped_idx({IP(i,fd), IP(12 * 64 + r,num_inputs)});
+        size_t m_idx = wrapped_idx({IP(i,fd), IP(12 * 64 + m_r,num_inputs)});
+        castling_weights[rights[r]][i] = net_data[idx2 + offset];
+        castling_weights[rights[r]][i + fd] = net_data[m_idx + offset];
+      }
+    }
+    
+    // Next we precompute weights for any combination of castling rights.
+    for (CastlingRights c = 1; c < 16; ++c) {
+      CastlingRights lowest = c & -c;
+      if (c == lowest) {
+        // c has a single non-zero input and was already initialized above.
+        continue;
+      }
+      // c is a composite of castling right inputs
+      castling_weights[c] = castling_weights[c ^ lowest];
+      castling_weights[c] += castling_weights[lowest];
+    }
+  }
+  offset += fd * num_inputs;
   for (size_t i = 0; i < fd; ++i) {
     full_layer_bias[i] = net_data[i + offset];
     full_layer_bias[i + fd] = net_data[i + offset];
@@ -754,6 +802,12 @@ void verify_accumulator_bounds() {
       }
       hi += bound_side(up);
       lo -= bound_side(down);
+    }
+    if (has_castling_inputs) {
+      for (CastlingRights right : { kWSCastle, kWLCastle, kBSCastle, kBLCastle }) {
+        hi += std::max<int32_t>(castling_weights[right][c], 0);
+        lo += std::min<int32_t>(castling_weights[right][c], 0);
+      }
     }
     assert(std::max(hi, -lo) <= kMaxInt16);
   }
